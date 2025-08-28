@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"your-project/internal/models"
-	"your-project/internal/repositories"
+	"high-performance-news-website/internal/models"
+	"high-performance-news-website/internal/repositories"
 )
 
 type PushNotificationService struct {
@@ -99,6 +99,11 @@ func (s *PushNotificationService) CreateNotification(notification *models.PushNo
 	}
 
 	return s.repo.CreateNotification(notification)
+}
+
+// GetNotification retrieves a notification by ID
+func (s *PushNotificationService) GetNotification(notificationID uint64) (*models.PushNotification, error) {
+	return s.repo.GetNotificationByID(notificationID)
 }
 
 func (s *PushNotificationService) CreateFromTemplate(templateName string, variables map[string]string, targetType, targetValue string, scheduledAt *time.Time) error {

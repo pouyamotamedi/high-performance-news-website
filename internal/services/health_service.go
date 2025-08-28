@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"high-performance-news-website/internal/config"
-	"high-performance-news-website/internal/models"
 	"high-performance-news-website/pkg/cache"
 )
 
@@ -51,8 +50,6 @@ type ComponentHealth struct {
 
 // PerformHealthCheck performs a comprehensive health check
 func (hs *HealthService) PerformHealthCheck(includeMetrics bool) *HealthResponse {
-	startTime := time.Now()
-	
 	components := make(map[string]ComponentHealth)
 	
 	// Check database health

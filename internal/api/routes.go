@@ -19,6 +19,8 @@ type Router struct {
 	adminHandlers             *AdminHandlers
 	contentManagementHandlers *ContentManagementHandlers
 	monitoringHandler         *MonitoringHandler
+	widgetHandlers            *WidgetHandlers
+	themeHandlers             *ThemeHandlers
 	authMiddleware            *AuthMiddleware
 	rateLimiter               *RateLimitMiddleware
 }
@@ -39,6 +41,8 @@ func NewRouter(
 	alertingService *services.AlertingService,
 	categoryService *services.CategoryService,
 	tagService *services.TagService,
+	widgetService *services.WidgetService,
+	themeService *services.ThemeService,
 ) *Router {
 	handler := NewAPIHandler(userService, articleService, searchService, contentIngestionService)
 	searchHandlers := NewSearchHandlers(searchService)
@@ -69,6 +73,10 @@ func NewRouter(
 		healthService,
 		alertingService,
 	)
+	
+	// Create widget and theme handlers
+	widgetHandlers := NewWidgetHandlers(widgetService)
+	themeHandlers := NewThemeHandlers(themeService)
 
 	return &Router{
 		handler:                   handler,
@@ -78,6 +86,8 @@ func NewRouter(
 		adminHandlers:             adminHandlers,
 		contentManagementHandlers: contentManagementHandlers,
 		monitoringHandler:         monitoringHandler,
+		widgetHandlers:            widgetHandlers,
+		themeHandlers:             themeHandlers,
 		authMiddleware:            authMiddleware,
 		rateLimiter:               rateLimiter,
 	}
@@ -192,47 +202,7 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 			system.GET("/metrics", r.handler.GetMetrics)                           // GET /api/v1/system/metrics
 		}
 
-		// Monitoring routes (admin only) - comprehensive monitoring system
-		monitoring := v1.Group("/monitoring")
-		{
-			monitoring.Use(r.authMiddleware.RequireAuth())
-			monitoring.Use(RequireRole(models.RoleAdmin))
-			
-			// Dashboard and overview
-			monitoring.GET("/dashboard", r.monitoringHandler.GetDashboard)         // GET /api/v1/monitoring/dashboard
-			monitoring.GET("/overview", r.monitoringHandler.GetOverview)           // GET /api/v1/monitoring/overview
-			
-			// System metrics
-			monitoring.GET("/metrics/system", r.monitoringHandler.GetSystemMetrics)       // GET /api/v1/monitoring/metrics/system
-			monitoring.GET("/metrics/database", r.monitoringHandler.GetDatabaseMetrics)   // GET /api/v1/monitoring/metrics/database
-			monitoring.GET("/metrics/cache", r.monitoringHandler.GetCacheMetrics)         // GET /api/v1/monitoring/metrics/cache
-			monitoring.GET("/metrics/publishing", r.monitoringHandler.GetPublishingMetrics) // GET /api/v1/monitoring/metrics/publishing
-			monitoring.GET("/metrics/performance", r.monitoringHandler.GetPerformanceMetrics) // GET /api/v1/monitoring/metrics/performance
-			
-			// Health checks
-			monitoring.GET("/health/components", r.monitoringHandler.GetComponentHealth)  // GET /api/v1/monitoring/health/components
-			monitoring.POST("/health/check/:component", r.monitoringHandler.CheckComponent) // POST /api/v1/monitoring/health/check/database
-			
-			// Alerts
-			monitoring.GET("/alerts", r.monitoringHandler.GetAlerts)               // GET /api/v1/monitoring/alerts
-			monitoring.GET("/alerts/active", r.monitoringHandler.GetActiveAlerts)  // GET /api/v1/monitoring/alerts/active
-			monitoring.POST("/alerts/test", r.monitoringHandler.SendTestAlert)     // POST /api/v1/monitoring/alerts/test
-			monitoring.POST("/alerts/:id/resolve", r.monitoringHandler.ResolveAlert) // POST /api/v1/monitoring/alerts/123/resolve
-			
-			// Alert rules
-			monitoring.GET("/alert-rules", r.monitoringHandler.GetAlertRules)      // GET /api/v1/monitoring/alert-rules
-			monitoring.POST("/alert-rules", r.monitoringHandler.CreateAlertRule)   // POST /api/v1/monitoring/alert-rules
-			monitoring.PUT("/alert-rules/:id", r.monitoringHandler.UpdateAlertRule) // PUT /api/v1/monitoring/alert-rules/123
-			monitoring.DELETE("/alert-rules/:id", r.monitoringHandler.DeleteAlertRule) // DELETE /api/v1/monitoring/alert-rules/123
-			
-			// Cache management
-			monitoring.POST("/cache/clear", r.monitoringHandler.ClearCache)        // POST /api/v1/monitoring/cache/clear
-			monitoring.GET("/cache/stats", r.monitoringHandler.GetCacheStats)      // GET /api/v1/monitoring/cache/stats
-			
-			// Configuration
-			monitoring.GET("/config", r.monitoringHandler.GetMonitoringConfig)     // GET /api/v1/monitoring/config
-			monitoring.PUT("/config", r.monitoringHandler.UpdateMonitoringConfig) // PUT /api/v1/monitoring/config
-		}
+		// Note: Monitoring routes are registered by monitoringHandler.RegisterRoutes() above
 
 		// Analytics routes (admin and editor only)
 		analytics := v1.Group("/analytics")
@@ -330,6 +300,65 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 			
 			// Register content management routes
 			r.contentManagementHandlers.RegisterContentManagementRoutes(admin)
+			
+			// Widget management routes
+			widgets := admin.Group("/widgets")
+			{
+				// Widget CRUD
+				widgets.GET("", r.widgetHandlers.GetAllWidgets)                    // GET /api/v1/admin/widgets
+				widgets.POST("", r.widgetHandlers.CreateWidget)                    // POST /api/v1/admin/widgets
+				widgets.GET("/:id", r.widgetHandlers.GetWidget)                    // GET /api/v1/admin/widgets/123
+				widgets.PUT("/:id", r.widgetHandlers.UpdateWidget)                 // PUT /api/v1/admin/widgets/123
+				widgets.DELETE("/:id", r.widgetHandlers.DeleteWidget)              // DELETE /api/v1/admin/widgets/123
+				
+				// Widget types and configuration
+				widgets.GET("/types", r.widgetHandlers.GetWidgetTypes)             // GET /api/v1/admin/widgets/types
+				widgets.GET("/page-types", r.widgetHandlers.GetPageTypes)          // GET /api/v1/admin/widgets/page-types
+				widgets.GET("/zones", r.widgetHandlers.GetWidgetZones)             // GET /api/v1/admin/widgets/zones
+				widgets.GET("/by-type/:type", r.widgetHandlers.GetWidgetsByType)   // GET /api/v1/admin/widgets/by-type/latest_articles
+				
+				// Widget rendering
+				widgets.GET("/:id/render", r.widgetHandlers.RenderWidget)          // GET /api/v1/admin/widgets/123/render
+				
+				// Widget placements
+				widgets.GET("/placements", r.widgetHandlers.GetWidgetPlacements)   // GET /api/v1/admin/widgets/placements?page_type=homepage&zone=sidebar
+				widgets.POST("/placements", r.widgetHandlers.CreateWidgetPlacement) // POST /api/v1/admin/widgets/placements
+				widgets.PUT("/placements/:id", r.widgetHandlers.UpdateWidgetPlacement) // PUT /api/v1/admin/widgets/placements/123
+				widgets.DELETE("/placements/:id", r.widgetHandlers.DeleteWidgetPlacement) // DELETE /api/v1/admin/widgets/placements/123
+				widgets.PUT("/placements/positions", r.widgetHandlers.UpdatePlacementPositions) // PUT /api/v1/admin/widgets/placements/positions
+			}
+			
+			// Theme management routes
+			themes := admin.Group("/themes")
+			{
+				// Theme CRUD
+				themes.GET("", r.themeHandlers.GetAllThemes)                       // GET /api/v1/admin/themes
+				themes.POST("", r.themeHandlers.CreateTheme)                       // POST /api/v1/admin/themes
+				themes.GET("/active", r.themeHandlers.GetActiveTheme)              // GET /api/v1/admin/themes/active
+				themes.GET("/:id", r.themeHandlers.GetTheme)                       // GET /api/v1/admin/themes/123
+				themes.PUT("/:id", r.themeHandlers.UpdateTheme)                    // PUT /api/v1/admin/themes/123
+				themes.DELETE("/:id", r.themeHandlers.DeleteTheme)                 // DELETE /api/v1/admin/themes/123
+				themes.POST("/:id/activate", r.themeHandlers.SetActiveTheme)       // POST /api/v1/admin/themes/123/activate
+				
+				// Theme CSS generation
+				themes.GET("/:id/css", r.themeHandlers.GenerateThemeCSS)           // GET /api/v1/admin/themes/123/css
+				themes.GET("/active/css", r.themeHandlers.GetActiveThemeCSS)       // GET /api/v1/admin/themes/active/css
+				
+				// Default configuration
+				themes.GET("/default-config", r.themeHandlers.GetDefaultThemeConfig) // GET /api/v1/admin/themes/default-config
+				
+				// Template overrides
+				templates := themes.Group("/templates")
+				{
+					templates.GET("", r.themeHandlers.GetAllTemplateOverrides)     // GET /api/v1/admin/themes/templates
+					templates.POST("", r.themeHandlers.CreateTemplateOverride)     // POST /api/v1/admin/themes/templates
+					templates.GET("/override", r.themeHandlers.GetTemplateOverride) // GET /api/v1/admin/themes/templates/override?path=pages/article.html
+					templates.GET("/content", r.themeHandlers.GetTemplateContent)  // GET /api/v1/admin/themes/templates/content?path=pages/article.html
+					templates.PUT("/:id", r.themeHandlers.UpdateTemplateOverride)  // PUT /api/v1/admin/themes/templates/123
+					templates.DELETE("/:id", r.themeHandlers.DeleteTemplateOverride) // DELETE /api/v1/admin/themes/templates/123
+					templates.POST("/preview", r.themeHandlers.PreviewTemplate)    // POST /api/v1/admin/themes/templates/preview
+				}
+			}
 		}
 	}
 }

@@ -2,7 +2,6 @@ package services
 
 import (
 	"bytes"
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
@@ -119,11 +118,6 @@ func (s *SocialMediaService) RotateCredentials(id uint64, newCredentials string)
 
 // PublishToSocialMedia publishes an article to social media platforms
 func (s *SocialMediaService) PublishToSocialMedia(articleID uint64, platforms []models.SocialMediaPlatform) error {
-	// Get article details
-	article, err := s.getArticle(articleID)
-	if err != nil {
-		return fmt.Errorf("failed to get article: %w", err)
-	}
 
 	// Create posts for each platform
 	for _, platform := range platforms {
@@ -142,13 +136,6 @@ func (s *SocialMediaService) PublishToSocialMedia(articleID uint64, platforms []
 			continue // Skip if no credentials available
 		}
 		post.CredentialID = credentialID
-
-		// Generate platform-specific content
-		content, err := s.generatePostContent(article, platform)
-		if err != nil {
-			continue // Skip if content generation fails
-		}
-		post.Content = *content
 
 		// Generate platform-specific content
 		if err := s.generatePostContent(post); err != nil {
@@ -478,7 +465,7 @@ func (s *SocialMediaService) CreateFacebookInstantArticle(articleID uint64) erro
 	instantHTML := s.generateInstantArticleHTML(article)
 
 	// Get Facebook credentials
-	creds, err := s.GetCredentials(models.PlatformFacebook)
+	creds, err := s.GetCredentialsByPlatform(models.PlatformFacebook)
 	if err != nil {
 		return err
 	}
@@ -780,11 +767,6 @@ func (s *SocialMediaService) PublishArticleToAllPlatforms(articleID uint64) erro
 
 // SchedulePost schedules a post for future publishing
 func (s *SocialMediaService) SchedulePost(articleID uint64, platforms []models.SocialMediaPlatform, scheduledAt time.Time) error {
-	// Get article details
-	article, err := s.getArticle(articleID)
-	if err != nil {
-		return fmt.Errorf("failed to get article: %w", err)
-	}
 
 	// Create posts for each platform
 	for _, platform := range platforms {
@@ -836,8 +818,8 @@ func (s *SocialMediaService) SchedulePost(articleID uint64, platforms []models.S
 	return nil
 }
 
-// GetCredentials retrieves active credentials for a platform
-func (s *SocialMediaService) GetCredentials(platform models.SocialMediaPlatform) (*models.SocialMediaCredentials, error) {
+// GetCredentialsByPlatform retrieves active credentials for a platform
+func (s *SocialMediaService) GetCredentialsByPlatform(platform models.SocialMediaPlatform) (*models.SocialMediaCredentials, error) {
 	creds := &models.SocialMediaCredentials{}
 	query := `
 		SELECT id, platform, name, credentials, is_active, last_rotated, created_at, updated_at

@@ -4,11 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
-	"time"
 
-	"github.com/lib/pq"
-	"your-project/internal/models"
+	"high-performance-news-website/internal/models"
 )
 
 type PushNotificationRepository struct {

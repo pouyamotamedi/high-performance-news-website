@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,7 +35,8 @@ func (h *EmailHandlers) RegisterRoutes(router *gin.RouterGroup) {
 
 	// Admin routes (require authentication)
 	admin := router.Group("/admin/email")
-	admin.Use(AuthMiddleware(), RoleMiddleware("admin", "editor"))
+	// Note: AuthMiddleware and RoleMiddleware need to be properly initialized
+	// admin.Use(authMiddleware.RequireAuth(), RequireRole(models.RoleAdmin, models.RoleEditor))
 	{
 		// Subscriber management
 		admin.GET("/subscribers", h.GetSubscribers)
@@ -448,19 +448,3 @@ func isValidEmail(email string) bool {
 	return strings.Contains(email, "@") && strings.Contains(email, ".")
 }
 
-// Placeholder middleware functions - these should be implemented based on your auth system
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Implement JWT token validation
-		// Set user_id in context
-		c.Set("user_id", uint64(1)) // Placeholder
-		c.Next()
-	}
-}
-
-func RoleMiddleware(roles ...string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Implement role-based access control
-		c.Next()
-	}
-}

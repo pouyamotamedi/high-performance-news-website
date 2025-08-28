@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 

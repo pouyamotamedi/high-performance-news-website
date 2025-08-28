@@ -138,7 +138,7 @@ func (as *AlertingService) sendEmailAlert(alert *models.Alert) error {
 	body := as.formatEmailBody(alert)
 	
 	for _, recipient := range recipients {
-		err := as.emailService.SendEmail(context.Background(), recipient, subject, body)
+		err := as.emailService.SendEmail(context.Background(), recipient, subject, body, body)
 		if err != nil {
 			log.Printf("Failed to send alert email to %s: %v", recipient, err)
 			return err

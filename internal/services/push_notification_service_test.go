@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"your-project/internal/models"
-	"your-project/internal/repositories"
+	"high-performance-news-website/internal/models"
+	"high-performance-news-website/internal/repositories"
 )
 
 // Mock repository for testing

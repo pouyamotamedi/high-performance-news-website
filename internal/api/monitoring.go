@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -163,9 +162,11 @@ func (mh *MonitoringHandler) GetOverview(c *gin.Context) {
 		return
 	}
 	
+	performanceMetrics := mh.metricsService.GetPerformanceMetrics()
+	
 	overview := gin.H{
 		"system_health": mh.metricsService.GetOverallHealth(),
-		"uptime":        time.Since(mh.metricsService.startTime).String(),
+		"uptime":        performanceMetrics["uptime_formatted"],
 		"timestamp":     time.Now(),
 	}
 	
@@ -309,8 +310,10 @@ func (mh *MonitoringHandler) CheckComponent(c *gin.Context) {
 		return
 	}
 	
-	healthCheck := mh.metricsService.PerformHealthCheck(component)
-	if healthCheck == nil {
+	// Get all health checks and find the specific component
+	healthChecks := mh.metricsService.GetHealthChecks()
+	healthCheck, exists := healthChecks[component]
+	if !exists {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid component name",
 		})

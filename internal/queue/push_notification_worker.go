@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"your-project/internal/config"
-	"your-project/internal/services"
+	"high-performance-news-website/internal/config"
+	"high-performance-news-website/internal/services"
 )
 
 // PushNotificationWorker handles background processing of push notifications

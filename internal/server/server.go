@@ -22,6 +22,29 @@ import (
 	"high-performance-news-website/pkg/database"
 )
 
+// CacheServiceAdapter adapts cache.CacheService to services.CacheService
+type CacheServiceAdapter struct {
+	cache cache.CacheService
+}
+
+func (c *CacheServiceAdapter) Set(key string, value []byte, ttl time.Duration) error {
+	return c.cache.Set(context.Background(), key, value, ttl)
+}
+
+func (c *CacheServiceAdapter) Get(key string) ([]byte, error) {
+	return c.cache.Get(context.Background(), key)
+}
+
+func (c *CacheServiceAdapter) Delete(key string) error {
+	return c.cache.Delete(context.Background(), key)
+}
+
+func (c *CacheServiceAdapter) DeletePattern(pattern string) error {
+	// This would need to be implemented based on the cache implementation
+	// For now, return nil
+	return nil
+}
+
 type Server struct {
 	config                   *config.Config
 	router                   *gin.Engine
@@ -88,44 +111,72 @@ func New(cfg *config.Config) (*Server, error) {
 		googleNewsHandlers = api.NewGoogleNewsHandlers(mockGoogleNewsSitemapService)
 	}
 
+	// Declare services outside the block
+	var authService *auth.AuthService
+	var userService *services.UserService
+	var configService *services.ConfigService
+	var metricsService *services.MetricsService
+	var healthService *services.HealthService
+	var alertingService *services.AlertingService
+	var monitoringConfig *config.MonitoringConfig
+	var categoryService *services.CategoryService
+	var tagService *services.TagService
+	var widgetService *services.WidgetService
+	var themeService *services.ThemeService
+	var articleService *services.ArticleService
+	var contentIngestionService *services.ContentIngestionService
+	var searchService *services.SearchService
+	var commentHandlers *api.CommentHandlers
+	var imageHandlers *api.ImageHandlers
+
 	// Initialize services - skip database-dependent services if using mock
 	if !useMockServices {
 		seoService = services.NewSEOService(baseURL, cfg.App.Name, "en")
 		breadcrumbService = services.NewBreadcrumbService(baseURL, cfg.App.Name)
 		// Initialize full services when database is available
-		authService := auth.NewAuthService(cfg.JWT.Secret, cfg.JWT.Secret)
-		userService := services.NewUserService(db.DB, authService)
+		authService = auth.NewAuthService(cfg.JWT.Secret, cfg.JWT.Secret)
+		userService = services.NewUserService(db.DB, authService)
 		
 		if err := createDemoUser(userService); err != nil {
 			log.Printf("Warning: Failed to create demo user: %v", err)
 		}
 		
-		configService := services.NewConfigService()
+		configService = services.NewConfigService()
 		configService.LoadDefaults()
 		
 		// Initialize monitoring configuration
-		monitoringConfig := config.LoadMonitoringConfig()
+		monitoringConfig = config.LoadMonitoringConfig()
 		if err := monitoringConfig.Validate(); err != nil {
 			log.Printf("Warning: Invalid monitoring config: %v", err)
 		}
 		
 		// Initialize metrics service with proper parameters
-		metricsService := services.NewMetricsService(db.DB, cacheClient, monitoringConfig)
+		metricsService = services.NewMetricsService(db.DB, cacheClient, monitoringConfig)
 		
 		// Initialize health service
-		healthService := services.NewHealthService(db.DB, cacheClient, monitoringConfig, metricsService)
+		healthService = services.NewHealthService(db.DB, cacheClient, monitoringConfig, metricsService)
 		
 		// Initialize alerting service
 		var emailService services.EmailService // This would be initialized based on config
-		alertingService := services.NewAlertingService(monitoringConfig, emailService)
+		alertingService = services.NewAlertingService(monitoringConfig, emailService)
 		
-		categoryService := services.NewCategoryService(db.DB)
-		tagService := services.NewTagService(db.DB)
+		categoryService = services.NewCategoryService(db.DB)
+		tagService = services.NewTagService(db.DB)
 		
 		articleRepo := repositories.NewArticleRepository(db, cacheClient, cfg.Server.StaticPath)
+		
+		// Initialize widget and theme services
+		widgetRepo := repositories.NewWidgetRepository(db.DB)
+		themeRepo := repositories.NewThemeRepository(db.DB)
+		categoryRepo := repositories.NewCategoryRepository(db.DB)
+		tagRepo := repositories.NewTagRepository(db.DB)
+		
+		// Create cache adapter for services that expect the old interface
+		cacheAdapter := &CacheServiceAdapter{cache: cacheClient}
+		widgetService = services.NewWidgetService(widgetRepo, articleRepo, categoryRepo, tagRepo, cacheAdapter)
+		themeService = services.NewThemeService(themeRepo, cacheAdapter, "web/templates")
 		searchRepo := &services.ArticleRepositoryAdapter{Repository: articleRepo}
 
-		var searchService *services.SearchService
 		redisClient := dragonflyCache.GetRedisClient()
 		
 		if cfg.Search.Enabled {
@@ -140,10 +191,10 @@ func New(cfg *config.Config) (*Server, error) {
 			searchService = services.NewSearchService(nil, redisClient, searchRepo)
 		}
 
-		articleService := services.NewArticleService(db, articleRepo, nil)
-		contentIngestionService := &services.ContentIngestionService{}
-		commentHandlers := &api.CommentHandlers{}
-		imageHandlers := &api.ImageHandlers{}
+		articleService = services.NewArticleService(db, articleRepo, nil)
+		contentIngestionService = &services.ContentIngestionService{}
+		commentHandlers = &api.CommentHandlers{}
+		imageHandlers = &api.ImageHandlers{}
 
 		// Initialize real RSS services now that articleRepo is available
 		if rssHandlers == nil {
@@ -184,6 +235,8 @@ func New(cfg *config.Config) (*Server, error) {
 			alertingService,
 			categoryService,
 			tagService,
+			widgetService,
+			themeService,
 		)
 	} else {
 		// Skip API router when using mock services
@@ -253,37 +306,7 @@ func (s *Server) setupRoutes() {
 	s.setupRSSRoutes()
 	s.setupGoogleNewsRoutes()
 
-	s.router.GET("/health", func(c *gin.Context) {
-		ctx := context.Background()
-		
-		cacheStatus := "ok"
-		if s.cache != nil {
-			if err := s.cache.Health(ctx); err != nil {
-				cacheStatus = "error"
-				log.Printf("Cache health check failed: %v", err)
-			}
-		} else {
-			cacheStatus = "dev-mode"
-		}
-		
-		dbStatus := "ok"
-		if s.db != nil {
-			if err := s.db.Ping(); err != nil {
-				dbStatus = "error"
-				log.Printf("Database health check failed: %v", err)
-			}
-		} else {
-			dbStatus = "dev-mode"
-		}
-		
-		c.JSON(http.StatusOK, gin.H{
-			"status":   "ok",
-			"app":      s.config.App.Name,
-			"version":  s.config.App.Version,
-			"cache":    cacheStatus,
-			"database": dbStatus,
-		})
-	})
+	// Health route is handled by the monitoring handler
 
 	s.router.Static("/static", "./web/static")
 	s.router.GET("/", s.handleHomepage)

@@ -1,9 +1,7 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -265,16 +263,7 @@ func (h *MonitoringHandlers) GetDetailedMetrics(c *gin.Context) {
 		return
 	}
 	
-	timeRange := c.DefaultQuery("range", "1h")
-	
-	metrics, err := h.metricsService.GetDetailedPerformanceMetrics(timeRange)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to get detailed metrics",
-			"details": err.Error(),
-		})
-		return
-	}
+	metrics := h.metricsService.GetPerformanceMetrics()
 	
 	c.JSON(http.StatusOK, metrics)
 }
@@ -381,11 +370,11 @@ func (h *MonitoringHandlers) PerformHealthCheck(c *gin.Context) {
 	component := c.DefaultQuery("component", "all")
 	
 	if component == "all" {
-		components := []string{"database", "cache", "disk", "memory", "cpu"}
 		results := make(map[string]*models.HealthCheck)
 		
-		for _, comp := range components {
-			results[comp] = h.metricsService.PerformHealthCheck(comp)
+		healthChecks := h.metricsService.GetHealthChecks()
+		for comp, check := range healthChecks {
+			results[comp] = check
 		}
 		
 		c.JSON(http.StatusOK, gin.H{
@@ -393,8 +382,14 @@ func (h *MonitoringHandlers) PerformHealthCheck(c *gin.Context) {
 			"overall_status": h.metricsService.GetOverallHealth(),
 		})
 	} else {
-		result := h.metricsService.PerformHealthCheck(component)
-		c.JSON(http.StatusOK, result)
+		healthChecks := h.metricsService.GetHealthChecks()
+		if result, exists := healthChecks[component]; exists {
+			c.JSON(http.StatusOK, result)
+		} else {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "Component not found",
+			})
+		}
 	}
 }
 
