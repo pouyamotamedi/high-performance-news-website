@@ -1,0 +1,362 @@
+{{define "article.html"}}
+<!DOCTYPE html>
+<html lang="{{.LanguageCode}}" dir="{{.LanguageDirection}}" data-theme="{{.ThemeMode}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <title>{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}</title>
+    <meta name="description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="preload" href="/static/css/article.css" as="style">
+    <link rel="stylesheet" href="/static/css/article.css">
+    <link rel="stylesheet" href="/static/css/syntax-highlighting.css">
+</head>
+<body>
+<div class="article-page">
+    <article class="article-main" itemscope itemtype="https://schema.org/NewsArticle">
+        <!-- Article header -->
+        <header class="article-header">
+            {{if .Category}}
+            <div class="article-category">
+                <a href="/categories/{{.Category.Slug}}" class="category-link">{{.Category.Name}}</a>
+            </div>
+            {{end}}
+            
+            <h1 class="article-title" itemprop="headline">{{.Article.Title}}</h1>
+            
+            {{if .Article.Excerpt}}
+            <div class="article-excerpt" itemprop="description">
+                <p>{{.Article.Excerpt}}</p>
+            </div>
+            {{end}}
+            
+            <div class="article-meta">
+                <div class="meta-primary">
+                    {{if .Author}}
+                    <div class="article-author" itemprop="author" itemscope itemtype="https://schema.org/Person">
+                        {{if .Author.Avatar}}
+                        <img src="{{.Author.Avatar}}" alt="{{.Author.FirstName}} {{.Author.LastName}}" class="author-avatar">
+                        {{end}}
+                        <div class="author-info">
+                            <span class="author-name" itemprop="name">{{.Author.FirstName}} {{.Author.LastName}}</span>
+                            {{if .Author.Bio}}
+                            <span class="author-bio">{{truncate .Author.Bio 100}}</span>
+                            {{end}}
+                        </div>
+                    </div>
+                    {{end}}
+                    
+                    <div class="article-dates">
+                        <time class="publish-date" datetime="{{.Article.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}" itemprop="datePublished">
+                            {{if eq .LanguageCode "fa"}}
+                                منتشر شده: {{formatDate .Article.PublishedAt}}
+                            {{else if eq .LanguageCode "ar"}}
+                                نُشر في: {{formatDate .Article.PublishedAt}}
+                            {{else}}
+                                Published: {{formatDate .Article.PublishedAt}}
+                            {{end}}
+                        </time>
+                        
+                        {{if ne .Article.UpdatedAt .Article.PublishedAt}}
+                        <time class="update-date" datetime="{{.Article.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}" itemprop="dateModified">
+                            {{if eq .LanguageCode "fa"}}
+                                به‌روزرسانی: {{formatDate .Article.UpdatedAt}}
+                            {{else if eq .LanguageCode "ar"}}
+                                محدث في: {{formatDate .Article.UpdatedAt}}
+                            {{else}}
+                                Updated: {{formatDate .Article.UpdatedAt}}
+                            {{end}}
+                        </time>
+                        {{end}}
+                    </div>
+                </div>
+                
+                <div class="meta-secondary">
+                    {{if .ReadingTime}}
+                    <span class="reading-time">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        {{.ReadingTime}} 
+                        {{if eq .LanguageCode "fa"}}
+                            دقیقه مطالعه
+                        {{else if eq .LanguageCode "ar"}}
+                            دقيقة قراءة
+                        {{else}}
+                            min read
+                        {{end}}
+                    </span>
+                    {{end}}
+                    
+                    <span class="article-views">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        {{.Article.ViewCount}} 
+                        {{if eq .LanguageCode "fa"}}
+                            بازدید
+                        {{else if eq .LanguageCode "ar"}}
+                            مشاهدة
+                        {{else}}
+                            views
+                        {{end}}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Social sharing -->
+            {{if .ShareURLs}}
+            <div class="article-sharing">
+                <span class="sharing-label">
+                    {{if eq .LanguageCode "fa"}}
+                        اشتراک‌گذاری:
+                    {{else if eq .LanguageCode "ar"}}
+                        مشاركة:
+                    {{else}}
+                        Share:
+                    {{end}}
+                </span>
+                <div class="sharing-buttons">
+                    {{range $platform, $url := .ShareURLs}}
+                    <a href="{{$url}}" class="share-button share-{{$platform}}" target="_blank" rel="noopener">
+                        {{if eq $platform "facebook"}}
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                        {{else if eq $platform "twitter"}}
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                        </svg>
+                        {{else if eq $platform "linkedin"}}
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                        </svg>
+                        {{else if eq $platform "telegram"}}
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                        </svg>
+                        {{end}}
+                    </a>
+                    {{end}}
+                    
+                    <!-- Copy link button -->
+                    <button class="share-button share-copy" data-url="{{.CanonicalURL}}" title="Copy link">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            {{end}}
+            
+            <!-- Tags -->
+            {{if .Tags}}
+            <div class="article-tags">
+                {{range .Tags}}
+                <a href="/tags/{{.Slug}}" class="tag-link" style="{{if .Color}}--tag-color: {{.Color}};{{end}}">
+                    {{.Name}}
+                </a>
+                {{end}}
+            </div>
+            {{end}}
+        </header>
+        
+        <!-- Featured image -->
+        {{if .Article.FeaturedImage}}
+        <div class="article-image">
+            <img src="{{.Article.FeaturedImage}}" alt="{{if .Article.ImageAlt}}{{.Article.ImageAlt}}{{else}}{{.Article.Title}}{{end}}" 
+                 class="featured-image" itemprop="image">
+        </div>
+        {{end}}
+        
+        <!-- Article content -->
+        <div class="article-content" itemprop="articleBody">
+            {{.Article.Content | safeHTML}}
+        </div>
+        
+        <!-- Article actions -->
+        <footer class="article-footer">
+            <div class="article-actions">
+                <div class="engagement-buttons">
+                    <button class="engagement-button like-button" data-article-id="{{.Article.ID}}" data-action="like">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <span class="button-text">{{.Article.LikeCount}}</span>
+                    </button>
+                    
+                    <button class="engagement-button dislike-button" data-article-id="{{.Article.ID}}" data-action="dislike">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="2" transform="rotate(180 12 12)"/>
+                        </svg>
+                        <span class="button-text">{{.Article.DislikeCount}}</span>
+                    </button>
+                </div>
+                
+                <!-- Print button -->
+                <button class="action-button print-button" onclick="window.print()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polyline points="6,9 6,2 18,2 18,9" stroke="currentColor" stroke-width="2"/>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="2"/>
+                        <rect x="6" y="14" width="12" height="8" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    {{if eq .LanguageCode "fa"}}
+                        چاپ
+                    {{else if eq .LanguageCode "ar"}}
+                        طباعة
+                    {{else}}
+                        Print
+                    {{end}}
+                </button>
+            </div>
+        </footer>
+        
+        <!-- Hidden structured data -->
+        <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization" style="display: none;">
+            <meta itemprop="name" content="{{.SiteName}}">
+            <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+                <meta itemprop="url" content="{{.SiteURL}}/static/images/logo.png">
+            </div>
+        </div>
+        <meta itemprop="dateModified" content="{{.Article.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">
+    </article>
+    
+    <!-- Related articles -->
+    {{if .RelatedArticles}}
+    <aside class="related-articles">
+        <h2 class="related-title">
+            {{if eq .LanguageCode "fa"}}
+                مقالات مرتبط
+            {{else if eq .LanguageCode "ar"}}
+                مقالات ذات صلة
+            {{else}}
+                Related Articles
+            {{end}}
+        </h2>
+        
+        <div class="related-grid">
+            {{range .RelatedArticles}}
+            <div class="article-card">
+                <h3><a href="/articles/{{.Slug}}">{{.Title}}</a></h3>
+            </div>
+            {{end}}
+        </div>
+    </aside>
+    {{end}}
+    
+    <!-- Comments section -->
+    {{if .Comments}}
+    <section class="comments-section">
+        <h2 class="comments-title">
+            {{if eq .LanguageCode "fa"}}
+                نظرات ({{.CommentCount}})
+            {{else if eq .LanguageCode "ar"}}
+                التعليقات ({{.CommentCount}})
+            {{else}}
+                Comments ({{.CommentCount}})
+            {{end}}
+        </h2>
+        
+        <!-- Comment form -->
+        <form class="comment-form" action="/articles/{{.Article.Slug}}/comments" method="POST">
+            <div class="form-group">
+                <label for="comment-name" class="form-label">
+                    {{if eq .LanguageCode "fa"}}
+                        نام
+                    {{else if eq .LanguageCode "ar"}}
+                        الاسم
+                    {{else}}
+                        Name
+                    {{end}}
+                </label>
+                <input type="text" id="comment-name" name="name" class="form-input" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="comment-email" class="form-label">
+                    {{if eq .LanguageCode "fa"}}
+                        ایمیل
+                    {{else if eq .LanguageCode "ar"}}
+                        البريد الإلكتروني
+                    {{else}}
+                        Email
+                    {{end}}
+                </label>
+                <input type="email" id="comment-email" name="email" class="form-input" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="comment-content" class="form-label">
+                    {{if eq .LanguageCode "fa"}}
+                        نظر
+                    {{else if eq .LanguageCode "ar"}}
+                        التعليق
+                    {{else}}
+                        Comment
+                    {{end}}
+                </label>
+                <textarea id="comment-content" name="content" class="form-textarea" rows="4" required></textarea>
+            </div>
+            
+            <button type="submit" class="form-submit">
+                {{if eq .LanguageCode "fa"}}
+                    ارسال نظر
+                {{else if eq .LanguageCode "ar"}}
+                    إرسال التعليق
+                {{else}}
+                    Submit Comment
+                {{end}}
+            </button>
+        </form>
+        
+        <!-- Comments list -->
+        <div class="comments-list">
+            {{range .Comments}}
+            <div class="comment" id="comment-{{.ID}}">
+                <div class="comment-header">
+                    <span class="comment-author">{{.Name}}</span>
+                    <time class="comment-date" datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">
+                        {{timeAgo .CreatedAt}}
+                    </time>
+                </div>
+                <div class="comment-content">
+                    {{.Content | safeHTML}}
+                </div>
+                
+                {{if .Replies}}
+                <div class="comment-replies">
+                    {{range .Replies}}
+                    <div class="comment comment-reply">
+                        <div class="comment-header">
+                            <span class="comment-author">{{.Name}}</span>
+                            <time class="comment-date" datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">
+                                {{timeAgo .CreatedAt}}
+                            </time>
+                        </div>
+                        <div class="comment-content">
+                            {{.Content | safeHTML}}
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+    </section>
+    {{end}}
+</div>
+<script src="/static/js/main.js"></script>
+<script src="/static/js/article.js"></script>
+<script src="/static/js/comments.js"></script>
+<script src="/static/js/sharing.js"></script>
+</body>
+</html>
+{{end}}

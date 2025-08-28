@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="{{.LanguageCode}}" dir="{{.LanguageDirection}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Language and content metadata -->
+    <meta name="language" content="{{.LanguageCode}}">
+    <meta name="content-language" content="{{.LanguageCode}}">
+    {{if .LanguageDirection}}
+    <meta name="direction" content="{{.LanguageDirection}}">
+    {{end}}
+    
+    <!-- SEO metadata -->
+    <title>{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}</title>
+    {{if .SEODescription}}
+    <meta name="description" content="{{.SEODescription}}">
+    {{end}}
+    {{if .SEOKeywords}}
+    <meta name="keywords" content="{{join .SEOKeywords ", "}}">
+    {{end}}
+    
+    <!-- Open Graph metadata -->
+    <meta property="og:title" content="{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}">
+    {{if .SEODescription}}
+    <meta property="og:description" content="{{.SEODescription}}">
+    {{end}}
+    <meta property="og:type" content="{{if .OGType}}{{.OGType}}{{else}}website{{end}}">
+    <meta property="og:url" content="{{.CanonicalURL}}">
+    <meta property="og:locale" content="{{.LanguageCode}}">
+    {{if .LanguageDirection}}
+    <meta property="og:locale:direction" content="{{.LanguageDirection}}">
+    {{end}}
+    
+    <!-- Twitter Card metadata -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}">
+    {{if .SEODescription}}
+    <meta name="twitter:description" content="{{.SEODescription}}">
+    {{end}}
+    
+    <!-- Canonical URL -->
+    {{if .CanonicalURL}}
+    <link rel="canonical" href="{{.CanonicalURL}}">
+    {{end}}
+    
+    <!-- Language alternates -->
+    {{range $lang, $url := .AlternateURLs}}
+    <link rel="alternate" hreflang="{{$lang}}" href="{{$url}}">
+    {{end}}
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/multilingual.css">
+    {{if eq .LanguageDirection "rtl"}}
+    <link rel="stylesheet" href="/static/css/rtl.css">
+    {{else}}
+    <link rel="stylesheet" href="/static/css/ltr.css">
+    {{end}}
+    
+    <!-- Language-specific fonts -->
+    {{if eq .LanguageCode "fa"}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazir:wght@300;400;500;700&display=swap" rel="stylesheet">
+    {{else if eq .LanguageCode "ar"}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    {{else}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {{end}}
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    
+    <!-- Additional head content -->
+    {{block "head" .}}{{end}}
+</head>
+<body class="{{.LanguageCode}}-lang {{.LanguageDirection}}-dir">
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-link">
+        {{if eq .LanguageCode "fa"}}
+            پرش به محتوا
+        {{else if eq .LanguageCode "ar"}}
+            انتقال إلى المحتوى
+        {{else}}
+            Skip to content
+        {{end}}
+    </a>
+    
+    <!-- Header -->
+    <header class="site-header" role="banner">
+        <div class="multilingual-container">
+            <!-- Language switcher -->
+            <div class="language-switcher">
+                <button class="language-toggle" aria-haspopup="true" aria-expanded="false">
+                    {{if eq .LanguageCode "fa"}}
+                        فارسی
+                    {{else if eq .LanguageCode "ar"}}
+                        العربية
+                    {{else if eq .LanguageCode "en"}}
+                        English
+                    {{else}}
+                        {{.LanguageCode}}
+                    {{end}}
+                    <span class="dropdown-arrow">▼</span>
+                </button>
+                <div class="language-dropdown" role="menu">
+                    {{range .AvailableLanguages}}
+                    <a href="{{.URL}}" class="language-option {{if eq .Code $.LanguageCode}}active{{end}}" 
+                       role="menuitem" hreflang="{{.Code}}">
+                        <span class="language-native">{{.NativeName}}</span>
+                        <span class="language-name">({{.Name}})</span>
+                    </a>
+                    {{end}}
+                </div>
+            </div>
+            
+            <!-- Site navigation -->
+            <nav class="main-navigation" role="navigation" aria-label="{{if eq .LanguageCode "fa"}}منوی اصلی{{else if eq .LanguageCode "ar"}}القائمة الرئيسية{{else}}Main navigation{{end}}">
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="{{.HomeURL}}" class="nav-link">
+                            {{if eq .LanguageCode "fa"}}
+                                خانه
+                            {{else if eq .LanguageCode "ar"}}
+                                الرئيسية
+                            {{else}}
+                                Home
+                            {{end}}
+                        </a>
+                    </li>
+                    {{range .NavigationCategories}}
+                    <li class="nav-item">
+                        <a href="{{.URL}}" class="nav-link">{{.Name}}</a>
+                    </li>
+                    {{end}}
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <!-- Breadcrumbs -->
+    {{if .Breadcrumbs}}
+    <nav class="breadcrumb-nav" aria-label="{{if eq .LanguageCode "fa"}}مسیر صفحه{{else if eq .LanguageCode "ar"}}مسار الصفحة{{else}}Breadcrumb{{end}}">
+        <div class="multilingual-container">
+            <ol class="breadcrumb">
+                {{range $index, $crumb := .Breadcrumbs}}
+                <li class="breadcrumb-item">
+                    {{if $crumb.URL}}
+                    <a href="{{$crumb.URL}}" class="breadcrumb-link">{{$crumb.Name}}</a>
+                    {{else}}
+                    <span class="breadcrumb-current">{{$crumb.Name}}</span>
+                    {{end}}
+                </li>
+                {{end}}
+            </ol>
+        </div>
+    </nav>
+    {{end}}
+    
+    <!-- Main content -->
+    <main id="main-content" class="main-content" role="main">
+        <div class="multilingual-container">
+            {{block "content" .}}{{end}}
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="site-footer" role="contentinfo">
+        <div class="multilingual-container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">
+                        {{if eq .LanguageCode "fa"}}
+                            درباره ما
+                        {{else if eq .LanguageCode "ar"}}
+                            معلومات عنا
+                        {{else}}
+                            About Us
+                        {{end}}
+                    </h3>
+                    <p class="footer-text">
+                        {{if eq .LanguageCode "fa"}}
+                            سایت خبری با پشتیبانی از چندین زبان
+                        {{else if eq .LanguageCode "ar"}}
+                            موقع إخباري يدعم عدة لغات
+                        {{else}}
+                            Multilingual news website
+                        {{end}}
+                    </p>
+                </div>
+                
+                <div class="footer-section">
+                    <h3 class="footer-title">
+                        {{if eq .LanguageCode "fa"}}
+                            لینک‌های مفید
+                        {{else if eq .LanguageCode "ar"}}
+                            روابط مفيدة
+                        {{else}}
+                            Useful Links
+                        {{end}}
+                    </h3>
+                    <ul class="footer-links">
+                        <li><a href="{{.ContactURL}}">
+                            {{if eq .LanguageCode "fa"}}
+                                تماس با ما
+                            {{else if eq .LanguageCode "ar"}}
+                                اتصل بنا
+                            {{else}}
+                                Contact Us
+                            {{end}}
+                        </a></li>
+                        <li><a href="{{.PrivacyURL}}">
+                            {{if eq .LanguageCode "fa"}}
+                                حریم خصوصی
+                            {{else if eq .LanguageCode "ar"}}
+                                سياسة الخصوصية
+                            {{else}}
+                                Privacy Policy
+                            {{end}}
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p class="copyright">
+                    {{if eq .LanguageCode "fa"}}
+                        © {{.CurrentYear}} تمامی حقوق محفوظ است.
+                    {{else if eq .LanguageCode "ar"}}
+                        © {{.CurrentYear}} جميع الحقوق محفوظة.
+                    {{else}}
+                        © {{.CurrentYear}} All rights reserved.
+                    {{end}}
+                </p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- JavaScript -->
+    <script src="/static/js/multilingual.js"></script>
+    {{block "scripts" .}}{{end}}
+    
+    <!-- Structured data -->
+    {{if .StructuredData}}
+    <script type="application/ld+json">
+    {{.StructuredData}}
+    </script>
+    {{end}}
+</body>
+</html>

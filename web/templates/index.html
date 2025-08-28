@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Performance hints -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    
+    <!-- SEO Meta Tags -->
+    <title>{{.title}} - High Performance News</title>
+    <meta name="description" content="High-performance multilingual news website with fast, reliable content delivery">
+    <meta name="keywords" content="news, breaking news, latest news, world news">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="/">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{.title}} - High Performance News">
+    <meta property="og:description" content="High-performance multilingual news website with fast, reliable content delivery">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="/">
+    <meta property="og:locale" content="en">
+    <meta property="og:site_name" content="High Performance News">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{.title}} - High Performance News">
+    <meta name="twitter:description" content="High-performance multilingual news website with fast, reliable content delivery">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1f2937">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="High Performance News">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/homepage.css">
+    <link rel="stylesheet" href="/static/css/themes.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="en-lang ltr-dir">
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    
+    <!-- Header -->
+    <header class="site-header" role="banner">
+        <div class="header-container">
+            <!-- Mobile menu button -->
+            <button class="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+            
+            <!-- Logo -->
+            <div class="site-logo">
+                <a href="/" class="logo-link">
+                    <span class="logo-text">{{.title}}</span>
+                </a>
+            </div>
+            
+            <!-- Main navigation -->
+            <nav class="main-navigation" role="navigation" aria-label="Main navigation">
+                <ul class="nav-menu">
+                    <li class="nav-item active">
+                        <a href="/" class="nav-link">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/categories" class="nav-link">Categories</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/trending" class="nav-link">Trending</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/latest" class="nav-link">Latest</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/about" class="nav-link">About</a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- Header actions -->
+            <div class="header-actions">
+                <!-- Search toggle -->
+                <button class="search-toggle" aria-label="Toggle search">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                        <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+                
+                <a href="/admin/login" class="login-link">Admin</a>
+            </div>
+        </div>
+        
+        <!-- Search overlay -->
+        <div class="search-overlay">
+            <div class="search-container">
+                <form class="search-form" action="/search" method="GET">
+                    <input type="search" name="q" class="search-input" 
+                           placeholder="Search..."
+                           autocomplete="off">
+                    <button type="submit" class="search-submit" aria-label="Search">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                            <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                    </button>
+                </form>
+                <button class="search-close" aria-label="Close search">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main content -->
+    <main id="main-content" class="main-content" role="main">
+        <div class="homepage">
+            <!-- Hero section -->
+            <section class="hero-section">
+                <div class="hero-container">
+                    <div class="hero-content">
+                        <h1 class="hero-title">Welcome to High Performance News</h1>
+                        <p class="hero-subtitle">Your source for fast, reliable news content with cutting-edge performance</p>
+                        
+                        <!-- Quick search -->
+                        <div class="hero-search">
+                            <form class="search-form" action="/search" method="GET">
+                                <div class="search-input-group">
+                                    <input type="search" name="q" class="search-input" 
+                                           placeholder="Search news..."
+                                           autocomplete="off">
+                                    <button type="submit" class="search-button">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                            <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Latest articles -->
+            <section class="latest-section">
+                <div class="section-container">
+                    <header class="section-header">
+                        <h2 class="section-title">Latest News</h2>
+                        <a href="/latest" class="section-link">View all</a>
+                    </header>
+                    
+                    <div class="latest-grid">
+                        <!-- Placeholder articles -->
+                        <article class="article-card">
+                            <div class="article-content">
+                                <header class="article-header">
+                                    <div class="article-category">
+                                        <span class="category-link">Technology</span>
+                                    </div>
+                                    <h3 class="article-title">
+                                        <a href="#" class="title-link">Sample News Article</a>
+                                    </h3>
+                                    <p class="article-excerpt">This is a sample news article to demonstrate the layout. Real articles will be loaded from the database.</p>
+                                </header>
+                                <footer class="article-meta">
+                                    <div class="meta-primary">
+                                        <span class="article-author">Admin User</span>
+                                        <time class="article-date">2 hours ago</time>
+                                    </div>
+                                </footer>
+                            </div>
+                        </article>
+                        
+                        <article class="article-card">
+                            <div class="article-content">
+                                <header class="article-header">
+                                    <div class="article-category">
+                                        <span class="category-link">Business</span>
+                                    </div>
+                                    <h3 class="article-title">
+                                        <a href="#" class="title-link">Another Sample Article</a>
+                                    </h3>
+                                    <p class="article-excerpt">Another sample article showing the responsive grid layout and beautiful typography.</p>
+                                </header>
+                                <footer class="article-meta">
+                                    <div class="meta-primary">
+                                        <span class="article-author">Editor</span>
+                                        <time class="article-date">4 hours ago</time>
+                                    </div>
+                                </footer>
+                            </div>
+                        </article>
+                        
+                        <article class="article-card">
+                            <div class="article-content">
+                                <header class="article-header">
+                                    <div class="article-category">
+                                        <span class="category-link">Sports</span>
+                                    </div>
+                                    <h3 class="article-title">
+                                        <a href="#" class="title-link">Sports News Sample</a>
+                                    </h3>
+                                    <p class="article-excerpt">Sample sports article demonstrating the card layout with proper spacing and typography.</p>
+                                </header>
+                                <footer class="article-meta">
+                                    <div class="meta-primary">
+                                        <span class="article-author">Sports Reporter</span>
+                                        <time class="article-date">6 hours ago</time>
+                                    </div>
+                                </footer>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Categories showcase -->
+            <section class="categories-section">
+                <div class="section-container">
+                    <header class="section-header">
+                        <h2 class="section-title">Categories</h2>
+                        <a href="/categories" class="section-link">View all</a>
+                    </header>
+                    
+                    <div class="categories-grid">
+                        <div class="category-card">
+                            <a href="/categories/technology" class="category-link">
+                                <h3 class="category-name">Technology</h3>
+                                <p class="category-description">Latest tech news and innovations</p>
+                                <span class="category-count">0 articles</span>
+                            </a>
+                        </div>
+                        
+                        <div class="category-card">
+                            <a href="/categories/business" class="category-link">
+                                <h3 class="category-name">Business</h3>
+                                <p class="category-description">Business and financial news</p>
+                                <span class="category-count">0 articles</span>
+                            </a>
+                        </div>
+                        
+                        <div class="category-card">
+                            <a href="/categories/sports" class="category-link">
+                                <h3 class="category-name">Sports</h3>
+                                <p class="category-description">Sports news and updates</p>
+                                <span class="category-count">0 articles</span>
+                            </a>
+                        </div>
+                        
+                        <div class="category-card">
+                            <a href="/categories/world" class="category-link">
+                                <h3 class="category-name">World</h3>
+                                <p class="category-description">International news coverage</p>
+                                <span class="category-count">0 articles</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Statistics -->
+            <section class="stats-section">
+                <div class="section-container">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number">0</div>
+                            <div class="stat-label">Published Articles</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-number">0</div>
+                            <div class="stat-label">Total Views</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-number">4</div>
+                            <div class="stat-label">Categories</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-number">1</div>
+                            <div class="stat-label">Active Users</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="site-footer" role="contentinfo">
+        <div class="footer-container">
+            <div class="footer-content">
+                <!-- About section -->
+                <div class="footer-section">
+                    <h3 class="footer-title">About Us</h3>
+                    <p class="footer-description">
+                        High-performance multilingual news website delivering fast, reliable content with cutting-edge technology.
+                    </p>
+                    
+                    <!-- Social links -->
+                    <div class="social-links">
+                        <a href="#" class="social-link" aria-label="Facebook">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="social-link" aria-label="Twitter">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="social-link" aria-label="RSS">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6.503 20.752c0 1.794-1.456 3.248-3.251 3.248S0 22.546 0 20.752s1.456-3.248 3.252-3.248 3.251 1.454 3.251 3.248zm-6.503-12.572v4.811c6.05.062 10.96 4.966 11.022 11.009h4.817c-.062-8.71-7.118-15.758-15.839-15.82zm0-3.368c10.58.046 19.152 8.594 19.183 19.188h4.817c-.03-13.231-10.755-23.954-24-24v4.812z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Quick links -->
+                <div class="footer-section">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="/" class="footer-link">Home</a></li>
+                        <li><a href="/categories" class="footer-link">Categories</a></li>
+                        <li><a href="/trending" class="footer-link">Trending</a></li>
+                        <li><a href="/search" class="footer-link">Search</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Legal links -->
+                <div class="footer-section">
+                    <h3 class="footer-title">Legal</h3>
+                    <ul class="footer-links">
+                        <li><a href="/privacy" class="footer-link">Privacy Policy</a></li>
+                        <li><a href="/terms" class="footer-link">Terms of Service</a></li>
+                        <li><a href="/contact" class="footer-link">Contact Us</a></li>
+                        <li><a href="/sitemap" class="footer-link">Sitemap</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Newsletter signup -->
+                <div class="footer-section">
+                    <h3 class="footer-title">Newsletter</h3>
+                    <p class="footer-text">Subscribe to get the latest news</p>
+                    <form class="newsletter-form" action="/newsletter/subscribe" method="POST">
+                        <div class="newsletter-input-group">
+                            <input type="email" name="email" class="newsletter-input" 
+                                   placeholder="Your email"
+                                   required>
+                            <button type="submit" class="newsletter-submit">Subscribe</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Footer bottom -->
+            <div class="footer-bottom">
+                <div class="footer-bottom-content">
+                    <p class="copyright">© 2024 {{.title}}. All rights reserved.</p>
+                    <div class="footer-meta">
+                        <span class="powered-by">Made with ❤️</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Theme toggle -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <span class="theme-icon light-icon">☀️</span>
+        <span class="theme-icon dark-icon">🌙</span>
+        <span class="theme-icon auto-icon">🌗</span>
+    </button>
+    
+    <!-- Back to top button -->
+    <button id="back-to-top" class="back-to-top" aria-label="Back to top">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+    
+    <!-- JavaScript -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/pwa.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

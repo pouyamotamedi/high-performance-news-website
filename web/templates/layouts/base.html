@@ -1,0 +1,178 @@
+{{define "base.html"}}
+<!DOCTYPE html>
+<html lang="{{.LanguageCode}}" dir="{{.LanguageDirection}}" data-theme="{{.ThemeMode}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Performance hints -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    {{range .PreloadResources}}
+    <link rel="preload" href="{{.URL}}" as="{{.As}}" type="{{.Type}}">
+    {{end}}
+    
+    <!-- SEO Meta Tags -->
+    <title>{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}</title>
+    <meta name="description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    {{if .SEOKeywords}}
+    <meta name="keywords" content="{{join .SEOKeywords ", "}}">
+    {{end}}
+    
+    <!-- Canonical URL -->
+    {{if .CanonicalURL}}
+    <link rel="canonical" href="{{.CanonicalURL}}">
+    {{end}}
+    
+    <!-- Language alternates -->
+    {{range $lang, $url := .AlternateURLs}}
+    <link rel="alternate" hreflang="{{$lang}}" href="{{$url}}">
+    {{end}}
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{if .OGTitle}}{{.OGTitle}}{{else if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}">
+    <meta property="og:description" content="{{if .OGDescription}}{{.OGDescription}}{{else if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    <meta property="og:type" content="{{.OGType}}">
+    <meta property="og:url" content="{{if .OGURL}}{{.OGURL}}{{else}}{{.CanonicalURL}}{{end}}">
+    {{if .OGImage}}
+    <meta property="og:image" content="{{.OGImage}}">
+    {{end}}
+    <meta property="og:locale" content="{{.LanguageCode}}">
+    <meta property="og:site_name" content="{{.SiteName}}">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="{{.TwitterCard}}">
+    <meta name="twitter:title" content="{{if .TwitterTitle}}{{.TwitterTitle}}{{else if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}">
+    <meta name="twitter:description" content="{{if .TwitterDescription}}{{.TwitterDescription}}{{else if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    {{if .TwitterImage}}
+    <meta name="twitter:image" content="{{.TwitterImage}}">
+    {{end}}
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1f2937">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{.SiteName}}">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    {{if eq .LanguageDirection "rtl"}}
+    <link rel="stylesheet" href="/static/css/rtl.css">
+    {{end}}
+    
+    <!-- Theme CSS -->
+    <link rel="stylesheet" href="/static/css/themes.css">
+    
+    <!-- Language-specific fonts -->
+    {{if eq .LanguageCode "fa"}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazir:wght@300;400;500;700&display=swap" rel="stylesheet">
+    {{else if eq .LanguageCode "ar"}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    {{else}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {{end}}
+    
+    <!-- Additional head content -->
+    {{block "head" .}}{{end}}
+    
+    <!-- Analytics -->
+    {{if .GoogleAnalyticsID}}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{.GoogleAnalyticsID}}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{.GoogleAnalyticsID}}');
+    </script>
+    {{end}}
+</head>
+<body class="{{.LanguageCode}}-lang {{.LanguageDirection}}-dir">
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-link">
+        {{if eq .LanguageCode "fa"}}
+            پرش به محتوا
+        {{else if eq .LanguageCode "ar"}}
+            انتقال إلى المحتوى
+        {{else}}
+            Skip to content
+        {{end}}
+    </a>
+    
+    <!-- Header -->
+    {{template "header" .}}
+    
+    <!-- Breadcrumbs -->
+    {{if .Breadcrumbs}}
+    <div class="breadcrumb-container">
+        <div class="container">
+            {{.Breadcrumbs.HTML | safeHTML}}
+        </div>
+    </div>
+    {{end}}
+    
+    <!-- Main content -->
+    <main id="main-content" class="main-content" role="main">
+        {{block "content" .}}{{end}}
+    </main>
+    
+    <!-- Footer -->
+    {{template "footer" .}}
+    
+    <!-- Theme toggle -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <span class="theme-icon light-icon">☀️</span>
+        <span class="theme-icon dark-icon">🌙</span>
+        <span class="theme-icon auto-icon">🌗</span>
+    </button>
+    
+    <!-- Back to top button -->
+    <button id="back-to-top" class="back-to-top" aria-label="Back to top">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+    
+    <!-- JavaScript -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/pwa.js"></script>
+    {{block "scripts" .}}{{end}}
+    
+    <!-- Structured data -->
+    {{if .StructuredData}}
+    <script type="application/ld+json">
+    {{.StructuredData | safeHTML}}
+    </script>
+    {{end}}
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
+{{end}}

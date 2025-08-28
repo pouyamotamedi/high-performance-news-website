@@ -1,0 +1,268 @@
+{{define "tag.html"}}
+<!DOCTYPE html>
+<html lang="{{.LanguageCode}}" dir="{{.LanguageDirection}}" data-theme="{{.ThemeMode}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <title>{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}</title>
+    <meta name="description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="preload" href="/static/css/tag.css" as="style">
+    <link rel="stylesheet" href="/static/css/tag.css">
+</head>
+<body>
+<div class="tag-page">
+    <!-- Tag header -->
+    <header class="tag-header">
+        <div class="tag-info">
+            <div class="tag-badge" style="{{if .Tag.Color}}--tag-color: {{.Tag.Color}};{{end}}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" stroke="currentColor" stroke-width="2"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                {{.Tag.Name}}
+            </div>
+            
+            <h1 class="tag-title">
+                {{if eq .LanguageCode "fa"}}
+                    مقالات برچسب "{{.Tag.Name}}"
+                {{else if eq .LanguageCode "ar"}}
+                    مقالات العلامة "{{.Tag.Name}}"
+                {{else}}
+                    Articles tagged "{{.Tag.Name}}"
+                {{end}}
+            </h1>
+            
+            {{if .Tag.Description}}
+            <p class="tag-description">{{.Tag.Description}}</p>
+            {{end}}
+            
+            <div class="tag-meta">
+                <span class="article-count">
+                    {{.Tag.ArticleCount}} 
+                    {{if eq .LanguageCode "fa"}}
+                        مقاله
+                    {{else if eq .LanguageCode "ar"}}
+                        مقال
+                    {{else}}
+                        articles
+                    {{end}}
+                </span>
+                
+                <!-- RSS feed link -->
+                <a href="/tags/{{.Tag.Slug}}/rss" class="rss-link" title="RSS Feed">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.503 20.752c0 1.794-1.456 3.248-3.251 3.248S0 22.546 0 20.752s1.456-3.248 3.252-3.248 3.251 1.454 3.251 3.248zm-6.503-12.572v4.811c6.05.062 10.96 4.966 11.022 11.009h4.817c-.062-8.71-7.118-15.758-15.839-15.82zm0-3.368c10.58.046 19.152 8.594 19.183 19.188h4.817c-.03-13.231-10.755-23.954-24-24v4.812z"/>
+                    </svg>
+                    RSS
+                </a>
+                
+                <!-- Follow tag button -->
+                <button class="follow-tag-button" data-tag-id="{{.Tag.ID}}" data-tag-slug="{{.Tag.Slug}}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7 7-7z" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    {{if eq .LanguageCode "fa"}}
+                        دنبال کردن
+                    {{else if eq .LanguageCode "ar"}}
+                        متابعة
+                    {{else}}
+                        Follow
+                    {{end}}
+                </button>
+            </div>
+            
+            <!-- Tag keywords (if any) -->
+            {{if .Tag.Keywords}}
+            <div class="tag-keywords">
+                <span class="keywords-label">
+                    {{if eq .LanguageCode "fa"}}
+                        کلمات کلیدی:
+                    {{else if eq .LanguageCode "ar"}}
+                        الكلمات المفتاحية:
+                    {{else}}
+                        Keywords:
+                    {{end}}
+                </span>
+                <div class="keywords-list">
+                    {{range .Tag.Keywords}}
+                    <span class="keyword">{{.}}</span>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+        </div>
+        
+        <!-- Tag actions -->
+        <div class="tag-actions">
+            <!-- Sort options -->
+            <div class="sort-options">
+                <label for="sort-select" class="sort-label">
+                    {{if eq .LanguageCode "fa"}}
+                        مرتب‌سازی:
+                    {{else if eq .LanguageCode "ar"}}
+                        ترتيب حسب:
+                    {{else}}
+                        Sort by:
+                    {{end}}
+                </label>
+                <select id="sort-select" class="sort-select" onchange="updateSort(this.value)">
+                    <option value="newest">
+                        {{if eq .LanguageCode "fa"}}
+                            جدیدترین
+                        {{else if eq .LanguageCode "ar"}}
+                            الأحدث
+                        {{else}}
+                            Newest
+                        {{end}}
+                    </option>
+                    <option value="oldest">
+                        {{if eq .LanguageCode "fa"}}
+                            قدیمی‌ترین
+                        {{else if eq .LanguageCode "ar"}}
+                            الأقدم
+                        {{else}}
+                            Oldest
+                        {{end}}
+                    </option>
+                    <option value="popular">
+                        {{if eq .LanguageCode "fa"}}
+                            محبوب‌ترین
+                        {{else if eq .LanguageCode "ar"}}
+                            الأكثر شعبية
+                        {{else}}
+                            Most Popular
+                        {{end}}
+                    </option>
+                    <option value="views">
+                        {{if eq .LanguageCode "fa"}}
+                            پربازدیدترین
+                        {{else if eq .LanguageCode "ar"}}
+                            الأكثر مشاهدة
+                        {{else}}
+                            Most Viewed
+                        {{end}}
+                    </option>
+                </select>
+            </div>
+            
+            <!-- View toggle -->
+            <div class="view-toggle">
+                <button class="view-button active" data-view="grid" title="Grid view">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                        <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                        <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                        <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+                <button class="view-button" data-view="list" title="List view">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="8" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>
+                        <line x1="8" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2"/>
+                        <line x1="8" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6" stroke="currentColor" stroke-width="2"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12" stroke="currentColor" stroke-width="2"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Articles section -->
+    {{if .Articles}}
+    <section class="articles-section">
+        <div class="articles-container" data-view="grid">
+            <div class="articles-grid">
+                {{range .Articles}}
+                {{template "article-card" .}}
+                {{end}}
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {{template "pagination" .}}
+    </section>
+    {{else}}
+    <!-- Empty state -->
+    <div class="empty-state">
+        <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" stroke="currentColor" stroke-width="2"/>
+                <line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </div>
+        <h3 class="empty-title">
+            {{if eq .LanguageCode "fa"}}
+                هنوز مقاله‌ای با این برچسب منتشر نشده
+            {{else if eq .LanguageCode "ar"}}
+                لم يتم نشر أي مقال بهذه العلامة بعد
+            {{else}}
+                No articles with this tag yet
+            {{end}}
+        </h3>
+        <p class="empty-description">
+            {{if eq .LanguageCode "fa"}}
+                به زودی مقالات جدید با این برچسب منتشر خواهد شد.
+            {{else if eq .LanguageCode "ar"}}
+                سيتم نشر مقالات جديدة بهذه العلامة قريباً.
+            {{else}}
+                New articles with this tag will be published soon.
+            {{end}}
+        </p>
+        <a href="/" class="empty-action">
+            {{if eq .LanguageCode "fa"}}
+                بازگشت به صفحه اصلی
+            {{else if eq .LanguageCode "ar"}}
+                العودة إلى الصفحة الرئيسية
+            {{else}}
+                Back to Homepage
+            {{end}}
+        </a>
+    </div>
+    {{end}}
+    
+    <!-- Related tags -->
+    {{if .RelatedTags}}
+    <aside class="related-tags">
+        <h2 class="related-title">
+            {{if eq .LanguageCode "fa"}}
+                برچسب‌های مرتبط
+            {{else if eq .LanguageCode "ar"}}
+                العلامات ذات الصلة
+            {{else}}
+                Related Tags
+            {{end}}
+        </h2>
+        
+        <div class="tags-cloud">
+            {{range .RelatedTags}}
+            <a href="/tags/{{.Slug}}" class="tag-link" style="{{if .Color}}--tag-color: {{.Color}};{{end}}">
+                {{.Name}}
+                <span class="tag-count">({{.ArticleCount}})</span>
+            </a>
+            {{end}}
+        </div>
+    </aside>
+    {{end}}
+</div>
+{{end}}
+
+<script src="/static/js/main.js"></script>
+<script src="/static/js/tag.js"></script>
+<script>
+    function updateSort(sortBy) {
+        const url = new URL(window.location);
+        url.searchParams.set('sort', sortBy);
+        url.searchParams.delete('page'); // Reset to first page
+        window.location.href = url.toString();
+    }
+</script>
+</body>
+</html>
+{{end}}

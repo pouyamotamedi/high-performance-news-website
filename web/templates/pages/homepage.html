@@ -1,0 +1,155 @@
+{{define "homepage.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/homepage.css">
+{{end}}
+
+{{define "content"}}
+<div class="homepage">
+    {{if eq .PageType "homepage"}}
+    <!-- Hero section -->
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">Welcome to {{.SiteName}}</h1>
+                <p class="hero-subtitle">Your source for fast, reliable news content with cutting-edge performance</p>
+                
+                <!-- Quick search -->
+                <div class="hero-search">
+                    <form class="search-form" action="/search" method="GET">
+                        <div class="search-input-group">
+                            <input type="search" name="q" class="search-input" 
+                                   placeholder="Search news..."
+                                   autocomplete="off">
+                            <button type="submit" class="search-button">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                    <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    {{else}}
+    <!-- Page header for other page types -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">{{.Title}}</h1>
+            {{if .Description}}
+            <p class="page-description">{{.Description}}</p>
+            {{end}}
+        </div>
+    </section>
+    {{end}}
+    
+    {{if .Articles}}
+    <!-- Articles section -->
+    <section class="articles-section">
+        <div class="section-container">
+            {{if eq .PageType "homepage"}}
+            <header class="section-header">
+                <h2 class="section-title">Latest News</h2>
+                <a href="/latest" class="section-link">View all</a>
+            </header>
+            {{end}}
+            
+            <div class="articles-grid">
+                {{range .Articles}}
+                <article class="article-card">
+                    <div class="article-content">
+                        <header class="article-header">
+                            {{if .Category}}
+                            <div class="article-category">
+                                <span class="category-link">{{.Category}}</span>
+                            </div>
+                            {{end}}
+                            <h3 class="article-title">
+                                <a href="/articles/{{.Slug}}" class="title-link">{{.Title}}</a>
+                            </h3>
+                            {{if .Excerpt}}
+                            <p class="article-excerpt">{{.Excerpt}}</p>
+                            {{end}}
+                        </header>
+                        <footer class="article-meta">
+                            <div class="meta-primary">
+                                {{if .Author}}<span class="article-author">{{.Author}}</span>{{end}}
+                                {{if .TimeAgo}}<time class="article-date">{{.TimeAgo}}</time>{{end}}
+                            </div>
+                            {{if .Views}}<div class="meta-secondary">
+                                <span class="article-views">{{.Views}} views</span>
+                            </div>{{end}}
+                            {{if .Likes}}<div class="meta-secondary">
+                                <span class="article-likes">{{.Likes}} likes</span>
+                            </div>{{end}}
+                        </footer>
+                    </div>
+                </article>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    {{if and .Categories (eq .PageType "homepage")}}
+    <!-- Categories showcase -->
+    <section class="categories-section">
+        <div class="section-container">
+            <header class="section-header">
+                <h2 class="section-title">Categories</h2>
+                <a href="/categories" class="section-link">View all</a>
+            </header>
+            
+            <div class="categories-grid">
+                {{range .Categories}}
+                <div class="category-card">
+                    <a href="/categories/{{.Slug}}" class="category-link">
+                        <h3 class="category-name">{{.Name}}</h3>
+                        {{if .Description}}<p class="category-description">{{.Description}}</p>{{end}}
+                        <span class="category-count">{{.Count}} articles</span>
+                    </a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    {{if .Content}}
+    <section class="content-section">
+        <div class="section-container">
+            <div class="content">
+                {{.Content}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    {{if .Query}}
+    <section class="search-results-section">
+        <div class="section-container">
+            <h2 class="section-title">Search Results for: "{{.Query}}"</h2>
+            {{if .Results}}
+            <div class="search-results">
+                {{range .Results}}
+                <div class="search-result">
+                    <h3><a href="/articles/{{.Slug}}" class="result-link">{{.Title}}</a></h3>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <p class="no-results">No results found for your search.</p>
+            {{end}}
+        </div>
+    </section>
+    {{end}}
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/homepage.js"></script>
+{{end}}

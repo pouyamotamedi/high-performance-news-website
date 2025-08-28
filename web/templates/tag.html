@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="{{.Language}}" dir="{{.Direction}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <meta name="description" content="{{.Description}}">
+    <meta name="keywords" content="{{join .Keywords ", "}}">
+    <link rel="canonical" href="{{.CanonicalURL}}">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="{{.Title}}">
+    <meta property="og:description" content="{{.Description}}">
+    <meta property="og:url" content="{{.CanonicalURL}}">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{.Title}}">
+    <meta name="twitter:description" content="{{.Description}}">
+    
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">{{.SchemaMarkup | safeHTML}}</script>
+    
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/multilingual.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <h1 class="logo"><a href="/">High Performance News</a></h1>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/tags">Tags</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="container">
+        <header class="tag-header">
+            <h1>
+                <span class="tag-badge" style="{{if .Tag.Color}}background-color: {{.Tag.Color}};{{end}}">
+                    {{.Tag.Name}}
+                </span>
+            </h1>
+            {{if .Tag.Description}}
+            <p class="tag-description">{{.Tag.Description}}</p>
+            {{end}}
+            
+            {{if .Tag.Keywords}}
+            <div class="tag-keywords">
+                <strong>Related keywords:</strong>
+                {{range .Tag.Keywords}}
+                <span class="keyword">{{.}}</span>
+                {{end}}
+            </div>
+            {{end}}
+            
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <a href="/tags">Tags</a>
+                <span class="separator">/</span>
+                <span class="current">{{.Tag.Name}}</span>
+            </nav>
+        </header>
+        
+        <!-- Articles with this tag -->
+        {{if .Articles}}
+        <section class="tag-articles">
+            <h2>Articles tagged with "{{.Tag.Name}}"</h2>
+            <div class="articles-grid">
+                {{range .Articles}}
+                <article class="article-card">
+                    <h3><a href="/articles/{{.Slug}}">{{.Title}}</a></h3>
+                    <p class="excerpt">{{truncate .Excerpt 200}}</p>
+                    <div class="article-meta">
+                        <time datetime="{{.PublishedAt}}">{{formatDate .PublishedAt}}</time>
+                        <span class="views">{{.ViewCount}} views</span>
+                        <span class="category">Category ID: {{.CategoryID}}</span>
+                    </div>
+                    {{if .Tags}}
+                    <div class="tags">
+                        {{range .Tags}}
+                        <a href="/tags/{{.Slug}}" class="tag" style="{{if .Color}}background-color: {{.Color}};{{end}}">{{.Name}}</a>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </article>
+                {{end}}
+            </div>
+        </section>
+        {{else}}
+        <section class="no-articles">
+            <p>No articles found with this tag yet.</p>
+        </section>
+        {{end}}
+        
+        <!-- Pagination -->
+        {{if gt .Pagination.TotalPages 1}}
+        <nav class="pagination">
+            {{if .Pagination.HasPrevious}}
+            <a href="{{if eq .Pagination.PreviousPage 1}}/tags/{{.Tag.Slug}}{{else}}/tags/{{.Tag.Slug}}/page-{{.Pagination.PreviousPage}}{{end}}" class="pagination-link">Previous</a>
+            {{end}}
+            
+            <span class="pagination-info">
+                Page {{.Pagination.CurrentPage}} of {{.Pagination.TotalPages}}
+            </span>
+            
+            {{if .Pagination.HasNext}}
+            <a href="/tags/{{.Tag.Slug}}/page-{{.Pagination.NextPage}}" class="pagination-link">Next</a>
+            {{end}}
+        </nav>
+        {{end}}
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 High Performance News Website. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

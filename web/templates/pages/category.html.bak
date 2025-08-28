@@ -1,0 +1,287 @@
+{{define "category.html"}}
+<!DOCTYPE html>
+<html lang="{{.LanguageCode}}" dir="{{.LanguageDirection}}" data-theme="{{.ThemeMode}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <title>{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}</title>
+    <meta name="description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="preload" href="/static/css/category.css" as="style">
+    <link rel="stylesheet" href="/static/css/category.css">
+</head>
+<body>
+<div class="category-page">
+    <!-- Category header -->
+    <header class="category-header">
+        <div class="category-info">
+            <h1 class="category-title">{{.Category.Name}}</h1>
+            
+            {{if .Category.Description}}
+            <p class="category-description">{{.Category.Description}}</p>
+            {{end}}
+            
+            <div class="category-meta">
+                <span class="article-count">
+                    {{.Category.ArticleCount}} 
+                    {{if eq .LanguageCode "fa"}}
+                        مقاله
+                    {{else if eq .LanguageCode "ar"}}
+                        مقال
+                    {{else}}
+                        articles
+                    {{end}}
+                </span>
+                
+                <!-- RSS feed link -->
+                <a href="/categories/{{.Category.Slug}}/rss" class="rss-link" title="RSS Feed">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.503 20.752c0 1.794-1.456 3.248-3.251 3.248S0 22.546 0 20.752s1.456-3.248 3.252-3.248 3.251 1.454 3.251 3.248zm-6.503-12.572v4.811c6.05.062 10.96 4.966 11.022 11.009h4.817c-.062-8.71-7.118-15.758-15.839-15.82zm0-3.368c10.58.046 19.152 8.594 19.183 19.188h4.817c-.03-13.231-10.755-23.954-24-24v4.812z"/>
+                    </svg>
+                    RSS
+                </a>
+            </div>
+        </div>
+        
+        <!-- Category actions -->
+        <div class="category-actions">
+            <!-- Sort options -->
+            <div class="sort-options">
+                <label for="sort-select" class="sort-label">
+                    {{if eq .LanguageCode "fa"}}
+                        مرتب‌سازی:
+                    {{else if eq .LanguageCode "ar"}}
+                        ترتيب حسب:
+                    {{else}}
+                        Sort by:
+                    {{end}}
+                </label>
+                <select id="sort-select" class="sort-select" onchange="updateSort(this.value)">
+                    <option value="newest">
+                        {{if eq .LanguageCode "fa"}}
+                            جدیدترین
+                        {{else if eq .LanguageCode "ar"}}
+                            الأحدث
+                        {{else}}
+                            Newest
+                        {{end}}
+                    </option>
+                    <option value="oldest">
+                        {{if eq .LanguageCode "fa"}}
+                            قدیمی‌ترین
+                        {{else if eq .LanguageCode "ar"}}
+                            الأقدم
+                        {{else}}
+                            Oldest
+                        {{end}}
+                    </option>
+                    <option value="popular">
+                        {{if eq .LanguageCode "fa"}}
+                            محبوب‌ترین
+                        {{else if eq .LanguageCode "ar"}}
+                            الأكثر شعبية
+                        {{else}}
+                            Most Popular
+                        {{end}}
+                    </option>
+                    <option value="views">
+                        {{if eq .LanguageCode "fa"}}
+                            پربازدیدترین
+                        {{else if eq .LanguageCode "ar"}}
+                            الأكثر مشاهدة
+                        {{else}}
+                            Most Viewed
+                        {{end}}
+                    </option>
+                </select>
+            </div>
+            
+            <!-- View toggle -->
+            <div class="view-toggle">
+                <button class="view-button active" data-view="grid" title="Grid view">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                        <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                        <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                        <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+                <button class="view-button" data-view="list" title="List view">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="8" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>
+                        <line x1="8" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2"/>
+                        <line x1="8" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6" stroke="currentColor" stroke-width="2"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12" stroke="currentColor" stroke-width="2"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Subcategories -->
+    {{if .Subcategories}}
+    <section class="subcategories-section">
+        <h2 class="subcategories-title">
+            {{if eq .LanguageCode "fa"}}
+                زیردسته‌ها
+            {{else if eq .LanguageCode "ar"}}
+                الفئات الفرعية
+            {{else}}
+                Subcategories
+            {{end}}
+        </h2>
+        
+        <div class="subcategories-grid">
+            {{range .Subcategories}}
+            <div class="subcategory-card">
+                <a href="/categories/{{.Slug}}" class="subcategory-link">
+                    <h3 class="subcategory-name">{{.Name}}</h3>
+                    {{if .Description}}
+                    <p class="subcategory-description">{{truncate .Description 80}}</p>
+                    {{end}}
+                    <span class="subcategory-count">
+                        {{.ArticleCount}} 
+                        {{if eq $.LanguageCode "fa"}}
+                            مقاله
+                        {{else if eq $.LanguageCode "ar"}}
+                            مقال
+                        {{else}}
+                            articles
+                        {{end}}
+                    </span>
+                </a>
+            </div>
+            {{end}}
+        </div>
+    </section>
+    {{end}}
+    
+    <!-- Articles section -->
+    {{if .Articles}}
+    <section class="articles-section">
+        <h2 class="articles-title">
+            {{if eq .LanguageCode "fa"}}
+                مقالات
+            {{else if eq .LanguageCode "ar"}}
+                المقالات
+            {{else}}
+                Articles
+            {{end}}
+        </h2>
+        
+        <div class="articles-container" data-view="grid">
+            <div class="articles-grid">
+                {{range .Articles}}
+                <div class="article-card">
+                    <h3><a href="/articles/{{.Slug}}">{{.Title}}</a></h3>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="pagination">
+            <!-- Pagination will be implemented later -->
+        </div>
+    </section>
+    {{else}}
+    <!-- Empty state -->
+    <div class="empty-state">
+        <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
+                <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
+                <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </div>
+        <h3 class="empty-title">
+            {{if eq .LanguageCode "fa"}}
+                هنوز مقاله‌ای منتشر نشده
+            {{else if eq .LanguageCode "ar"}}
+                لم يتم نشر أي مقال بعد
+            {{else}}
+                No articles published yet
+            {{end}}
+        </h3>
+        <p class="empty-description">
+            {{if eq .LanguageCode "fa"}}
+                به زودی مقالات جدید در این دسته منتشر خواهد شد.
+            {{else if eq .LanguageCode "ar"}}
+                سيتم نشر مقالات جديدة في هذه الفئة قريباً.
+            {{else}}
+                New articles will be published in this category soon.
+            {{end}}
+        </p>
+        <a href="/" class="empty-action">
+            {{if eq .LanguageCode "fa"}}
+                بازگشت به صفحه اصلی
+            {{else if eq .LanguageCode "ar"}}
+                العودة إلى الصفحة الرئيسية
+            {{else}}
+                Back to Homepage
+            {{end}}
+        </a>
+    </div>
+    {{end}}
+    
+    <!-- Related categories -->
+    {{if .RelatedCategories}}
+    <aside class="related-categories">
+        <h2 class="related-title">
+            {{if eq .LanguageCode "fa"}}
+                دسته‌های مرتبط
+            {{else if eq .LanguageCode "ar"}}
+                الفئات ذات الصلة
+            {{else}}
+                Related Categories
+            {{end}}
+        </h2>
+        
+        <div class="related-grid">
+            {{range .RelatedCategories}}
+            <div class="category-card">
+                <a href="/categories/{{.Slug}}" class="category-link">
+                    <h3 class="category-name">{{.Name}}</h3>
+                    {{if .Description}}
+                    <p class="category-description">{{truncate .Description 60}}</p>
+                    {{end}}
+                    <span class="category-count">
+                        {{.ArticleCount}} 
+                        {{if eq $.LanguageCode "fa"}}
+                            مقاله
+                        {{else if eq $.LanguageCode "ar"}}
+                            مقال
+                        {{else}}
+                            articles
+                        {{end}}
+                    </span>
+                </a>
+            </div>
+            {{end}}
+        </div>
+    </aside>
+    {{end}}
+</div>
+{{end}}
+
+<script src="/static/js/main.js"></script>
+<script src="/static/js/category.js"></script>
+<script>
+    function updateSort(sortBy) {
+        const url = new URL(window.location);
+        url.searchParams.set('sort', sortBy);
+        url.searchParams.delete('page'); // Reset to first page
+        window.location.href = url.toString();
+    }
+</script>
+</body>
+</html>
+{{end}}

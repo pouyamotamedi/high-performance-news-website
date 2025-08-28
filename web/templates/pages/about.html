@@ -1,0 +1,54 @@
+{{define "about.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/page.css">
+{{end}}
+
+{{define "content"}}
+<div class="about-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">About Us</h1>
+            <p class="page-description">Learn more about our high-performance news website</p>
+        </div>
+    </section>
+    
+    <!-- About content -->
+    <section class="content-section">
+        <div class="section-container">
+            <div class="content">
+                <h2>Our Mission</h2>
+                <p>We are dedicated to providing fast, reliable, and comprehensive news coverage with cutting-edge performance and user experience.</p>
+                
+                <h2>What We Offer</h2>
+                <ul>
+                    <li>Real-time news updates</li>
+                    <li>RSS feeds for all categories and tags</li>
+                    <li>Google News integration</li>
+                    <li>High-performance content delivery</li>
+                    <li>Mobile-optimized experience</li>
+                </ul>
+                
+                <h2>Technology</h2>
+                <p>Our website is built with modern technologies including:</p>
+                <ul>
+                    <li>Go backend for high performance</li>
+                    <li>PostgreSQL database with connection pooling</li>
+                    <li>DragonflyDB for caching</li>
+                    <li>Responsive web design</li>
+                    <li>SEO optimization</li>
+                </ul>
+                
+                <h2>Contact Information</h2>
+                <p>For more information, please visit our <a href="/contact">contact page</a>.</p>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+{{end}}

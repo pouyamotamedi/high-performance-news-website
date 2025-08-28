@@ -1,0 +1,888 @@
+package server
+
+import (
+	"context"
+	"fmt"
+	"html/template"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"high-performance-news-website/internal/api"
+	"high-performance-news-website/internal/auth"
+	"high-performance-news-website/internal/config"
+	"high-performance-news-website/internal/models"
+	"high-performance-news-website/internal/repositories"
+	"high-performance-news-website/internal/services"
+	"high-performance-news-website/internal/templates"
+	"high-performance-news-website/pkg/cache"
+	"high-performance-news-website/pkg/database"
+)
+
+type Server struct {
+	config         *config.Config
+	router         *gin.Engine
+	cache          cache.CacheService
+	db             *database.DB
+	apiRouter      *api.Router
+	templateEngine *templates.TemplateEngine
+}
+
+func New(cfg *config.Config) (*Server, error) {
+	// Set Gin mode
+	gin.SetMode(cfg.Server.Mode)
+
+	router := gin.New()
+
+	// Initialize cache
+	dragonflyCache, err := cache.NewDragonflyClient(&cfg.Cache)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize cache: %w", err)
+	}
+	cacheClient := cache.CacheService(dragonflyCache)
+
+	// Initialize database
+	db, err := database.NewConnection(&cfg.Database)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize database: %w", err)
+	}
+
+	// Initialize services
+	authService := auth.NewAuthService(cfg.JWT.Secret, cfg.JWT.Secret) // Use same secret for both for now
+	userService := services.NewUserService(db.DB, authService)
+	
+	// Create demo user if it doesn't exist
+	if err := createDemoUser(userService); err != nil {
+		log.Printf("Warning: Failed to create demo user: %v", err)
+	}
+	
+	// Initialize additional services for admin panel
+	configService := services.NewConfigService()
+	configService.LoadDefaults() // Load default configuration
+	metricsService := services.NewMetricsService()
+	categoryService := services.NewCategoryService(db.DB)
+	tagService := services.NewTagService(db.DB)
+	
+	// Initialize repositories
+	articleRepo := repositories.NewArticleRepository(db, cacheClient, cfg.Server.StaticPath)
+	
+	// For now, create a simple tag repository implementation or skip autolinking
+	// autoLinkingService := services.NewAutoLinkingService(tagRepo)
+	
+	// Create a simple article repository adapter for search
+	searchRepo := &services.ArticleRepositoryAdapter{Repository: articleRepo}
+
+	// Initialize search indexer and service
+	var searchService *services.SearchService
+	redisClient := dragonflyCache.GetRedisClient()
+	
+	if cfg.Search.Enabled {
+		searchIndexer := services.NewSearchIndexer(
+			cfg.Search.MeiliSearchURL,
+			cfg.Search.MeiliSearchAPIKey,
+			cfg.Search.IndexName,
+			searchRepo,
+		)
+		searchService = services.NewSearchService(searchIndexer, redisClient, searchRepo)
+	} else {
+		// Create a fallback search service that only uses PostgreSQL
+		searchService = services.NewSearchService(nil, redisClient, searchRepo)
+	}
+
+	// Initialize services that depend on repositories
+	articleService := services.NewArticleService(db, articleRepo, nil) // Pass nil for autolinking for now
+	
+	// Create a simple content ingestion service for now
+	contentIngestionService := &services.ContentIngestionService{} // Placeholder
+	
+	// Create placeholder handlers
+	commentHandlers := &api.CommentHandlers{} // Placeholder
+	imageHandlers := &api.ImageHandlers{}     // Placeholder
+
+	// Initialize API router with all required services
+	apiRouter := api.NewRouter(
+		userService,
+		articleService,
+		searchService,
+		contentIngestionService,
+		authService,
+		cacheClient,
+		commentHandlers,
+		imageHandlers,
+		configService,
+		metricsService,
+		categoryService,
+		tagService,
+	)
+
+	// Initialize template engine - use simple fallback for now
+	templateEngine := templates.NewTemplateEngine(cfg.Server.Mode == "debug")
+	// Don't fail if templates can't load - we'll use fallback rendering
+	if err := templateEngine.LoadTemplates("web/templates"); err != nil {
+		log.Printf("Warning: Failed to load templates, using fallback rendering: %v", err)
+	}
+
+	return &Server{
+		config:         cfg,
+		router:         router,
+		cache:          cacheClient,
+		db:             db,
+		apiRouter:      apiRouter,
+		templateEngine: templateEngine,
+	}, nil
+}
+
+func (s *Server) setupRoutes() {
+	// Setup API routes
+	s.apiRouter.SetupRoutes(s.router)
+
+	// Setup admin frontend routes with fallback rendering
+	s.setupAdminRoutes()
+
+	// Health check endpoint (legacy)
+	s.router.GET("/health", func(c *gin.Context) {
+		ctx := context.Background()
+		
+		// Check cache health
+		cacheStatus := "ok"
+		if err := s.cache.Health(ctx); err != nil {
+			cacheStatus = "error"
+			log.Printf("Cache health check failed: %v", err)
+		}
+		
+		// Check database health
+		dbStatus := "ok"
+		if err := s.db.Ping(); err != nil {
+			dbStatus = "error"
+			log.Printf("Database health check failed: %v", err)
+		}
+		
+		c.JSON(http.StatusOK, gin.H{
+			"status":   "ok",
+			"app":      s.config.App.Name,
+			"version":  s.config.App.Version,
+			"cache":    cacheStatus,
+			"database": dbStatus,
+		})
+	})
+
+	// Serve static files
+	s.router.Static("/static", "./web/static")
+	
+	// Setup template functions
+	s.router.SetFuncMap(template.FuncMap{
+		"join": func(slice []string, sep string) string {
+			return strings.Join(slice, sep)
+		},
+		"safeHTML": func(s string) template.HTML {
+			return template.HTML(s)
+		},
+		"formatDateTime": func(t time.Time) string {
+			return t.Format("January 2, 2006 at 3:04 PM")
+		},
+		"formatDate": func(t time.Time) string {
+			return t.Format("January 2, 2006")
+		},
+		"truncate": func(s string, length int) string {
+			if len(s) <= length {
+				return s
+			}
+			return s[:length] + "..."
+		},
+		"title": func(s string) string {
+			if len(s) == 0 {
+				return s
+			}
+			return strings.ToUpper(s[:1]) + s[1:]
+		},
+		"timeAgo": func(t time.Time) string {
+			duration := time.Since(t)
+			if duration < time.Minute {
+				return "just now"
+			} else if duration < time.Hour {
+				minutes := int(duration.Minutes())
+				if minutes == 1 {
+					return "1 minute ago"
+				}
+				return fmt.Sprintf("%d minutes ago", minutes)
+			} else if duration < 24*time.Hour {
+				hours := int(duration.Hours())
+				if hours == 1 {
+					return "1 hour ago"
+				}
+				return fmt.Sprintf("%d hours ago", hours)
+			} else {
+				days := int(duration.Hours() / 24)
+				if days == 1 {
+					return "1 day ago"
+				}
+				return fmt.Sprintf("%d days ago", days)
+			}
+		},
+		"add": func(a, b int) int {
+			return a + b
+		},
+		"subtract": func(a, b int) int {
+			return a - b
+		},
+		"multiply": func(a, b int) int {
+			return a * b
+		},
+		"divide": func(a, b int) int {
+			if b == 0 {
+				return 0
+			}
+			return a / b
+		},
+		"mod": func(a, b int) int {
+			if b == 0 {
+				return 0
+			}
+			return a % b
+		},
+		"eq": func(a, b interface{}) bool {
+			return a == b
+		},
+		"ne": func(a, b interface{}) bool {
+			return a != b
+		},
+		"lt": func(a, b int) bool {
+			return a < b
+		},
+		"le": func(a, b int) bool {
+			return a <= b
+		},
+		"gt": func(a, b int) bool {
+			return a > b
+		},
+		"ge": func(a, b int) bool {
+			return a >= b
+		},
+		"len": func(v interface{}) int {
+			switch s := v.(type) {
+			case []interface{}:
+				return len(s)
+			case []string:
+				return len(s)
+			case string:
+				return len(s)
+			default:
+				return 0
+			}
+		},
+		"upper": func(s string) string {
+			return strings.ToUpper(s)
+		},
+		"lower": func(s string) string {
+			return strings.ToLower(s)
+		},
+		"contains": func(s, substr string) bool {
+			return strings.Contains(s, substr)
+		},
+		"hasPrefix": func(s, prefix string) bool {
+			return strings.HasPrefix(s, prefix)
+		},
+		"hasSuffix": func(s, suffix string) bool {
+			return strings.HasSuffix(s, suffix)
+		},
+		"replace": func(s, old, new string) string {
+			return strings.ReplaceAll(s, old, new)
+		},
+		"split": func(s, sep string) []string {
+			return strings.Split(s, sep)
+		},
+		"default": func(defaultValue, value interface{}) interface{} {
+			if value == nil || value == "" {
+				return defaultValue
+			}
+			return value
+		},
+		"seq": func(start, end int) []int {
+			if start > end {
+				return []int{}
+			}
+			result := make([]int, end-start+1)
+			for i := range result {
+				result[i] = start + i
+			}
+			return result
+		},
+	})
+	
+	// Admin routes are now handled by setupAdminRoutes()
+
+	// Homepage route
+	s.router.GET("/", s.handleHomepage)
+
+	// Frontend routes for public pages
+	s.setupFrontendRoutes()
+}
+
+func (s *Server) Start() error {
+	s.setupRoutes()
+
+	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
+	
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: s.router,
+	}
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Server starting on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// Give outstanding requests 30 seconds to complete
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	// Close connections
+	if s.cache != nil {
+		if err := s.cache.Close(); err != nil {
+			log.Printf("Error closing cache connection: %v", err)
+		}
+	}
+
+	if s.db != nil {
+		if err := s.db.Close(); err != nil {
+			log.Printf("Error closing database connection: %v", err)
+		}
+	}
+
+	log.Println("Server exited")
+	return nil
+}
+
+// handleCacheClear clears cache based on pattern
+func (s *Server) handleCacheClear(c *gin.Context) {
+	var req struct {
+		Pattern string `json:"pattern"`
+	}
+	
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+	
+	ctx := context.Background()
+	
+	if req.Pattern == "" {
+		req.Pattern = "*" // Clear all if no pattern specified
+	}
+	
+	err := s.cache.DeletePattern(ctx, req.Pattern)
+	if err != nil {
+		log.Printf("Failed to clear cache pattern %s: %v", req.Pattern, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear cache"})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Cache cleared successfully",
+		"pattern": req.Pattern,
+	})
+}
+
+// handleCacheStats returns basic cache statistics
+func (s *Server) handleCacheStats(c *gin.Context) {
+	ctx := context.Background()
+	
+	// Check cache health
+	err := s.cache.Health(ctx)
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "Cache unavailable",
+			"details": err.Error(),
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"status": "healthy",
+		"message": "Cache is operational",
+	})
+}
+
+// createDemoUser creates a demo admin user if it doesn't exist
+func createDemoUser(userService *services.UserService) error {
+	// Check if demo user already exists
+	_, err := userService.GetByEmail("admin@example.com")
+	if err == nil {
+		// User already exists
+		return nil
+	}
+	
+	// Create demo user
+	createReq := &services.CreateUserRequest{
+		Username:  "admin",
+		Email:     "admin@example.com",
+		Password:  "Admin123!",
+		Role:      models.RoleAdmin,
+		FirstName: "Demo",
+		LastName:  "Admin",
+		Bio:       "Demo administrator account",
+	}
+	
+	_, err = userService.Create(createReq, nil) // nil currentUser means system creation
+	if err != nil {
+		return fmt.Errorf("failed to create demo user: %w", err)
+	}
+	
+	log.Println("Demo admin user created successfully (admin@example.com / Admin123!)")
+	return nil
+}
+
+// setupFrontendRoutes configures frontend routes for public pages
+func (s *Server) setupFrontendRoutes() {
+	// Article routes
+	s.router.GET("/article/:slug", s.handleArticlePage)
+	s.router.GET("/articles/:slug", s.handleArticlePage) // Alternative URL structure
+	
+	// Category routes
+	s.router.GET("/category/:slug", s.handleCategoryPage)
+	s.router.GET("/categories", s.handleCategoriesPage)
+	s.router.GET("/categories/:slug", s.handleCategoryPage)
+	
+	// Tag routes
+	s.router.GET("/tag/:slug", s.handleTagPage)
+	s.router.GET("/tags", s.handleTagsPage)
+	s.router.GET("/tags/:slug", s.handleTagPage)
+	
+	// Special pages
+	s.router.GET("/trending", s.handleTrendingPage)
+	s.router.GET("/latest", s.handleLatestPage)
+	s.router.GET("/popular", s.handlePopularPage)
+	s.router.GET("/about", s.handleAboutPage)
+	s.router.GET("/contact", s.handleContactPage)
+	
+	// Search page
+	s.router.GET("/search", s.handleSearchPage)
+	
+	// Debug route to test if frontend routes are working
+	s.router.GET("/debug", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Frontend routes are working!",
+			"routes": []string{
+				"/trending", "/latest", "/categories", "/about",
+			},
+		})
+	})
+}
+
+// renderTemplate renders a template using fallback HTML generation
+func (s *Server) renderTemplate(c *gin.Context, templateName string, data gin.H) {
+	// Add default template data
+	if data == nil {
+		data = gin.H{}
+	}
+	
+	// Add common template variables
+	data["SiteName"] = s.config.App.Name
+	data["CurrentYear"] = time.Now().Year()
+	data["LanguageCode"] = "en"
+	data["LanguageDirection"] = "ltr"
+	data["ThemeMode"] = "light"
+	
+	// Try the template engine first
+	html, err := s.templateEngine.Render(templateName, data)
+	if err == nil {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(http.StatusOK, html)
+		return
+	}
+	
+	log.Printf("Template rendering failed for %s: %v, using fallback", templateName, err)
+	
+	// Fallback to simple HTML generation
+	s.renderFallbackHTML(c, templateName, data)
+}
+
+// renderFallbackHTML renders a simple HTML page when templates fail
+func (s *Server) renderFallbackHTML(c *gin.Context, templateName string, data gin.H) {
+	title := fmt.Sprintf("%v", data["Title"])
+	if title == "" || title == "<nil>" {
+		title = s.config.App.Name
+	}
+	
+	description := fmt.Sprintf("%v", data["Description"])
+	if description == "" || description == "<nil>" {
+		description = "High-performance multilingual news website"
+	}
+	
+	var content string
+	
+	switch templateName {
+	case "homepage":
+		content = s.generateHomepageContent(data)
+	case "article":
+		content = s.generateArticleContent(data)
+	case "category":
+		content = s.generateCategoryContent(data)
+	case "tag":
+		content = s.generateTagContent(data)
+	default:
+		content = s.generateGenericContent(data)
+	}
+	
+	html := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>%s</title>
+    <meta name="description" content="%s">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/%s.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .header { background: #1f2937; color: white; padding: 1rem 0; }
+        .nav { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; text-decoration: none; color: white; }
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a { color: white; text-decoration: none; }
+        .nav-links a:hover { text-decoration: underline; }
+        .hero { background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 4rem 0; text-align: center; }
+        .hero h1 { font-size: 3rem; margin: 0 0 1rem 0; }
+        .hero p { font-size: 1.2rem; margin: 0; opacity: 0.9; }
+        .main { padding: 2rem 0; }
+        .footer { background: #f9fafb; padding: 2rem 0; margin-top: 4rem; text-align: center; color: #6b7280; }
+        .articles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 2rem 0; }
+        .article-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; }
+        .article-card h3 { margin: 0 0 1rem 0; }
+        .article-card h3 a { color: #1f2937; text-decoration: none; }
+        .article-card h3 a:hover { color: #3b82f6; }
+        .article-meta { color: #6b7280; font-size: 0.9rem; }
+        .categories-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+        .category-card { background: #f9fafb; border-radius: 8px; padding: 1.5rem; }
+        .category-card h4 { margin: 0 0 0.5rem 0; }
+        .category-card a { color: #1f2937; text-decoration: none; }
+        .category-card a:hover { color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <a href="/" class="logo">%s</a>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/tags">Tags</a>
+                    <a href="/search">Search</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+    
+    <main class="main">
+        %s
+    </main>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; %d %s. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script src="/static/js/main.js"></script>
+</body>
+</html>`, title, description, templateName, s.config.App.Name, content, data["CurrentYear"], s.config.App.Name)
+	
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+// Frontend page handlers
+func (s *Server) handleArticlePage(c *gin.Context) {
+	slug := c.Param("slug")
+	
+	// TODO: Fetch article data from repository
+	// For now, serve with mock data
+	s.renderTemplate(c, "article", gin.H{
+		"Title": "Article: " + slug,
+		"Description": "Read this article about " + slug,
+		"Article": gin.H{
+			"Title":   "Sample Article: " + slug,
+			"Content": "<p>This is a sample article content for <strong>" + slug + "</strong>. The full article content would be displayed here with proper formatting and styling.</p>",
+			"Excerpt": "This is a sample article excerpt that provides a brief overview of the content.",
+			"Slug":    slug,
+		},
+	})
+}
+
+func (s *Server) handleCategoryPage(c *gin.Context) {
+	slug := c.Param("slug")
+	
+	// TODO: Fetch category and articles from repository
+	s.renderTemplate(c, "category", gin.H{
+		"Title": "Category: " + slug,
+		"Description": "Browse articles in the " + slug + " category",
+	})
+}
+
+func (s *Server) handleCategoriesPage(c *gin.Context) {
+	// TODO: Fetch all categories from repository
+	s.renderTemplate(c, "category", gin.H{
+		"Title": "All Categories",
+		"Description": "Explore all article categories",
+	})
+}
+
+func (s *Server) handleTagPage(c *gin.Context) {
+	slug := c.Param("slug")
+	
+	// TODO: Fetch tag and articles from repository
+	s.renderTemplate(c, "tag", gin.H{
+		"Title": "Tag: " + slug,
+		"Description": "Articles tagged with " + slug,
+	})
+}
+
+func (s *Server) handleTagsPage(c *gin.Context) {
+	// TODO: Fetch all tags from repository
+	s.renderTemplate(c, "tag", gin.H{
+		"Title": "All Tags",
+		"Description": "Explore all article tags",
+	})
+}
+
+func (s *Server) handleTrendingPage(c *gin.Context) {
+	// TODO: Fetch trending articles from repository
+	s.renderTemplate(c, "homepage", gin.H{
+		"Title": "Trending Articles",
+		"SEOTitle": "Trending News Articles",
+		"Description": "Discover the most trending articles",
+		"PageType": "trending",
+		"Articles": []gin.H{
+			{"Title": "Trending Article 1", "Slug": "trending-1", "Views": 1000},
+			{"Title": "Trending Article 2", "Slug": "trending-2", "Views": 800},
+		},
+	})
+}
+
+func (s *Server) handleLatestPage(c *gin.Context) {
+	// TODO: Fetch latest articles from repository
+	s.renderTemplate(c, "homepage", gin.H{
+		"Title": "Latest Articles",
+		"SEOTitle": "Latest News Articles",
+		"Description": "Read the latest news articles",
+		"PageType": "latest",
+		"Articles": []gin.H{
+			{"Title": "Latest Article 1", "Slug": "latest-1"},
+			{"Title": "Latest Article 2", "Slug": "latest-2"},
+		},
+	})
+}
+
+func (s *Server) handlePopularPage(c *gin.Context) {
+	// TODO: Fetch popular articles from repository
+	s.renderTemplate(c, "homepage", gin.H{
+		"Title": "Popular Articles",
+		"SEOTitle": "Most Popular Articles",
+		"Description": "Discover the most popular articles",
+		"PageType": "popular",
+		"Articles": []gin.H{
+			{"Title": "Popular Article 1", "Slug": "popular-1", "Likes": 50},
+			{"Title": "Popular Article 2", "Slug": "popular-2", "Likes": 40},
+		},
+	})
+}
+
+func (s *Server) handleAboutPage(c *gin.Context) {
+	s.renderTemplate(c, "homepage", gin.H{
+		"Title": "About Us",
+		"SEOTitle": "About Our News Website",
+		"Description": "Learn more about our news website",
+		"PageType": "about",
+		"Content": "This is the about page content.",
+	})
+}
+
+func (s *Server) handleContactPage(c *gin.Context) {
+	s.renderTemplate(c, "homepage", gin.H{
+		"Title": "Contact Us",
+		"SEOTitle": "Contact Our News Team",
+		"Description": "Get in touch with our news team",
+		"PageType": "contact",
+		"Content": "Contact information and form would go here.",
+	})
+}
+
+func (s *Server) handleSearchPage(c *gin.Context) {
+	query := c.Query("q")
+	
+	// TODO: Implement search functionality
+	s.renderTemplate(c, "homepage", gin.H{
+		"Title": "Search Results",
+		"SEOTitle": "Search Results for: " + query,
+		"Description": "Search results for " + query,
+		"PageType": "search",
+		"Query": query,
+		"Results": []gin.H{
+			{"Title": "Search Result 1", "Slug": "result-1"},
+			{"Title": "Search Result 2", "Slug": "result-2"},
+		},
+	})
+}
+
+func (s *Server) handleHomepage(c *gin.Context) {
+	// TODO: Fetch latest articles from repository
+	s.renderTemplate(c, "homepage", gin.H{
+		"Title": s.config.App.Name,
+		"Description": "High-performance multilingual news website with fast, reliable content delivery",
+		"PageType": "homepage",
+		"Articles": []gin.H{
+			{"Title": "Sample News Article", "Slug": "sample-1", "Category": "Technology", "Author": "Admin User", "TimeAgo": "2 hours ago"},
+			{"Title": "Another Sample Article", "Slug": "sample-2", "Category": "Business", "Author": "Editor", "TimeAgo": "4 hours ago"},
+			{"Title": "Sports News Sample", "Slug": "sample-3", "Category": "Sports", "Author": "Sports Reporter", "TimeAgo": "6 hours ago"},
+		},
+		"Categories": []gin.H{
+			{"Name": "Technology", "Slug": "technology", "Description": "Latest tech news and innovations", "Count": 0},
+			{"Name": "Business", "Slug": "business", "Description": "Business and financial news", "Count": 0},
+			{"Name": "Sports", "Slug": "sports", "Description": "Sports news and updates", "Count": 0},
+			{"Name": "World", "Slug": "world", "Description": "International news coverage", "Count": 0},
+		},
+	})
+}
+
+// Content generation functions for fallback rendering
+
+func (s *Server) generateHomepageContent(data gin.H) string {
+	content := `<div class="container">
+        <section class="hero">
+            <h1>Welcome to ` + s.config.App.Name + `</h1>
+            <p>Your source for fast, reliable news content with cutting-edge performance</p>
+        </section>`
+	
+	if articles, ok := data["Articles"].([]gin.H); ok && len(articles) > 0 {
+		content += `<section><h2>Latest Articles</h2><div class="articles-grid">`
+		for _, article := range articles {
+			title := fmt.Sprintf("%v", article["Title"])
+			slug := fmt.Sprintf("%v", article["Slug"])
+			category := fmt.Sprintf("%v", article["Category"])
+			author := fmt.Sprintf("%v", article["Author"])
+			timeAgo := fmt.Sprintf("%v", article["TimeAgo"])
+			
+			content += fmt.Sprintf(`
+                <article class="article-card">
+                    <h3><a href="/articles/%s">%s</a></h3>
+                    <div class="article-meta">
+                        <span>%s</span> • <span>%s</span> • <span>%s</span>
+                    </div>
+                </article>`, slug, title, category, author, timeAgo)
+		}
+		content += `</div></section>`
+	}
+	
+	if categories, ok := data["Categories"].([]gin.H); ok && len(categories) > 0 {
+		content += `<section><h2>Categories</h2><div class="categories-grid">`
+		for _, category := range categories {
+			name := fmt.Sprintf("%v", category["Name"])
+			slug := fmt.Sprintf("%v", category["Slug"])
+			description := fmt.Sprintf("%v", category["Description"])
+			
+			content += fmt.Sprintf(`
+                <div class="category-card">
+                    <h4><a href="/categories/%s">%s</a></h4>
+                    <p>%s</p>
+                </div>`, slug, name, description)
+		}
+		content += `</div></section>`
+	}
+	
+	content += `</div>`
+	return content
+}
+
+func (s *Server) generateArticleContent(data gin.H) string {
+	title := "Sample Article"
+	content := "This is a sample article content."
+	
+	if article, ok := data["Article"].(gin.H); ok {
+		if t, exists := article["Title"]; exists {
+			title = fmt.Sprintf("%v", t)
+		}
+		if c, exists := article["Content"]; exists {
+			content = fmt.Sprintf("%v", c)
+		}
+	}
+	
+	return fmt.Sprintf(`<div class="container">
+        <article>
+            <header>
+                <h1>%s</h1>
+            </header>
+            <div class="article-content">
+                %s
+            </div>
+        </article>
+    </div>`, title, content)
+}
+
+func (s *Server) generateCategoryContent(data gin.H) string {
+	title := fmt.Sprintf("%v", data["Title"])
+	description := fmt.Sprintf("%v", data["Description"])
+	
+	return fmt.Sprintf(`<div class="container">
+        <header>
+            <h1>%s</h1>
+            <p>%s</p>
+        </header>
+        <div class="content">
+            <p>Articles in this category will be displayed here.</p>
+        </div>
+    </div>`, title, description)
+}
+
+func (s *Server) generateTagContent(data gin.H) string {
+	title := fmt.Sprintf("%v", data["Title"])
+	description := fmt.Sprintf("%v", data["Description"])
+	
+	return fmt.Sprintf(`<div class="container">
+        <header>
+            <h1>%s</h1>
+            <p>%s</p>
+        </header>
+        <div class="content">
+            <p>Articles with this tag will be displayed here.</p>
+        </div>
+    </div>`, title, description)
+}
+
+func (s *Server) generateGenericContent(data gin.H) string {
+	title := fmt.Sprintf("%v", data["Title"])
+	content := fmt.Sprintf("%v", data["Content"])
+	if content == "" || content == "<nil>" {
+		content = "This page is under construction."
+	}
+	
+	return fmt.Sprintf(`<div class="container">
+        <header>
+            <h1>%s</h1>
+        </header>
+        <div class="content">
+            <p>%s</p>
+        </div>
+    </div>`, title, content)
+}
+

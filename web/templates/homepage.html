@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="{{.Language}}" dir="{{.Direction}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <meta name="description" content="{{.Description}}">
+    <meta name="keywords" content="{{join .Keywords ", "}}">
+    <link rel="canonical" href="{{.CanonicalURL}}">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="{{.Title}}">
+    <meta property="og:description" content="{{.Description}}">
+    <meta property="og:url" content="{{.CanonicalURL}}">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{.Title}}">
+    <meta name="twitter:description" content="{{.Description}}">
+    
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">{{.SchemaMarkup | safeHTML}}</script>
+    
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/multilingual.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <h1 class="logo">High Performance News</h1>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/tags">Tags</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <h2>Latest News and Updates</h2>
+            <p>Stay informed with our comprehensive news coverage</p>
+        </section>
+        
+        <!-- Trending Articles -->
+        {{if .TrendingArticles}}
+        <section class="trending-section">
+            <h3>Trending Now</h3>
+            <div class="articles-grid trending">
+                {{range .TrendingArticles}}
+                <article class="article-card trending-card">
+                    <h4><a href="/articles/{{.Slug}}">{{.Title}}</a></h4>
+                    <p class="excerpt">{{truncate .Excerpt 150}}</p>
+                    <div class="article-meta">
+                        <time datetime="{{.PublishedAt}}">{{formatDate .PublishedAt}}</time>
+                        <span class="views">{{.ViewCount}} views</span>
+                    </div>
+                </article>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+        
+        <!-- Latest Articles -->
+        {{if .LatestArticles}}
+        <section class="latest-section">
+            <h3>Latest Articles</h3>
+            <div class="articles-grid">
+                {{range .LatestArticles}}
+                <article class="article-card">
+                    <h4><a href="/articles/{{.Slug}}">{{.Title}}</a></h4>
+                    <p class="excerpt">{{truncate .Excerpt 200}}</p>
+                    <div class="article-meta">
+                        <time datetime="{{.PublishedAt}}">{{formatDate .PublishedAt}}</time>
+                        <span class="category">Category ID: {{.CategoryID}}</span>
+                    </div>
+                    {{if .Tags}}
+                    <div class="tags">
+                        {{range .Tags}}
+                        <a href="/tags/{{.Slug}}" class="tag">{{.Name}}</a>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </article>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+        
+        <!-- Categories -->
+        {{if .Categories}}
+        <section class="categories-section">
+            <h3>Browse Categories</h3>
+            <div class="categories-grid">
+                {{range .Categories}}
+                <div class="category-card">
+                    <h4><a href="/categories/{{.Slug}}">{{.Name}}</a></h4>
+                    <p>{{.Description}}</p>
+                </div>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 High Performance News Website. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

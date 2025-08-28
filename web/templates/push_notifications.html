@@ -1,0 +1,465 @@
+{{define "push_notifications"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Push Notifications - {{.SiteName}}</title>
+    
+    <!-- Push notification configuration -->
+    <meta name="vapid-public-key" content="{{.VAPIDPublicKey}}">
+    <meta name="onesignal-app-id" content="{{.OneSignalAppID}}">
+    <meta name="firebase-config" content="{{.FirebaseConfig}}">
+    <meta name="user-id" content="{{.CurrentUser.ID}}">
+    
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .notification-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .notification-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: #4CAF50;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(30px);
+        }
+        
+        .preference-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        
+        .preference-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .checkbox-item:hover {
+            background: #f5f5f5;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Push Notifications</h1>
+        
+        <div id="push-messages"></div>
+        
+        <!-- Subscription Status -->
+        <div class="notification-card">
+            <h2>Notification Status</h2>
+            <p id="notification-status">Checking notification support...</p>
+            
+            <div id="subscription-controls">
+                <button id="push-subscribe-btn" class="btn btn-primary hidden">
+                    Enable Notifications
+                </button>
+                <button id="push-unsubscribe-btn" class="btn btn-danger hidden">
+                    Disable Notifications
+                </button>
+            </div>
+        </div>
+        
+        <!-- Notification Preferences -->
+        <div id="push-preferences" class="notification-card hidden">
+            <h2>Notification Preferences</h2>
+            <p>Customize what notifications you want to receive:</p>
+            
+            <form id="push-preferences-form">
+                <!-- Basic Notification Types -->
+                <div class="preference-section">
+                    <h3>Notification Types</h3>
+                    
+                    <div class="notification-toggle">
+                        <label for="breaking_news">Breaking News</label>
+                        <div class="toggle-switch" data-input="breaking_news">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <input type="checkbox" id="breaking_news" name="breaking_news" style="display: none;">
+                    </div>
+                    
+                    <div class="notification-toggle">
+                        <label for="category_updates">Category Updates</label>
+                        <div class="toggle-switch" data-input="category_updates">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <input type="checkbox" id="category_updates" name="category_updates" style="display: none;">
+                    </div>
+                    
+                    <div class="notification-toggle">
+                        <label for="tag_updates">Tag Updates</label>
+                        <div class="toggle-switch" data-input="tag_updates">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <input type="checkbox" id="tag_updates" name="tag_updates" style="display: none;">
+                    </div>
+                    
+                    <div class="notification-toggle">
+                        <label for="author_updates">Author Updates</label>
+                        <div class="toggle-switch" data-input="author_updates">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <input type="checkbox" id="author_updates" name="author_updates" style="display: none;">
+                    </div>
+                </div>
+                
+                <!-- Preferred Categories -->
+                <div class="preference-section">
+                    <h3>Preferred Categories</h3>
+                    <p>Select categories you want to receive notifications for:</p>
+                    <div class="checkbox-group">
+                        {{range .Categories}}
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="category_{{.ID}}" name="preferred_categories" value="{{.ID}}">
+                            <label for="category_{{.ID}}">{{.Name}}</label>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                
+                <!-- Preferred Tags -->
+                <div class="preference-section">
+                    <h3>Preferred Tags</h3>
+                    <p>Select tags you want to receive notifications for:</p>
+                    <div class="checkbox-group">
+                        {{range .Tags}}
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="tag_{{.ID}}" name="preferred_tags" value="{{.ID}}">
+                            <label for="tag_{{.ID}}">{{.Name}}</label>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                
+                <!-- Preferred Authors -->
+                <div class="preference-section">
+                    <h3>Preferred Authors</h3>
+                    <p>Select authors you want to receive notifications for:</p>
+                    <div class="checkbox-group">
+                        {{range .Authors}}
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="author_{{.ID}}" name="preferred_authors" value="{{.ID}}">
+                            <label for="author_{{.ID}}">{{.FirstName}} {{.LastName}}</label>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <button type="submit" class="btn btn-primary">Save Preferences</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Test Notification -->
+        {{if .IsAdmin}}
+        <div class="notification-card">
+            <h2>Test Notifications (Admin Only)</h2>
+            <p>Send a test notification to verify the system is working:</p>
+            
+            <div style="margin: 15px 0;">
+                <input type="text" id="test-title" placeholder="Notification Title" style="width: 100%; padding: 8px; margin: 5px 0;">
+                <textarea id="test-body" placeholder="Notification Body" style="width: 100%; padding: 8px; margin: 5px 0; height: 80px;"></textarea>
+                <input type="url" id="test-url" placeholder="Notification URL (optional)" style="width: 100%; padding: 8px; margin: 5px 0;">
+            </div>
+            
+            <button id="send-test-notification" class="btn btn-secondary">Send Test Notification</button>
+        </div>
+        {{end}}
+        
+        <!-- Browser Compatibility Info -->
+        <div class="notification-card">
+            <h2>Browser Compatibility</h2>
+            <div id="browser-support-info">
+                <p>Checking browser support...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/static/js/push-notifications.js"></script>
+    <script>
+        // Initialize toggle switches
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleSwitches = document.querySelectorAll('.toggle-switch');
+            
+            toggleSwitches.forEach(toggle => {
+                const inputName = toggle.dataset.input;
+                const checkbox = document.getElementById(inputName);
+                
+                toggle.addEventListener('click', function() {
+                    checkbox.checked = !checkbox.checked;
+                    toggle.classList.toggle('active', checkbox.checked);
+                });
+                
+                // Set initial state
+                toggle.classList.toggle('active', checkbox.checked);
+            });
+            
+            // Update browser support info
+            updateBrowserSupportInfo();
+            
+            // Update notification status
+            updateNotificationStatus();
+            
+            // Load existing preferences
+            loadExistingPreferences();
+            
+            {{if .IsAdmin}}
+            // Admin test notification
+            document.getElementById('send-test-notification').addEventListener('click', sendTestNotification);
+            {{end}}
+        });
+        
+        function updateBrowserSupportInfo() {
+            const supportInfo = document.getElementById('browser-support-info');
+            let info = '<ul>';
+            
+            if ('serviceWorker' in navigator) {
+                info += '<li>✅ Service Worker supported</li>';
+            } else {
+                info += '<li>❌ Service Worker not supported</li>';
+            }
+            
+            if ('PushManager' in window) {
+                info += '<li>✅ Push Manager supported</li>';
+            } else {
+                info += '<li>❌ Push Manager not supported</li>';
+            }
+            
+            if ('Notification' in window) {
+                info += '<li>✅ Notifications supported</li>';
+                info += '<li>Permission: ' + Notification.permission + '</li>';
+            } else {
+                info += '<li>❌ Notifications not supported</li>';
+            }
+            
+            info += '</ul>';
+            supportInfo.innerHTML = info;
+        }
+        
+        function updateNotificationStatus() {
+            const statusElement = document.getElementById('notification-status');
+            const isSubscribed = localStorage.getItem('push_subscribed') === 'true';
+            
+            if (!window.pushManager.isSupported) {
+                statusElement.textContent = 'Push notifications are not supported in this browser.';
+                statusElement.style.color = '#dc3545';
+                return;
+            }
+            
+            if (isSubscribed) {
+                statusElement.textContent = 'You are subscribed to push notifications.';
+                statusElement.style.color = '#28a745';
+            } else {
+                statusElement.textContent = 'You are not subscribed to push notifications.';
+                statusElement.style.color = '#ffc107';
+            }
+        }
+        
+        async function loadExistingPreferences() {
+            const subscriptionId = localStorage.getItem('push_subscription_id');
+            if (!subscriptionId) return;
+            
+            try {
+                const preferences = await window.pushManager.getPreferences();
+                if (preferences) {
+                    // Update form with existing preferences
+                    document.getElementById('breaking_news').checked = preferences.breaking_news;
+                    document.getElementById('category_updates').checked = preferences.category_updates;
+                    document.getElementById('tag_updates').checked = preferences.tag_updates;
+                    document.getElementById('author_updates').checked = preferences.author_updates;
+                    
+                    // Update preferred categories
+                    if (preferences.preferred_categories) {
+                        preferences.preferred_categories.forEach(categoryId => {
+                            const checkbox = document.getElementById(`category_${categoryId}`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                    }
+                    
+                    // Update preferred tags
+                    if (preferences.preferred_tags) {
+                        preferences.preferred_tags.forEach(tagId => {
+                            const checkbox = document.getElementById(`tag_${tagId}`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                    }
+                    
+                    // Update preferred authors
+                    if (preferences.preferred_authors) {
+                        preferences.preferred_authors.forEach(authorId => {
+                            const checkbox = document.getElementById(`author_${authorId}`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                    }
+                    
+                    // Update toggle switches
+                    document.querySelectorAll('.toggle-switch').forEach(toggle => {
+                        const inputName = toggle.dataset.input;
+                        const checkbox = document.getElementById(inputName);
+                        toggle.classList.toggle('active', checkbox.checked);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load preferences:', error);
+            }
+        }
+        
+        {{if .IsAdmin}}
+        async function sendTestNotification() {
+            const title = document.getElementById('test-title').value || 'Test Notification';
+            const body = document.getElementById('test-body').value || 'This is a test notification';
+            const url = document.getElementById('test-url').value || window.location.origin;
+            
+            try {
+                const response = await fetch('/api/v1/push/admin/notifications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        body: body,
+                        url: url,
+                        target_type: 'all',
+                        send_now: true
+                    })
+                });
+                
+                if (response.ok) {
+                    window.pushManager.showMessage('Test notification sent successfully!', 'success');
+                } else {
+                    throw new Error('Failed to send test notification');
+                }
+            } catch (error) {
+                console.error('Failed to send test notification:', error);
+                window.pushManager.showMessage('Failed to send test notification', 'error');
+            }
+        }
+        {{end}}
+    </script>
+</body>
+</html>
+{{end}}

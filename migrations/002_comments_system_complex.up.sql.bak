@@ -1,0 +1,258 @@
+-- Create comments table (partitioned by created_at for high volume)
+CREATE TABLE comments (
+    id BIGSERIAL,
+    article_id BIGINT NOT NULL,
+    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    parent_id BIGINT, -- Self-referencing for threading
+    content TEXT NOT NULL,
+    author_name VARCHAR(100) NOT NULL,
+    author_email VARCHAR(255) NOT NULL,
+    author_ip INET,
+    user_agent TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    spam_score DECIMAL(3,2) DEFAULT 0.0,
+    moderated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    moderated_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
+
+-- Create comment_moderation_log table (partitioned by created_at)
+CREATE TABLE comment_moderation_log (
+    id BIGSERIAL,
+    comment_id BIGINT NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    moderator_id BIGINT NOT NULL REFERENCES users(id),
+    reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
+
+-- Create initial partitions for current month
+DO $
+DECLARE
+    start_date date := date_trunc('month', CURRENT_DATE);
+    end_date date := start_date + interval '1 month';
+    partition_name text := 'comments_' || to_char(start_date, 'YYYY_MM');
+BEGIN
+    EXECUTE format('CREATE TABLE %I PARTITION OF comments FOR VALUES FROM (%L) TO (%L)',
+        partition_name, start_date, end_date);
+    
+    -- Create indexes on the partition
+    EXECUTE format('CREATE INDEX idx_%I_article_status ON %I (article_id, status, created_at)',
+        partition_name, partition_name);
+    EXECUTE format('CREATE INDEX idx_%I_parent ON %I (parent_id) WHERE parent_id IS NOT NULL',
+        partition_name, partition_name);
+    EXECUTE format('CREATE INDEX idx_%I_status ON %I (status, created_at)',
+        partition_name, partition_name);
+    EXECUTE format('CREATE INDEX idx_%I_user ON %I (user_id) WHERE user_id IS NOT NULL',
+        partition_name, partition_name);
+    EXECUTE format('CREATE INDEX idx_%I_moderation ON %I (moderated_by, moderated_at) WHERE moderated_by IS NOT NULL',
+        partition_name, partition_name);
+    EXECUTE format('CREATE INDEX idx_%I_spam_score ON %I (spam_score) WHERE spam_score > 0',
+        partition_name, partition_name);
+    EXECUTE format('CREATE INDEX idx_%I_author_email ON %I (author_email)',
+        partition_name, partition_name);
+    
+    -- Full-text search index for content
+    EXECUTE format('CREATE INDEX idx_%I_content_search ON %I USING gin(to_tsvector(''english'', content))',
+        partition_name, partition_name);
+    
+    -- BRIN index for time-series performance
+    EXECUTE format('CREATE INDEX idx_%I_created_brin ON %I USING BRIN (created_at) WITH (pages_per_range = 128)',
+        partition_name, partition_name);
+END $;
+
+-- Create moderation log partition
+DO $
+DECLARE
+    start_date date := date_trunc('month', CURRENT_DATE);
+    end_date date := start_date + interval '1 month';
+    partition_name text := 'comment_moderation_log_' || to_char(start_date, 'YYYY_MM');
+BEGIN
+    EXECUTE format('CREATE TABLE %I PARTITION OF comment_moderation_log FOR VALUES FROM (%L) TO (%L)',
+        partition_name, start_date, end_date);
+    
+    -- Create indexes on the partition
+    EXECUTE format('CREATE INDEX idx_%I_comment ON %I (comment_id, created_at)',
+        partition_name, partition_name);
+    EXECUTE format('CREATE INDEX idx_%I_moderator ON %I (moderator_id, created_at)',
+        partition_name, partition_name);
+    EXECUTE format('CREATE INDEX idx_%I_action ON %I (action, created_at)',
+        partition_name, partition_name);
+    
+    -- BRIN index for time-series performance
+    EXECUTE format('CREATE INDEX idx_%I_created_brin ON %I USING BRIN (created_at) WITH (pages_per_range = 128)',
+        partition_name, partition_name);
+END $;
+
+-- Add foreign key constraint for parent_id (self-referencing)
+-- Note: This needs to be added after partition creation
+ALTER TABLE comments ADD CONSTRAINT fk_comments_parent 
+    FOREIGN KEY (parent_id, created_at) REFERENCES comments(id, created_at) DEFERRABLE INITIALLY DEFERRED;
+
+-- Add check constraints for data integrity
+ALTER TABLE comments ADD CONSTRAINT chk_comments_status 
+    CHECK (status IN ('pending', 'approved', 'rejected', 'spam'));
+
+ALTER TABLE comments ADD CONSTRAINT chk_comments_spam_score 
+    CHECK (spam_score >= 0.0 AND spam_score <= 1.0);
+
+ALTER TABLE comments ADD CONSTRAINT chk_comments_content_length 
+    CHECK (length(content) > 0 AND length(content) <= 2000);
+
+ALTER TABLE comments ADD CONSTRAINT chk_comments_author_name_length 
+    CHECK (length(author_name) > 0 AND length(author_name) <= 100);
+
+ALTER TABLE comment_moderation_log ADD CONSTRAINT chk_moderation_log_action 
+    CHECK (action IN ('pending', 'approved', 'rejected', 'spam'));
+
+-- Create function to automatically create monthly partitions
+CREATE OR REPLACE FUNCTION create_monthly_comment_partitions()
+RETURNS void AS $
+DECLARE
+    start_date date;
+    end_date date;
+    partition_name text;
+BEGIN
+    -- Create partitions for next 3 months
+    FOR i IN 1..3 LOOP
+        start_date := date_trunc('month', CURRENT_DATE + (i || ' months')::interval);
+        end_date := start_date + interval '1 month';
+        
+        -- Comments partition
+        partition_name := 'comments_' || to_char(start_date, 'YYYY_MM');
+        
+        -- Check if partition already exists
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_class WHERE relname = partition_name
+        ) THEN
+            EXECUTE format('CREATE TABLE %I PARTITION OF comments FOR VALUES FROM (%L) TO (%L)',
+                partition_name, start_date, end_date);
+            
+            -- Create indexes
+            EXECUTE format('CREATE INDEX idx_%I_article_status ON %I (article_id, status, created_at)',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_parent ON %I (parent_id) WHERE parent_id IS NOT NULL',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_status ON %I (status, created_at)',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_user ON %I (user_id) WHERE user_id IS NOT NULL',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_moderation ON %I (moderated_by, moderated_at) WHERE moderated_by IS NOT NULL',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_spam_score ON %I (spam_score) WHERE spam_score > 0',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_author_email ON %I (author_email)',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_content_search ON %I USING gin(to_tsvector(''english'', content))',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_created_brin ON %I USING BRIN (created_at) WITH (pages_per_range = 128)',
+                partition_name, partition_name);
+        END IF;
+        
+        -- Moderation log partition
+        partition_name := 'comment_moderation_log_' || to_char(start_date, 'YYYY_MM');
+        
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_class WHERE relname = partition_name
+        ) THEN
+            EXECUTE format('CREATE TABLE %I PARTITION OF comment_moderation_log FOR VALUES FROM (%L) TO (%L)',
+                partition_name, start_date, end_date);
+            
+            -- Create indexes
+            EXECUTE format('CREATE INDEX idx_%I_comment ON %I (comment_id, created_at)',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_moderator ON %I (moderator_id, created_at)',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_action ON %I (action, created_at)',
+                partition_name, partition_name);
+            EXECUTE format('CREATE INDEX idx_%I_created_brin ON %I USING BRIN (created_at) WITH (pages_per_range = 128)',
+                partition_name, partition_name);
+        END IF;
+    END LOOP;
+END;
+$ LANGUAGE plpgsql;
+
+-- Create function to drop old comment partitions (older than 12 months)
+CREATE OR REPLACE FUNCTION drop_old_comment_partitions()
+RETURNS void AS $
+DECLARE
+    cutoff_date date := date_trunc('month', CURRENT_DATE - interval '12 months');
+    partition_record record;
+BEGIN
+    -- Drop old comment partitions
+    FOR partition_record IN
+        SELECT schemaname, tablename
+        FROM pg_tables
+        WHERE tablename ~ '^comments_\d{4}_\d{2}$'
+        AND to_date(substring(tablename from '\d{4}_\d{2}$'), 'YYYY_MM') < cutoff_date
+    LOOP
+        EXECUTE format('DROP TABLE IF EXISTS %I.%I CASCADE',
+            partition_record.schemaname, partition_record.tablename);
+    END LOOP;
+    
+    -- Drop old moderation log partitions
+    FOR partition_record IN
+        SELECT schemaname, tablename
+        FROM pg_tables
+        WHERE tablename ~ '^comment_moderation_log_\d{4}_\d{2}$'
+        AND to_date(substring(tablename from '\d{4}_\d{2}$'), 'YYYY_MM') < cutoff_date
+    LOOP
+        EXECUTE format('DROP TABLE IF EXISTS %I.%I CASCADE',
+            partition_record.schemaname, partition_record.tablename);
+    END LOOP;
+END;
+$ LANGUAGE plpgsql;
+
+-- Create trigger function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_comment_updated_at()
+RETURNS TRIGGER AS $
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
+-- Create trigger for updated_at
+CREATE TRIGGER trigger_update_comment_updated_at
+    BEFORE UPDATE ON comments
+    FOR EACH ROW
+    EXECUTE FUNCTION update_comment_updated_at();
+
+-- Create indexes for global queries (across all partitions)
+CREATE INDEX idx_comments_global_article_status ON comments (article_id, status);
+CREATE INDEX idx_comments_global_status_created ON comments (status, created_at);
+CREATE INDEX idx_comments_global_user ON comments (user_id) WHERE user_id IS NOT NULL;
+
+-- Create view for comment statistics
+CREATE VIEW comment_stats AS
+SELECT 
+    DATE(created_at) as date,
+    status,
+    COUNT(*) as count,
+    AVG(spam_score) as avg_spam_score
+FROM comments
+WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY DATE(created_at), status
+ORDER BY date DESC, status;
+
+-- Create view for moderation queue with article information
+CREATE VIEW moderation_queue AS
+SELECT 
+    c.id,
+    c.article_id,
+    c.content,
+    c.author_name,
+    c.author_email,
+    c.spam_score,
+    c.created_at,
+    a.title as article_title,
+    a.slug as article_slug,
+    u.username as author_username
+FROM comments c
+LEFT JOIN articles a ON c.article_id = a.id
+LEFT JOIN users u ON c.user_id = u.id
+WHERE c.status = 'pending'
+ORDER BY c.spam_score DESC, c.created_at ASC;

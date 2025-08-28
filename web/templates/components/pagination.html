@@ -1,0 +1,158 @@
+{{define "pagination"}}
+{{if gt .Pagination.TotalPages 1}}
+<nav class="pagination-nav" aria-label="{{if eq .LanguageCode "fa"}}صفحه‌بندی{{else if eq .LanguageCode "ar"}}ترقيم الصفحات{{else}}Pagination{{end}}">
+    <div class="pagination-info">
+        <span class="pagination-text">
+            {{if eq .LanguageCode "fa"}}
+                صفحه {{.Pagination.CurrentPage}} از {{.Pagination.TotalPages}}
+            {{else if eq .LanguageCode "ar"}}
+                الصفحة {{.Pagination.CurrentPage}} من {{.Pagination.TotalPages}}
+            {{else}}
+                Page {{.Pagination.CurrentPage}} of {{.Pagination.TotalPages}}
+            {{end}}
+        </span>
+    </div>
+    
+    <ul class="pagination-list">
+        <!-- Previous page -->
+        {{if .Pagination.HasPrevious}}
+        <li class="pagination-item">
+            <a href="{{.Pagination.PreviousURL}}" class="pagination-link pagination-prev" rel="prev">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {{if eq .LanguageDirection "rtl"}}
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    {{else}}
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    {{end}}
+                </svg>
+                <span class="pagination-label">
+                    {{if eq .LanguageCode "fa"}}
+                        قبلی
+                    {{else if eq .LanguageCode "ar"}}
+                        السابق
+                    {{else}}
+                        Previous
+                    {{end}}
+                </span>
+            </a>
+        </li>
+        {{else}}
+        <li class="pagination-item pagination-disabled">
+            <span class="pagination-link pagination-prev">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {{if eq .LanguageDirection "rtl"}}
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    {{else}}
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    {{end}}
+                </svg>
+                <span class="pagination-label">
+                    {{if eq .LanguageCode "fa"}}
+                        قبلی
+                    {{else if eq .LanguageCode "ar"}}
+                        السابق
+                    {{else}}
+                        Previous
+                    {{end}}
+                </span>
+            </span>
+        </li>
+        {{end}}
+        
+        <!-- Page numbers -->
+        {{$currentPage := .Pagination.CurrentPage}}
+        {{$totalPages := .Pagination.TotalPages}}
+        {{$startPage := 1}}
+        {{$endPage := $totalPages}}
+        
+        {{if gt $totalPages 7}}
+            {{if le $currentPage 4}}
+                {{$endPage = 5}}
+            {{else if ge $currentPage (subtract $totalPages 3)}}
+                {{$startPage = subtract $totalPages 4}}
+            {{else}}
+                {{$startPage = subtract $currentPage 2}}
+                {{$endPage = add $currentPage 2}}
+            {{end}}
+        {{end}}
+        
+        {{if gt $startPage 1}}
+        <li class="pagination-item">
+            <a href="?page=1" class="pagination-link">1</a>
+        </li>
+        {{if gt $startPage 2}}
+        <li class="pagination-item pagination-ellipsis">
+            <span class="pagination-link">...</span>
+        </li>
+        {{end}}
+        {{end}}
+        
+        {{range $page := (seq $startPage $endPage)}}
+        <li class="pagination-item {{if eq $page $currentPage}}pagination-current{{end}}">
+            {{if eq $page $currentPage}}
+            <span class="pagination-link" aria-current="page">{{$page}}</span>
+            {{else}}
+            <a href="?page={{$page}}" class="pagination-link">{{$page}}</a>
+            {{end}}
+        </li>
+        {{end}}
+        
+        {{if lt $endPage $totalPages}}
+        {{if lt $endPage (subtract $totalPages 1)}}
+        <li class="pagination-item pagination-ellipsis">
+            <span class="pagination-link">...</span>
+        </li>
+        {{end}}
+        <li class="pagination-item">
+            <a href="?page={{$totalPages}}" class="pagination-link">{{$totalPages}}</a>
+        </li>
+        {{end}}
+        
+        <!-- Next page -->
+        {{if .Pagination.HasNext}}
+        <li class="pagination-item">
+            <a href="{{.Pagination.NextURL}}" class="pagination-link pagination-next" rel="next">
+                <span class="pagination-label">
+                    {{if eq .LanguageCode "fa"}}
+                        بعدی
+                    {{else if eq .LanguageCode "ar"}}
+                        التالي
+                    {{else}}
+                        Next
+                    {{end}}
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {{if eq .LanguageDirection "rtl"}}
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    {{else}}
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    {{end}}
+                </svg>
+            </a>
+        </li>
+        {{else}}
+        <li class="pagination-item pagination-disabled">
+            <span class="pagination-link pagination-next">
+                <span class="pagination-label">
+                    {{if eq .LanguageCode "fa"}}
+                        بعدی
+                    {{else if eq .LanguageCode "ar"}}
+                        التالي
+                    {{else}}
+                        Next
+                    {{end}}
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {{if eq .LanguageDirection "rtl"}}
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    {{else}}
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    {{end}}
+                </svg>
+            </span>
+        </li>
+        {{end}}
+    </ul>
+</nav>
+{{end}}
+{{end}}

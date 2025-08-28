@@ -1,0 +1,63 @@
+{{define "tags.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/tag.css">
+{{end}}
+
+{{define "content"}}
+<div class="tags-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">All Tags</h1>
+            <p class="page-description">Browse all available news tags</p>
+        </div>
+    </section>
+    
+    <!-- All tags listing -->
+    <section class="tags-section">
+        <div class="section-container">
+            <div class="tags-cloud">
+                <a href="/tag/breaking" class="tag-link">
+                    <span class="tag-name">breaking</span>
+                    <span class="tag-count">(15)</span>
+                </a>
+                <a href="/tag/news" class="tag-link">
+                    <span class="tag-name">news</span>
+                    <span class="tag-count">(42)</span>
+                </a>
+                <a href="/tag/technology" class="tag-link">
+                    <span class="tag-name">technology</span>
+                    <span class="tag-count">(28)</span>
+                </a>
+                <a href="/tag/sports" class="tag-link">
+                    <span class="tag-name">sports</span>
+                    <span class="tag-count">(18)</span>
+                </a>
+                <a href="/tag/politics" class="tag-link">
+                    <span class="tag-name">politics</span>
+                    <span class="tag-count">(22)</span>
+                </a>
+                <a href="/tag/business" class="tag-link">
+                    <span class="tag-name">business</span>
+                    <span class="tag-count">(19)</span>
+                </a>
+                <a href="/tag/health" class="tag-link">
+                    <span class="tag-name">health</span>
+                    <span class="tag-count">(12)</span>
+                </a>
+                <a href="/tag/science" class="tag-link">
+                    <span class="tag-name">science</span>
+                    <span class="tag-count">(16)</span>
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/tag.js"></script>
+{{end}}

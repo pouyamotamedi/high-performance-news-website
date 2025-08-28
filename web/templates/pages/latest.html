@@ -1,0 +1,99 @@
+{{define "latest.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/homepage.css">
+{{end}}
+
+{{define "content"}}
+<div class="latest-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">Latest Articles</h1>
+            <p class="page-description">The most recent news and updates</p>
+        </div>
+    </section>
+    
+    <!-- Latest articles -->
+    <section class="articles-section">
+        <div class="section-container">
+            <div class="articles-grid">
+                <article class="article-card">
+                    <div class="article-content">
+                        <header class="article-header">
+                            <div class="article-category">
+                                <span class="category-link">Breaking News</span>
+                            </div>
+                            <h3 class="article-title">
+                                <a href="/article/latest-breaking-news" class="title-link">Latest Breaking News Story</a>
+                            </h3>
+                            <p class="article-excerpt">This is the most recent breaking news story with important updates.</p>
+                        </header>
+                        <footer class="article-meta">
+                            <div class="meta-primary">
+                                <span class="article-author">News Reporter</span>
+                                <time class="article-date">2 minutes ago</time>
+                            </div>
+                            <div class="meta-secondary">
+                                <span class="article-views">1,234 views</span>
+                            </div>
+                        </footer>
+                    </div>
+                </article>
+                
+                <article class="article-card">
+                    <div class="article-content">
+                        <header class="article-header">
+                            <div class="article-category">
+                                <span class="category-link">Technology</span>
+                            </div>
+                            <h3 class="article-title">
+                                <a href="/article/tech-innovation" class="title-link">New Technology Innovation Announced</a>
+                            </h3>
+                            <p class="article-excerpt">A groundbreaking technology innovation has been announced today.</p>
+                        </header>
+                        <footer class="article-meta">
+                            <div class="meta-primary">
+                                <span class="article-author">Tech Writer</span>
+                                <time class="article-date">15 minutes ago</time>
+                            </div>
+                            <div class="meta-secondary">
+                                <span class="article-views">856 views</span>
+                            </div>
+                        </footer>
+                    </div>
+                </article>
+                
+                <article class="article-card">
+                    <div class="article-content">
+                        <header class="article-header">
+                            <div class="article-category">
+                                <span class="category-link">Sports</span>
+                            </div>
+                            <h3 class="article-title">
+                                <a href="/article/sports-update" class="title-link">Major Sports Championship Update</a>
+                            </h3>
+                            <p class="article-excerpt">Latest updates from the ongoing sports championship.</p>
+                        </header>
+                        <footer class="article-meta">
+                            <div class="meta-primary">
+                                <span class="article-author">Sports Reporter</span>
+                                <time class="article-date">30 minutes ago</time>
+                            </div>
+                            <div class="meta-secondary">
+                                <span class="article-views">642 views</span>
+                            </div>
+                        </footer>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/homepage.js"></script>
+{{end}}

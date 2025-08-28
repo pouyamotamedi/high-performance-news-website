@@ -1,0 +1,161 @@
+{{define "header"}}
+<header class="site-header" role="banner">
+    <div class="header-container">
+        <!-- Mobile menu button -->
+        <button class="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        
+        <!-- Logo -->
+        <div class="site-logo">
+            <a href="/" class="logo-link">
+                <img src="/static/images/logo.svg" alt="{{.SiteName}}" class="logo-image">
+                <span class="logo-text">{{.SiteName}}</span>
+            </a>
+        </div>
+        
+        <!-- Main navigation -->
+        <nav class="main-navigation" role="navigation" aria-label="Main navigation">
+            <ul class="nav-menu">
+                {{range .Navigation}}
+                <li class="nav-item {{if .Active}}active{{end}}">
+                    <a href="{{.URL}}" class="nav-link">
+                        {{if .Icon}}<i class="nav-icon {{.Icon}}"></i>{{end}}
+                        {{.Name}}
+                    </a>
+                    {{if .Children}}
+                    <ul class="nav-submenu">
+                        {{range .Children}}
+                        <li class="nav-subitem">
+                            <a href="{{.URL}}" class="nav-sublink">{{.Name}}</a>
+                        </li>
+                        {{end}}
+                    </ul>
+                    {{end}}
+                </li>
+                {{end}}
+            </ul>
+        </nav>
+        
+        <!-- Header actions -->
+        <div class="header-actions">
+            <!-- Search toggle -->
+            <button class="search-toggle" aria-label="Toggle search">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                    <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </button>
+            
+            <!-- Language switcher -->
+            {{if .AlternateURLs}}
+            <div class="language-switcher">
+                <button class="language-toggle" aria-haspopup="true" aria-expanded="false">
+                    {{if eq .LanguageCode "fa"}}
+                        فا
+                    {{else if eq .LanguageCode "ar"}}
+                        ع
+                    {{else if eq .LanguageCode "en"}}
+                        EN
+                    {{else}}
+                        {{upper .LanguageCode}}
+                    {{end}}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <div class="language-dropdown" role="menu">
+                    {{range $lang, $url := .AlternateURLs}}
+                    <a href="{{$url}}" class="language-option {{if eq $lang $.LanguageCode}}active{{end}}" 
+                       role="menuitem" hreflang="{{$lang}}">
+                        {{if eq $lang "fa"}}
+                            فارسی
+                        {{else if eq $lang "ar"}}
+                            العربية
+                        {{else if eq $lang "en"}}
+                            English
+                        {{else}}
+                            {{upper $lang}}
+                        {{end}}
+                    </a>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+            
+            <!-- User menu -->
+            {{if .IsAuthenticated}}
+            <div class="user-menu">
+                <button class="user-toggle" aria-haspopup="true" aria-expanded="false">
+                    <img src="{{.User.Avatar}}" alt="{{.User.FirstName}}" class="user-avatar">
+                    <span class="user-name">{{.User.FirstName}}</span>
+                </button>
+                <div class="user-dropdown" role="menu">
+                    <a href="/profile" class="user-option" role="menuitem">Profile</a>
+                    <a href="/settings" class="user-option" role="menuitem">Settings</a>
+                    <hr class="user-divider">
+                    <a href="/logout" class="user-option" role="menuitem">Logout</a>
+                </div>
+            </div>
+            {{else}}
+            <a href="/login" class="login-link">
+                {{if eq .LanguageCode "fa"}}
+                    ورود
+                {{else if eq .LanguageCode "ar"}}
+                    تسجيل الدخول
+                {{else}}
+                    Login
+                {{end}}
+            </a>
+            {{end}}
+        </div>
+    </div>
+    
+    <!-- Search overlay -->
+    <div class="search-overlay">
+        <div class="search-container">
+            <form class="search-form" action="/search" method="GET">
+                <input type="search" name="q" class="search-input" 
+                       placeholder="{{if eq .LanguageCode "fa"}}جستجو...{{else if eq .LanguageCode "ar"}}البحث...{{else}}Search...{{end}}"
+                       autocomplete="off">
+                <button type="submit" class="search-submit" aria-label="Search">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                        <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </form>
+            <button class="search-close" aria-label="Close search">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Mobile navigation overlay -->
+    <div class="mobile-nav-overlay">
+        <nav class="mobile-navigation">
+            <ul class="mobile-nav-menu">
+                {{range .Navigation}}
+                <li class="mobile-nav-item">
+                    <a href="{{.URL}}" class="mobile-nav-link">{{.Name}}</a>
+                    {{if .Children}}
+                    <ul class="mobile-nav-submenu">
+                        {{range .Children}}
+                        <li class="mobile-nav-subitem">
+                            <a href="{{.URL}}" class="mobile-nav-sublink">{{.Name}}</a>
+                        </li>
+                        {{end}}
+                    </ul>
+                    {{end}}
+                </li>
+                {{end}}
+            </ul>
+        </nav>
+    </div>
+</header>
+{{end}}

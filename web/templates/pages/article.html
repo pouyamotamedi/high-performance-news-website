@@ -1,0 +1,122 @@
+{{define "article.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/article.css">
+{{end}}
+
+{{define "content"}}
+<div class="article-page">
+    <article class="article-main">
+        <header class="article-header">
+            <div class="article-meta-top">
+                {{if .Article.Category}}
+                <div class="article-category">
+                    <a href="/categories/{{.Article.Category.Slug}}" class="category-link">{{.Article.Category.Name}}</a>
+                </div>
+                {{end}}
+                {{if .Article.PublishedAt}}
+                <time class="article-date" datetime="{{.Article.PublishedAt}}">{{formatDate .Article.PublishedAt}}</time>
+                {{end}}
+            </div>
+            
+            <h1 class="article-title">{{.Article.Title}}</h1>
+            
+            {{if .Article.Excerpt}}
+            <p class="article-excerpt">{{.Article.Excerpt}}</p>
+            {{end}}
+            
+            <div class="article-meta-bottom">
+                {{if .Article.Author}}
+                <div class="article-author">
+                    {{if .Article.Author.Avatar}}
+                    <img src="{{.Article.Author.Avatar}}" alt="{{.Article.Author.FirstName}}" class="author-avatar">
+                    {{end}}
+                    <div class="author-info">
+                        <span class="author-name">{{.Article.Author.FirstName}} {{.Article.Author.LastName}}</span>
+                        {{if .Article.Author.Bio}}
+                        <span class="author-bio">{{.Article.Author.Bio}}</span>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+                
+                <div class="article-stats">
+                    {{if .Article.Views}}
+                    <span class="stat-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        {{.Article.Views}} views
+                    </span>
+                    {{end}}
+                    {{if .Article.ReadTime}}
+                    <span class="stat-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        {{.Article.ReadTime}} min read
+                    </span>
+                    {{end}}
+                </div>
+            </div>
+        </header>
+        
+        {{if .Article.FeaturedImage}}
+        <div class="article-image">
+            <img src="{{.Article.FeaturedImage}}" alt="{{.Article.Title}}" class="featured-image">
+            {{if .Article.ImageCaption}}
+            <figcaption class="image-caption">{{.Article.ImageCaption}}</figcaption>
+            {{end}}
+        </div>
+        {{end}}
+        
+        <div class="article-content">
+            {{if .Article.Content}}
+            {{.Article.Content | safeHTML}}
+            {{else}}
+            <p>This is a sample article content. The full article content would be displayed here with proper formatting and styling.</p>
+            {{end}}
+        </div>
+        
+        {{if .Article.Tags}}
+        <footer class="article-footer">
+            <div class="article-tags">
+                <span class="tags-label">Tags:</span>
+                {{range .Article.Tags}}
+                <a href="/tags/{{.Slug}}" class="tag-link">{{.Name}}</a>
+                {{end}}
+            </div>
+        </footer>
+        {{end}}
+    </article>
+    
+    <!-- Related articles -->
+    {{if .RelatedArticles}}
+    <section class="related-articles">
+        <div class="section-container">
+            <h2 class="section-title">Related Articles</h2>
+            <div class="related-grid">
+                {{range .RelatedArticles}}
+                <article class="related-card">
+                    <h3 class="related-title">
+                        <a href="/articles/{{.Slug}}" class="related-link">{{.Title}}</a>
+                    </h3>
+                    {{if .Excerpt}}
+                    <p class="related-excerpt">{{.Excerpt}}</p>
+                    {{end}}
+                </article>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/article.js"></script>
+{{end}}

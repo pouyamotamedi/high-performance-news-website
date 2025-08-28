@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: news_postgres
+    environment:
+      POSTGRES_DB: news_website
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: news_dragonfly
+    ports:
+      - "6379:6379"
+    command: ["dragonfly", "--logtostderr"]
+    volumes:
+      - dragonfly_data:/data
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: news_adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  dragonfly_data:
+
+networks:
+  default:
+    name: news_network

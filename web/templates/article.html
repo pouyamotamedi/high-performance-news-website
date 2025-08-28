@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="{{.Language}}" dir="{{.Direction}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <meta name="description" content="{{.Description}}">
+    <meta name="keywords" content="{{join .Keywords ", "}}">
+    <link rel="canonical" href="{{.CanonicalURL}}">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="{{.Title}}">
+    <meta property="og:description" content="{{.Description}}">
+    <meta property="og:url" content="{{.CanonicalURL}}">
+    <meta property="og:type" content="article">
+    <meta property="article:published_time" content="{{.Article.PublishedAt}}">
+    <meta property="article:modified_time" content="{{.Article.UpdatedAt}}">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{.Title}}">
+    <meta name="twitter:description" content="{{.Description}}">
+    
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">{{.SchemaMarkup | safeHTML}}</script>
+    
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/multilingual.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <h1 class="logo"><a href="/">High Performance News</a></h1>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/tags">Tags</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="container">
+        <article class="article-content">
+            <header class="article-header">
+                <h1>{{.Article.Title}}</h1>
+                
+                <div class="article-meta">
+                    <time datetime="{{.Article.PublishedAt}}">{{formatDateTime .Article.PublishedAt}}</time>
+                    <span class="author">Author ID: {{.Article.AuthorID}}</span>
+                    <span class="views">{{.Article.ViewCount}} views</span>
+                </div>
+                
+                {{if .Article.Tags}}
+                <div class="tags">
+                    {{range .Article.Tags}}
+                    <a href="/tags/{{.Slug}}" class="tag" style="{{if .Color}}background-color: {{.Color}};{{end}}">{{.Name}}</a>
+                    {{end}}
+                </div>
+                {{end}}
+                
+                {{if .Article.Excerpt}}
+                <div class="article-excerpt">
+                    <p>{{.Article.Excerpt}}</p>
+                </div>
+                {{end}}
+            </header>
+            
+            <div class="article-body">
+                {{.Article.Content | safeHTML}}
+            </div>
+            
+            <footer class="article-footer">
+                <div class="article-actions">
+                    <span class="likes">{{.Article.LikeCount}} likes</span>
+                    <span class="dislikes">{{.Article.DislikeCount}} dislikes</span>
+                </div>
+                
+                <div class="article-category">
+                    <span>Category: <a href="/categories/{{.Category.Slug}}">{{.Category.Name}}</a></span>
+                </div>
+            </footer>
+        </article>
+        
+        <!-- Related Articles -->
+        {{if .RelatedArticles}}
+        <section class="related-articles">
+            <h3>Related Articles</h3>
+            <div class="articles-grid">
+                {{range .RelatedArticles}}
+                <article class="article-card">
+                    <h4><a href="/articles/{{.Slug}}">{{.Title}}</a></h4>
+                    <p class="excerpt">{{truncate .Excerpt 150}}</p>
+                    <div class="article-meta">
+                        <time datetime="{{.PublishedAt}}">{{formatDate .PublishedAt}}</time>
+                        <span class="views">{{.ViewCount}} views</span>
+                    </div>
+                </article>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 High Performance News Website. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

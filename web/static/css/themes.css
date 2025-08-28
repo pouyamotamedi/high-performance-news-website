@@ -1,0 +1,329 @@
+/* Theme system CSS - Dark mode and theme switching */
+
+/* Theme toggle button */
+.theme-toggle {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  width: 48px;
+  height: 48px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-normal);
+  z-index: var(--z-fixed);
+}
+
+.theme-toggle:hover {
+  background-color: var(--color-bg-tertiary);
+  transform: scale(1.05);
+}
+
+.theme-toggle:focus {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.theme-icon {
+  font-size: 20px;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+/* Show/hide theme icons based on current theme */
+/* Light theme shows dark icon (to switch to dark) */
+[data-theme="light"] .theme-toggle .dark-icon {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+[data-theme="light"] .theme-toggle .light-icon,
+[data-theme="light"] .theme-toggle .auto-icon {
+  opacity: 0;
+  transform: rotate(180deg);
+  position: absolute;
+}
+
+/* Dark theme shows light icon (to switch to light) */
+[data-theme="dark"] .theme-toggle .light-icon {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+[data-theme="dark"] .theme-toggle .dark-icon,
+[data-theme="dark"] .theme-toggle .auto-icon {
+  opacity: 0;
+  transform: rotate(180deg);
+  position: absolute;
+}
+
+/* Auto theme shows auto icon (to switch to light) */
+[data-theme="auto"] .theme-toggle .auto-icon {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+[data-theme="auto"] .theme-toggle .light-icon,
+[data-theme="auto"] .theme-toggle .dark-icon {
+  opacity: 0;
+  transform: rotate(180deg);
+  position: absolute;
+}
+
+/* Auto theme detection */
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+    --color-secondary: #94a3b8;
+    --color-accent: #fbbf24;
+    
+    --color-bg-primary: #0f172a;
+    --color-bg-secondary: #1e293b;
+    --color-bg-tertiary: #334155;
+    --color-bg-overlay: rgba(0, 0, 0, 0.8);
+    
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    --color-text-inverse: #0f172a;
+    
+    --color-border-primary: #334155;
+    --color-border-secondary: #475569;
+    --color-border-focus: #3b82f6;
+  }
+}
+
+/* Theme transition animations */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .theme-toggle {
+    transition: none;
+  }
+  
+  .theme-icon {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border-primary: #000000;
+    --color-border-secondary: #000000;
+    --color-text-secondary: var(--color-text-primary);
+  }
+  
+  [data-theme="dark"] {
+    --color-border-primary: #ffffff;
+    --color-border-secondary: #ffffff;
+    --color-text-secondary: var(--color-text-primary);
+  }
+  
+  .card {
+    border-width: 2px;
+  }
+  
+  .btn {
+    border-width: 2px;
+  }
+}
+
+/* Focus visible support for better accessibility */
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Back to top button */
+.back-to-top {
+  position: fixed;
+  bottom: var(--space-6);
+  left: var(--space-6);
+  width: 48px;
+  height: 48px;
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-normal);
+  z-index: var(--z-fixed);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+}
+
+.back-to-top.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-2px);
+}
+
+.back-to-top:focus {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* RTL adjustments for fixed elements */
+.rtl-dir .theme-toggle {
+  right: auto;
+  left: var(--space-6);
+}
+
+.rtl-dir .back-to-top {
+  left: auto;
+  right: var(--space-6);
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .theme-toggle,
+  .back-to-top {
+    bottom: var(--space-4);
+    width: 44px;
+    height: 44px;
+  }
+  
+  .theme-toggle {
+    right: var(--space-4);
+  }
+  
+  .back-to-top {
+    left: var(--space-4);
+  }
+  
+  .rtl-dir .theme-toggle {
+    right: auto;
+    left: var(--space-4);
+  }
+  
+  .rtl-dir .back-to-top {
+    left: auto;
+    right: var(--space-4);
+  }
+}
+
+/* Theme-specific component styles */
+
+/* Dark mode specific adjustments */
+[data-theme="dark"] .card {
+  background-color: var(--color-bg-secondary);
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-textarea,
+[data-theme="dark"] .form-select {
+  background-color: var(--color-bg-secondary);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border-secondary);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background-color: var(--color-bg-primary);
+}
+
+/* Light mode specific adjustments */
+[data-theme="light"] .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Auto theme with system preference */
+@media (prefers-color-scheme: light) {
+  [data-theme="auto"] .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .card {
+    background-color: var(--color-bg-secondary);
+  }
+  
+  [data-theme="auto"] .form-input,
+  [data-theme="auto"] .form-textarea,
+  [data-theme="auto"] .form-select {
+    background-color: var(--color-bg-secondary);
+  }
+  
+  [data-theme="auto"] .btn-secondary {
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-border-secondary);
+  }
+  
+  [data-theme="auto"] .btn-secondary:hover {
+    background-color: var(--color-bg-primary);
+  }
+}
+
+/* Theme persistence indicator */
+.theme-indicator {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  z-index: var(--z-tooltip);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-fast);
+}
+
+.theme-indicator.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.rtl-dir .theme-indicator {
+  right: auto;
+  left: var(--space-4);
+}
+
+/* Print mode - force light theme */
+@media print {
+  * {
+    background-color: white !important;
+    color: black !important;
+    border-color: black !important;
+  }
+  
+  .theme-toggle,
+  .back-to-top {
+    display: none !important;
+  }
+}

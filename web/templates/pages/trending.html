@@ -1,0 +1,99 @@
+{{define "trending.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/homepage.css">
+{{end}}
+
+{{define "content"}}
+<div class="trending-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">Trending Articles</h1>
+            <p class="page-description">The most popular and trending news stories</p>
+        </div>
+    </section>
+    
+    <!-- Trending articles -->
+    <section class="articles-section">
+        <div class="section-container">
+            <div class="articles-grid">
+                <article class="article-card">
+                    <div class="article-content">
+                        <header class="article-header">
+                            <div class="article-category">
+                                <span class="category-link">Viral</span>
+                            </div>
+                            <h3 class="article-title">
+                                <a href="/article/viral-story" class="title-link">🔥 Most Viral Story of the Week</a>
+                            </h3>
+                            <p class="article-excerpt">This story has gone viral across all social media platforms.</p>
+                        </header>
+                        <footer class="article-meta">
+                            <div class="meta-primary">
+                                <span class="article-author">Viral Reporter</span>
+                                <time class="article-date">2 hours ago</time>
+                            </div>
+                            <div class="meta-secondary">
+                                <span class="article-views">15,420 views</span>
+                            </div>
+                        </footer>
+                    </div>
+                </article>
+                
+                <article class="article-card">
+                    <div class="article-content">
+                        <header class="article-header">
+                            <div class="article-category">
+                                <span class="category-link">Technology</span>
+                            </div>
+                            <h3 class="article-title">
+                                <a href="/article/trending-tech" class="title-link">📈 Trending Technology News</a>
+                            </h3>
+                            <p class="article-excerpt">This tech story is trending and gaining massive attention.</p>
+                        </header>
+                        <footer class="article-meta">
+                            <div class="meta-primary">
+                                <span class="article-author">Tech Analyst</span>
+                                <time class="article-date">4 hours ago</time>
+                            </div>
+                            <div class="meta-secondary">
+                                <span class="article-views">12,350 views</span>
+                            </div>
+                        </footer>
+                    </div>
+                </article>
+                
+                <article class="article-card">
+                    <div class="article-content">
+                        <header class="article-header">
+                            <div class="article-category">
+                                <span class="category-link">Sports</span>
+                            </div>
+                            <h3 class="article-title">
+                                <a href="/article/trending-sports" class="title-link">⚡ Breaking Sports Sensation</a>
+                            </h3>
+                            <p class="article-excerpt">A sports story that's capturing everyone's attention.</p>
+                        </header>
+                        <footer class="article-meta">
+                            <div class="meta-primary">
+                                <span class="article-author">Sports Writer</span>
+                                <time class="article-date">6 hours ago</time>
+                            </div>
+                            <div class="meta-secondary">
+                                <span class="article-views">9,870 views</span>
+                            </div>
+                        </footer>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/homepage.js"></script>
+{{end}}

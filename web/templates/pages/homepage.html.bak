@@ -1,0 +1,314 @@
+{{define "homepage.html"}}
+<!DOCTYPE html>
+<html lang="{{.LanguageCode}}" dir="{{.LanguageDirection}}" data-theme="{{.ThemeMode}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <title>{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}</title>
+    <meta name="description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="preload" href="/static/css/homepage.css" as="style">
+    <link rel="stylesheet" href="/static/css/homepage.css">
+</head>
+<body>
+<div class="homepage">
+    <!-- Hero section -->
+    {{if .HeroTitle}}
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">{{.HeroTitle}}</h1>
+                {{if .HeroSubtitle}}
+                <p class="hero-subtitle">{{.HeroSubtitle}}</p>
+                {{end}}
+                
+                <!-- Quick search -->
+                <div class="hero-search">
+                    <form class="search-form" action="/search" method="GET">
+                        <div class="search-input-group">
+                            <input type="search" name="q" class="search-input" 
+                                   placeholder="{{if eq .LanguageCode "fa"}}جستجوی اخبار...{{else if eq .LanguageCode "ar"}}البحث في الأخبار...{{else}}Search news...{{end}}"
+                                   autocomplete="off">
+                            <button type="submit" class="search-button">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                    <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {{if .HeroImage}}
+            <div class="hero-image">
+                <img src="{{.HeroImage}}" alt="{{.HeroTitle}}" loading="eager">
+            </div>
+            {{end}}
+        </div>
+    </section>
+    {{end}}
+    
+    <!-- Featured articles -->
+    {{if .FeaturedArticles}}
+    <section class="featured-section">
+        <div class="section-container">
+            <header class="section-header">
+                <h2 class="section-title">
+                    {{if eq .LanguageCode "fa"}}
+                        اخبار ویژه
+                    {{else if eq .LanguageCode "ar"}}
+                        الأخبار المميزة
+                    {{else}}
+                        Featured News
+                    {{end}}
+                </h2>
+            </header>
+            
+            <div class="featured-grid">
+                {{range $index, $article := .FeaturedArticles}}
+                {{if eq $index 0}}
+                <!-- Main featured article -->
+                <article class="featured-main" itemscope itemtype="https://schema.org/NewsArticle">
+                    {{if $article.FeaturedImage}}
+                    <div class="featured-image">
+                        <a href="/articles/{{$article.Slug}}" class="image-link">
+                            <img src="{{$article.FeaturedImage}}" alt="{{$article.Title}}" loading="eager" itemprop="image">
+                        </a>
+                    </div>
+                    {{end}}
+                    
+                    <div class="featured-content">
+                        {{if $article.Category}}
+                        <div class="article-category">
+                            <a href="/categories/{{$article.Category.Slug}}" class="category-link">{{$article.Category.Name}}</a>
+                        </div>
+                        {{end}}
+                        
+                        <h3 class="featured-title" itemprop="headline">
+                            <a href="/articles/{{$article.Slug}}" class="title-link">{{$article.Title}}</a>
+                        </h3>
+                        
+                        {{if $article.Excerpt}}
+                        <p class="featured-excerpt" itemprop="description">{{truncate $article.Excerpt 200}}</p>
+                        {{end}}
+                        
+                        <div class="featured-meta">
+                            {{if $article.Author}}
+                            <span class="article-author">{{$article.Author.FirstName}} {{$article.Author.LastName}}</span>
+                            {{end}}
+                            <time class="article-date" datetime="{{$article.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">
+                                {{timeAgo $article.PublishedAt}}
+                            </time>
+                        </div>
+                    </div>
+                </article>
+                {{else}}
+                <!-- Secondary featured articles -->
+                <div class="featured-secondary">
+                    {{template "article-card" $article}}
+                </div>
+                {{end}}
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    <!-- Trending articles -->
+    {{if .TrendingArticles}}
+    <section class="trending-section">
+        <div class="section-container">
+            <header class="section-header">
+                <h2 class="section-title">
+                    {{if eq .LanguageCode "fa"}}
+                        پرطرفدار
+                    {{else if eq .LanguageCode "ar"}}
+                        الأكثر شعبية
+                    {{else}}
+                        Trending
+                    {{end}}
+                </h2>
+                <a href="/trending" class="section-link">
+                    {{if eq .LanguageCode "fa"}}
+                        مشاهده همه
+                    {{else if eq .LanguageCode "ar"}}
+                        عرض الكل
+                    {{else}}
+                        View all
+                    {{end}}
+                </a>
+            </header>
+            
+            <div class="trending-grid">
+                {{range .TrendingArticles}}
+                {{template "article-card" .}}
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    <!-- Latest articles -->
+    {{if .LatestArticles}}
+    <section class="latest-section">
+        <div class="section-container">
+            <header class="section-header">
+                <h2 class="section-title">
+                    {{if eq .LanguageCode "fa"}}
+                        آخرین اخبار
+                    {{else if eq .LanguageCode "ar"}}
+                        آخر الأخبار
+                    {{else}}
+                        Latest News
+                    {{end}}
+                </h2>
+                <a href="/latest" class="section-link">
+                    {{if eq .LanguageCode "fa"}}
+                        مشاهده همه
+                    {{else if eq .LanguageCode "ar"}}
+                        عرض الكل
+                    {{else}}
+                        View all
+                    {{end}}
+                </a>
+            </header>
+            
+            <div class="latest-grid">
+                {{range .LatestArticles}}
+                {{template "article-card" .}}
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    <!-- Categories showcase -->
+    {{if .Categories}}
+    <section class="categories-section">
+        <div class="section-container">
+            <header class="section-header">
+                <h2 class="section-title">
+                    {{if eq .LanguageCode "fa"}}
+                        دسته‌بندی‌ها
+                    {{else if eq .LanguageCode "ar"}}
+                        الفئات
+                    {{else}}
+                        Categories
+                    {{end}}
+                </h2>
+                <a href="/categories" class="section-link">
+                    {{if eq .LanguageCode "fa"}}
+                        مشاهده همه
+                    {{else if eq .LanguageCode "ar"}}
+                        عرض الكل
+                    {{else}}
+                        View all
+                    {{end}}
+                </a>
+            </header>
+            
+            <div class="categories-grid">
+                {{range .Categories}}
+                <div class="category-card">
+                    <a href="/categories/{{.Slug}}" class="category-link">
+                        <h3 class="category-name">{{.Name}}</h3>
+                        {{if .Description}}
+                        <p class="category-description">{{truncate .Description 100}}</p>
+                        {{end}}
+                        <span class="category-count">
+                            {{.ArticleCount}} 
+                            {{if eq $.LanguageCode "fa"}}
+                                مقاله
+                            {{else if eq $.LanguageCode "ar"}}
+                                مقال
+                            {{else}}
+                                articles
+                            {{end}}
+                        </span>
+                    </a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    <!-- Popular tags -->
+    {{if .PopularTags}}
+    <section class="tags-section">
+        <div class="section-container">
+            <header class="section-header">
+                <h2 class="section-title">
+                    {{if eq .LanguageCode "fa"}}
+                        برچسب‌های محبوب
+                    {{else if eq .LanguageCode "ar"}}
+                        العلامات الشائعة
+                    {{else}}
+                        Popular Tags
+                    {{end}}
+                </h2>
+            </header>
+            
+            <div class="tags-cloud">
+                {{range .PopularTags}}
+                <a href="/tags/{{.Slug}}" class="tag-link" style="{{if .Color}}--tag-color: {{.Color}};{{end}}">
+                    {{.Name}}
+                    <span class="tag-count">({{.ArticleCount}})</span>
+                </a>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    <!-- Statistics -->
+    {{if or .TotalArticles .TotalViews}}
+    <section class="stats-section">
+        <div class="section-container">
+            <div class="stats-grid">
+                {{if .TotalArticles}}
+                <div class="stat-item">
+                    <div class="stat-number">{{.TotalArticles}}</div>
+                    <div class="stat-label">
+                        {{if eq .LanguageCode "fa"}}
+                            مقاله منتشر شده
+                        {{else if eq .LanguageCode "ar"}}
+                            مقال منشور
+                        {{else}}
+                            Published Articles
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+                
+                {{if .TotalViews}}
+                <div class="stat-item">
+                    <div class="stat-number">{{.TotalViews}}</div>
+                    <div class="stat-label">
+                        {{if eq .LanguageCode "fa"}}
+                            بازدید کل
+                        {{else if eq .LanguageCode "ar"}}
+                            إجمالي المشاهدات
+                        {{else}}
+                            Total Views
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+</div>
+{{end}}
+
+<script src="/static/js/main.js"></script>
+<script src="/static/js/homepage.js"></script>
+</body>
+</html>
+{{end}}
