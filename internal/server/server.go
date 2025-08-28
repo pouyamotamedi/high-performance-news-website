@@ -58,6 +58,11 @@ type Server struct {
 	healthService            *services.HealthService
 	alertingService          *services.AlertingService
 	monitoringConfig         *config.MonitoringConfig
+	analyticsService         *services.AnalyticsService
+	advertisementService     *services.AdvertisementService
+	pushNotificationService  *services.PushNotificationService
+	widgetService            *services.WidgetService
+	themeService             *services.ThemeService
 }
 
 func New(cfg *config.Config) (*Server, error) {
@@ -128,6 +133,9 @@ func New(cfg *config.Config) (*Server, error) {
 	var searchService *services.SearchService
 	var commentHandlers *api.CommentHandlers
 	var imageHandlers *api.ImageHandlers
+	var analyticsService *services.AnalyticsService
+	var advertisementService *services.AdvertisementService
+	var pushNotificationService *services.PushNotificationService
 
 	// Initialize services - skip database-dependent services if using mock
 	if !useMockServices {
@@ -175,6 +183,16 @@ func New(cfg *config.Config) (*Server, error) {
 		cacheAdapter := &CacheServiceAdapter{cache: cacheClient}
 		widgetService = services.NewWidgetService(widgetRepo, articleRepo, categoryRepo, tagRepo, cacheAdapter)
 		themeService = services.NewThemeService(themeRepo, cacheAdapter, "web/templates")
+		
+		// Initialize additional admin services
+		analyticsRepo := repositories.NewAnalyticsRepository(db.DB)
+		analyticsService = services.NewAnalyticsService(analyticsRepo)
+		
+		advertisementRepo := repositories.NewAdvertisementRepository(db.DB)
+		advertisementService = services.NewAdvertisementService(advertisementRepo, cacheAdapter, baseURL)
+		
+		pushNotificationRepo := repositories.NewPushNotificationRepository(db.DB)
+		pushNotificationService = services.NewPushNotificationService(pushNotificationRepo, "", "", "")
 		searchRepo := &services.ArticleRepositoryAdapter{Repository: articleRepo}
 
 		redisClient := dragonflyCache.GetRedisClient()
@@ -281,6 +299,21 @@ func New(cfg *config.Config) (*Server, error) {
 		finalMonitoringConfig = monitoringConfig
 	}
 
+	// Initialize final service variables for all cases
+	var finalAnalyticsService *services.AnalyticsService
+	var finalAdvertisementService *services.AdvertisementService
+	var finalPushNotificationService *services.PushNotificationService
+	var finalWidgetService *services.WidgetService
+	var finalThemeService *services.ThemeService
+	
+	if !useMockServices {
+		finalAnalyticsService = analyticsService
+		finalAdvertisementService = advertisementService
+		finalPushNotificationService = pushNotificationService
+		finalWidgetService = widgetService
+		finalThemeService = themeService
+	}
+
 	return &Server{
 		config:                   cfg,
 		router:                   router,
@@ -294,6 +327,11 @@ func New(cfg *config.Config) (*Server, error) {
 		healthService:            finalHealthService,
 		alertingService:          finalAlertingService,
 		monitoringConfig:         finalMonitoringConfig,
+		analyticsService:         finalAnalyticsService,
+		advertisementService:     finalAdvertisementService,
+		pushNotificationService:  finalPushNotificationService,
+		widgetService:            finalWidgetService,
+		themeService:             finalThemeService,
 	}, nil
 }
 
@@ -932,23 +970,23 @@ func (s *Server) handleAdminDashboard(c *gin.Context) {
 }
 
 func (s *Server) handleAdminAnalytics(c *gin.Context) {
-	s.renderAdminDashboard(c, "Analytics", "analytics")
+	s.renderAdminAnalytics(c)
 }
 
 func (s *Server) handleAdminUsers(c *gin.Context) {
-	s.renderAdminDashboard(c, "User Management", "users")
+	s.renderAdminUsers(c)
 }
 
 func (s *Server) handleAdminContent(c *gin.Context) {
-	s.renderAdminDashboard(c, "Content Management", "content")
+	s.renderAdminContent(c)
 }
 
 func (s *Server) handleAdminSettings(c *gin.Context) {
-	s.renderAdminDashboard(c, "Settings", "settings")
+	s.renderAdminSettings(c)
 }
 
 func (s *Server) handleAdminSystem(c *gin.Context) {
-	s.renderAdminDashboard(c, "System Monitoring", "system")
+	s.renderAdminSystem(c)
 }
 
 func (s *Server) renderAdminDashboard(c *gin.Context, title, page string) {
@@ -1136,3 +1174,4 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 		"TwitterCard":    "summary_large_image",
 	}
 }
+//
