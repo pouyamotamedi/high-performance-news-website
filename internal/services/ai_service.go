@@ -542,20 +542,108 @@ Return only the title text, no additional formatting.
 
 // CheckGrammar checks grammar and spelling using Anthropic
 func (ai *AnthropicService) CheckGrammar(text string) ([]models.AIIssue, error) {
-	// Implementation similar to OpenAI but using Anthropic API
-	return nil, fmt.Errorf("not implemented")
+	prompt := fmt.Sprintf(`
+Check the following text for grammar and spelling errors. Return results in JSON format:
+
+Text: %s
+
+Return format:
+{
+  "issues": [
+    {
+      "type": "grammar",
+      "severity": "medium",
+      "description": "Subject-verb disagreement",
+      "location": "sentence 3",
+      "suggestion": "Change 'are' to 'is'"
+    }
+  ]
+}
+
+Issue types: "grammar", "spelling"
+Severity levels: "low", "medium", "high"
+`, text)
+
+	response, err := ai.callAnthropic(prompt)
+	if err != nil {
+		return nil, fmt.Errorf("grammar check failed: %w", err)
+	}
+
+	var result struct {
+		Issues []models.AIIssue `json:"issues"`
+	}
+
+	if err := json.Unmarshal([]byte(response), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse grammar check response: %w", err)
+	}
+
+	return result.Issues, nil
 }
 
 // CheckReadability calculates readability score using Anthropic
 func (ai *AnthropicService) CheckReadability(text string) (float64, error) {
-	// Implementation similar to OpenAI but using Anthropic API
-	return 0, fmt.Errorf("not implemented")
+	prompt := fmt.Sprintf(`
+Analyze the readability of this text and provide a score from 0.0 to 1.0 (1.0 being most readable).
+Consider sentence length, word complexity, paragraph structure, and overall clarity.
+
+Text: %s
+
+Return only a decimal number between 0.0 and 1.0, no additional text.
+`, text)
+
+	response, err := ai.callAnthropic(prompt)
+	if err != nil {
+		return 0, fmt.Errorf("readability check failed: %w", err)
+	}
+
+	var score float64
+	if err := json.Unmarshal([]byte(strings.TrimSpace(response)), &score); err != nil {
+		return 0, fmt.Errorf("failed to parse readability score: %w", err)
+	}
+
+	return score, nil
 }
 
 // CheckAppropriateness checks content appropriateness using Anthropic
 func (ai *AnthropicService) CheckAppropriateness(text string) (float64, []models.AIFlaggedContent, error) {
-	// Implementation similar to OpenAI but using Anthropic API
-	return 0, nil, fmt.Errorf("not implemented")
+	prompt := fmt.Sprintf(`
+Analyze this text for appropriateness in a news context. Check for inappropriate content, spam, or low quality.
+Return results in JSON format:
+
+Text: %s
+
+Return format:
+{
+  "appropriateness_score": 0.95,
+  "flagged_content": [
+    {
+      "type": "inappropriate",
+      "content": "flagged text snippet",
+      "reason": "potentially offensive language",
+      "confidence": 0.75
+    }
+  ]
+}
+
+Flagged content types: "inappropriate", "spam", "low_quality"
+Score: 0.0 (completely inappropriate) to 1.0 (completely appropriate)
+`, text)
+
+	response, err := ai.callAnthropic(prompt)
+	if err != nil {
+		return 0, nil, fmt.Errorf("appropriateness check failed: %w", err)
+	}
+
+	var result struct {
+		AppropriatenessScore float64                   `json:"appropriateness_score"`
+		FlaggedContent       []models.AIFlaggedContent `json:"flagged_content"`
+	}
+
+	if err := json.Unmarshal([]byte(response), &result); err != nil {
+		return 0, nil, fmt.Errorf("failed to parse appropriateness response: %w", err)
+	}
+
+	return result.AppropriatenessScore, result.FlaggedContent, nil
 }
 
 // callAnthropic makes a request to Anthropic API

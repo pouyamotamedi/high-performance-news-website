@@ -63,6 +63,7 @@ type Server struct {
 	pushNotificationService  *services.PushNotificationService
 	widgetService            *services.WidgetService
 	themeService             *services.ThemeService
+	cdnService               services.CDNServiceInterface
 }
 
 func New(cfg *config.Config) (*Server, error) {
@@ -136,6 +137,7 @@ func New(cfg *config.Config) (*Server, error) {
 	var analyticsService *services.AnalyticsService
 	var advertisementService *services.AdvertisementService
 	var pushNotificationService *services.PushNotificationService
+	var cdnService services.CDNServiceInterface
 
 	// Initialize services - skip database-dependent services if using mock
 	if !useMockServices {
@@ -193,6 +195,12 @@ func New(cfg *config.Config) (*Server, error) {
 		
 		pushNotificationRepo := repositories.NewPushNotificationRepository(db.DB)
 		pushNotificationService = services.NewPushNotificationService(pushNotificationRepo, "", "", "")
+		
+		// Initialize CDN service
+		cdnConfig := config.LoadCDNConfig()
+		if cdnConfig.Enabled {
+			cdnService = services.NewCloudflareCDNService(cdnConfig.ToModel())
+		}
 		searchRepo := &services.ArticleRepositoryAdapter{Repository: articleRepo}
 
 		redisClient := dragonflyCache.GetRedisClient()
@@ -255,6 +263,7 @@ func New(cfg *config.Config) (*Server, error) {
 			tagService,
 			widgetService,
 			themeService,
+			cdnService,
 		)
 	} else {
 		// Skip API router when using mock services
@@ -305,6 +314,7 @@ func New(cfg *config.Config) (*Server, error) {
 	var finalPushNotificationService *services.PushNotificationService
 	var finalWidgetService *services.WidgetService
 	var finalThemeService *services.ThemeService
+	var finalCDNService services.CDNServiceInterface
 	
 	if !useMockServices {
 		finalAnalyticsService = analyticsService
@@ -312,6 +322,7 @@ func New(cfg *config.Config) (*Server, error) {
 		finalPushNotificationService = pushNotificationService
 		finalWidgetService = widgetService
 		finalThemeService = themeService
+		finalCDNService = cdnService
 	}
 
 	return &Server{
@@ -332,6 +343,7 @@ func New(cfg *config.Config) (*Server, error) {
 		pushNotificationService:  finalPushNotificationService,
 		widgetService:            finalWidgetService,
 		themeService:             finalThemeService,
+		cdnService:               finalCDNService,
 	}, nil
 }
 

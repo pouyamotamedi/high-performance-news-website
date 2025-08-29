@@ -63,6 +63,17 @@ func (s SEOData) Value() (driver.Value, error) {
 	return json.Marshal(s)
 }
 
+// ArticleFilter represents filters for article queries
+type ArticleFilter struct {
+	Status          string     `json:"status,omitempty"`
+	CategoryID      *uint64    `json:"category_id,omitempty"`
+	TagID           *uint64    `json:"tag_id,omitempty"`
+	AuthorID        *uint64    `json:"author_id,omitempty"`
+	PublishedAfter  *time.Time `json:"published_after,omitempty"`
+	PublishedBefore *time.Time `json:"published_before,omitempty"`
+	LanguageCode    string     `json:"language_code,omitempty"`
+}
+
 // ValidateArticle validates an Article struct with comprehensive error checking
 func ValidateArticle(article *Article) error {
 	var errors []string

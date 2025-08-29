@@ -116,10 +116,7 @@ func isWordChar(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '\'' || r == '-'
 }
 
-// TagRepositoryInterface defines the interface for tag repository operations
-type TagRepositoryInterface interface {
-	GetAllWithKeywords(ctx context.Context) ([]models.Tag, error)
-}
+// TagRepositoryInterface is defined in interfaces.go
 
 // AutoLinkingService handles automatic internal linking based on keyword banks
 type AutoLinkingService struct {

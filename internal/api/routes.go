@@ -21,6 +21,7 @@ type Router struct {
 	monitoringHandler         *MonitoringHandler
 	widgetHandlers            *WidgetHandlers
 	themeHandlers             *ThemeHandlers
+	cdnHandlers               *CDNHandlers
 	authMiddleware            *AuthMiddleware
 	rateLimiter               *RateLimitMiddleware
 }
@@ -43,6 +44,7 @@ func NewRouter(
 	tagService *services.TagService,
 	widgetService *services.WidgetService,
 	themeService *services.ThemeService,
+	cdnService services.CDNServiceInterface,
 ) *Router {
 	handler := NewAPIHandler(userService, articleService, searchService, contentIngestionService)
 	searchHandlers := NewSearchHandlers(searchService)
@@ -77,6 +79,12 @@ func NewRouter(
 	// Create widget and theme handlers
 	widgetHandlers := NewWidgetHandlers(widgetService)
 	themeHandlers := NewThemeHandlers(themeService)
+	
+	// Create CDN handlers
+	var cdnHandlers *CDNHandlers
+	if cdnService != nil {
+		cdnHandlers = NewCDNHandlers(cdnService)
+	}
 
 	return &Router{
 		handler:                   handler,
@@ -88,6 +96,7 @@ func NewRouter(
 		monitoringHandler:         monitoringHandler,
 		widgetHandlers:            widgetHandlers,
 		themeHandlers:             themeHandlers,
+		cdnHandlers:               cdnHandlers,
 		authMiddleware:            authMiddleware,
 		rateLimiter:               rateLimiter,
 	}
@@ -357,6 +366,37 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 					templates.PUT("/:id", r.themeHandlers.UpdateTemplateOverride)  // PUT /api/v1/admin/themes/templates/123
 					templates.DELETE("/:id", r.themeHandlers.DeleteTemplateOverride) // DELETE /api/v1/admin/themes/templates/123
 					templates.POST("/preview", r.themeHandlers.PreviewTemplate)    // POST /api/v1/admin/themes/templates/preview
+				}
+			}
+			
+			// CDN management routes (admin only)
+			if r.cdnHandlers != nil {
+				cdn := admin.Group("/cdn")
+				{
+					// CDN configuration
+					cdn.GET("/config", r.cdnHandlers.GetCDNConfig)                 // GET /api/v1/admin/cdn/config
+					cdn.PUT("/config", r.cdnHandlers.UpdateCDNConfig)              // PUT /api/v1/admin/cdn/config
+					cdn.POST("/test", r.cdnHandlers.TestCDNConnection)             // POST /api/v1/admin/cdn/test
+					
+					// Cache management
+					cdn.POST("/purge", r.cdnHandlers.PurgeCache)                   // POST /api/v1/admin/cdn/purge
+					cdn.POST("/purge/url", r.cdnHandlers.PurgeURL)                 // POST /api/v1/admin/cdn/purge/url
+					cdn.POST("/purge/urls", r.cdnHandlers.PurgeURLs)               // POST /api/v1/admin/cdn/purge/urls
+					cdn.POST("/purge/all", r.cdnHandlers.PurgeAll)                 // POST /api/v1/admin/cdn/purge/all
+					
+					// Content-specific purging
+					cdn.POST("/purge/article/:slug", r.cdnHandlers.PurgeArticle)   // POST /api/v1/admin/cdn/purge/article/my-article
+					cdn.POST("/purge/category/:slug", r.cdnHandlers.PurgeCategory) // POST /api/v1/admin/cdn/purge/category/tech
+					cdn.POST("/purge/tag/:slug", r.cdnHandlers.PurgeTag)           // POST /api/v1/admin/cdn/purge/tag/breaking
+					
+					// Monitoring and stats
+					cdn.GET("/stats", r.cdnHandlers.GetCDNStats)                   // GET /api/v1/admin/cdn/stats
+					cdn.GET("/health", r.cdnHandlers.GetCDNHealth)                 // GET /api/v1/admin/cdn/health
+					
+					// Failover management
+					cdn.POST("/failover/enable", r.cdnHandlers.EnableFailover)     // POST /api/v1/admin/cdn/failover/enable
+					cdn.POST("/failover/disable", r.cdnHandlers.DisableFailover)   // POST /api/v1/admin/cdn/failover/disable
+					cdn.GET("/failover/status", r.cdnHandlers.GetFailoverStatus)   // GET /api/v1/admin/cdn/failover/status
 				}
 			}
 		}
