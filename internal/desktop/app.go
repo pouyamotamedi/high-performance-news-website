@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -95,42 +94,47 @@ func (a *App) Router() http.Handler {
 
 // loadTemplates loads HTML templates from embedded files
 func (a *App) loadTemplates() error {
-	tmpl := template.New("")
-	
 	// Try to read templates, if it fails (e.g., in tests), use empty template
 	defer func() {
 		if a.templates == nil {
-			a.templates = tmpl
+			a.templates = template.New("").Funcs(a.getTemplateFuncs())
 		}
 	}()
 	
-	err := fs.WalkDir(a.config.TemplateFiles, "templates", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		
-		if d.IsDir() || !strings.HasSuffix(path, ".html") {
-			return nil
-		}
-		
-		content, err := a.config.TemplateFiles.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		
-		name := strings.TrimPrefix(path, "templates/")
-		_, err = tmpl.New(name).Parse(string(content))
-		return err
-	})
+	// Create template with custom functions
+	tmpl := template.New("").Funcs(a.getTemplateFuncs())
 	
+	// Use ParseFS to parse all templates from the embedded filesystem
+	tmpl, err := tmpl.ParseFS(a.config.TemplateFiles, "templates/*.html")
 	if err != nil {
 		// If template loading fails (e.g., in tests), continue with empty template
-		a.templates = tmpl
+		a.templates = template.New("").Funcs(a.getTemplateFuncs())
 		return nil
 	}
 	
 	a.templates = tmpl
 	return nil
+}
+
+// getTemplateFuncs returns custom template functions
+func (a *App) getTemplateFuncs() template.FuncMap {
+	return template.FuncMap{
+		"add": func(a, b int) int {
+			return a + b
+		},
+		"sub": func(a, b int) int {
+			return a - b
+		},
+		"mul": func(a, b int) int {
+			return a * b
+		},
+		"div": func(a, b int) int {
+			if b == 0 {
+				return 0
+			}
+			return a / b
+		},
+	}
 }
 
 // renderTemplate renders an HTML template with data
@@ -143,7 +147,8 @@ func (a *App) renderTemplate(w http.ResponseWriter, name string, data interface{
 		return
 	}
 	
-	err := a.templates.ExecuteTemplate(w, name, data)
+	// Always use base.html as the main template and execute the specific page
+	err := a.templates.ExecuteTemplate(w, "base.html", data)
 	if err != nil {
 		// If template doesn't exist, render a simple HTML page
 		fmt.Fprintf(w, "<html><body><h1>%s</h1><p>Template not found: %v</p></body></html>", name, err)
