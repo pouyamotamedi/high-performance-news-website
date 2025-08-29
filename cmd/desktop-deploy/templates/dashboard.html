@@ -1,0 +1,255 @@
+{{define "content"}}
+<div class="space-y-6">
+    <!-- Status Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-server text-2xl text-blue-600"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Servers</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="total-servers">
+                                {{if .Servers}}{{len .Servers}}{{else}}0{{end}}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-2xl text-green-600"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Connected</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="connected-servers">
+                                {{if .Servers}}
+                                    {{$connected := 0}}
+                                    {{range .Servers}}
+                                        {{if .Connected}}{{$connected = add $connected 1}}{{end}}
+                                    {{end}}
+                                    {{$connected}}
+                                {{else}}0{{end}}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-2xl text-yellow-600"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Errors</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="error-servers">
+                                {{if .Servers}}
+                                    {{$errors := 0}}
+                                    {{range .Servers}}
+                                        {{if .Error}}{{$errors = add $errors 1}}{{end}}
+                                    {{end}}
+                                    {{$errors}}
+                                {{else}}0{{end}}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-rocket text-2xl text-purple-600"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Deployments</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="total-deployments">0</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Status -->
+    {{if not .Servers}}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">No Configuration Loaded</h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                    <p>Please load a deployment configuration file to get started.</p>
+                </div>
+                <div class="mt-4">
+                    <a href="/config" class="bg-yellow-100 text-yellow-800 px-3 py-2 rounded-md text-sm font-medium hover:bg-yellow-200">
+                        Load Configuration
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{end}}
+
+    <!-- Server Status -->
+    {{if .Servers}}
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Server Status</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Current status of all configured servers</p>
+        </div>
+        <ul class="divide-y divide-gray-200">
+            {{range .Servers}}
+            <li class="px-4 py-4 sm:px-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            {{if .Connected}}
+                                <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                            {{else}}
+                                <div class="w-3 h-3 bg-red-400 rounded-full"></div>
+                            {{end}}
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">{{.Name}}</div>
+                            <div class="text-sm text-gray-500">{{.Host}}</div>
+                            {{if .Error}}
+                                <div class="text-sm text-red-600">{{.Error}}</div>
+                            {{end}}
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="setupServer('{{.Name}}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            Setup
+                        </button>
+                        <button onclick="deployToServer('{{.Name}}')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                            Deploy
+                        </button>
+                        <a href="/servers/{{.Name}}" class="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">
+                            Details
+                        </a>
+                    </div>
+                </div>
+            </li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
+
+    <!-- Recent Activity -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Activity</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Latest deployment activities and system events</p>
+        </div>
+        <div class="px-4 py-5 sm:px-6">
+            <div id="activity-log" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-sm text-gray-500">No recent activity</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Dashboard-specific JavaScript
+function setupServer(serverName) {
+    if (confirm(`Are you sure you want to setup server "${serverName}"? This will install dependencies and configure the server.`)) {
+        fetch(`/api/servers/${serverName}/setup`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showNotification(`Server setup started for ${serverName}`, 'info');
+        })
+        .catch(error => {
+            showNotification(`Failed to start setup: ${error.message}`, 'error');
+        });
+    }
+}
+
+function deployToServer(serverName) {
+    if (confirm(`Are you sure you want to deploy to server "${serverName}"?`)) {
+        fetch(`/api/servers/${serverName}/deploy`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showNotification(`Deployment started for ${serverName}`, 'info');
+        })
+        .catch(error => {
+            showNotification(`Failed to start deployment: ${error.message}`, 'error');
+        });
+    }
+}
+
+// Add activity to log
+function addActivity(message, type = 'info') {
+    const activityLog = document.getElementById('activity-log');
+    const timestamp = new Date().toLocaleTimeString();
+    
+    const activity = document.createElement('div');
+    activity.className = `flex items-center space-x-2 text-sm ${type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-gray-600'}`;
+    activity.innerHTML = `
+        <span class="text-gray-400">${timestamp}</span>
+        <span>${message}</span>
+    `;
+    
+    // Remove "No recent activity" message if it exists
+    const noActivity = activityLog.querySelector('.text-gray-500');
+    if (noActivity && noActivity.textContent === 'No recent activity') {
+        noActivity.remove();
+    }
+    
+    activityLog.insertBefore(activity, activityLog.firstChild);
+    
+    // Keep only last 20 activities
+    while (activityLog.children.length > 20) {
+        activityLog.removeChild(activityLog.lastChild);
+    }
+}
+
+// Listen for WebSocket messages
+if (window.ws) {
+    window.ws.addEventListener('message', function(event) {
+        const data = JSON.parse(event.data);
+        
+        switch (data.type) {
+            case 'setup_start':
+                addActivity(`Setup started for ${data.server}`, 'info');
+                break;
+            case 'setup_complete':
+                addActivity(`Setup completed for ${data.server}`, 'success');
+                break;
+            case 'setup_error':
+                addActivity(`Setup failed for ${data.server}: ${data.message}`, 'error');
+                break;
+            case 'deploy_start':
+                addActivity(`Deployment started for ${data.server}`, 'info');
+                break;
+            case 'deploy_complete':
+                addActivity(`Deployment completed for ${data.server}`, 'success');
+                break;
+            case 'deploy_error':
+                addActivity(`Deployment failed for ${data.server}: ${data.message}`, 'error');
+                break;
+        }
+    });
+}
+</script>
+{{end}}

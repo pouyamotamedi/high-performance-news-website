@@ -1,0 +1,350 @@
+{{define "content"}}
+<div class="space-y-6">
+    <!-- Configuration Status -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Configuration Management</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Load and manage deployment configuration</p>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm font-medium text-gray-900">Configuration Status</div>
+                    <div class="text-sm text-gray-500" id="config-status">No configuration loaded</div>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="loadConfigFile()" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                        <i class="fas fa-folder-open mr-2"></i>Load Config File
+                    </button>
+                    <button onclick="saveConfig()" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700" id="save-config-btn" disabled>
+                        <i class="fas fa-save mr-2"></i>Save Config
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Input -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Load Configuration File</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Select a YAML configuration file to load</p>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <div class="space-y-4">
+                <div>
+                    <label for="config-path" class="block text-sm font-medium text-gray-700">Configuration File Path</label>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                        <input type="text" id="config-path" class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="/path/to/deploy-config.yaml">
+                        <button onclick="browseConfigFile()" class="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-gray-500 text-sm">
+                            <i class="fas fa-folder mr-1"></i>Browse
+                        </button>
+                    </div>
+                </div>
+                <button onclick="loadConfigFromPath()" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                    Load Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Editor -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg" id="config-editor" style="display: none;">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Configuration Editor</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Edit your deployment configuration</p>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <div class="space-y-6">
+                <!-- App Configuration -->
+                <div>
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Application Configuration</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">App Name</label>
+                            <input type="text" id="app-name" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Binary Path</label>
+                            <input type="text" id="app-binary" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Port</label>
+                            <input type="number" id="app-port" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Health Path</label>
+                            <input type="text" id="app-health-path" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Servers Configuration -->
+                <div>
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Servers</h4>
+                    <div id="servers-config">
+                        <!-- Servers will be dynamically added here -->
+                    </div>
+                    <button onclick="addServer()" class="mt-2 bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                        <i class="fas fa-plus mr-1"></i>Add Server
+                    </button>
+                </div>
+
+                <!-- Deploy Configuration -->
+                <div>
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Deployment Configuration</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Strategy</label>
+                            <select id="deploy-strategy" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                <option value="blue-green">Blue-Green</option>
+                                <option value="rolling">Rolling</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Health Timeout</label>
+                            <input type="text" id="deploy-health-timeout" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="2m">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Preview -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg" id="config-preview" style="display: none;">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Configuration Preview</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Current configuration in YAML format</p>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <pre id="config-yaml" class="bg-gray-900 text-green-400 p-4 rounded-md font-mono text-sm max-h-64 overflow-y-auto"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentConfig = null;
+
+function loadConfigFile() {
+    // In a real desktop app, this would open a file dialog
+    // For now, we'll use the path input
+    const path = prompt("Enter the path to your configuration file:", "deploy-config.yaml");
+    if (path) {
+        document.getElementById('config-path').value = path;
+        loadConfigFromPath();
+    }
+}
+
+function browseConfigFile() {
+    // In a real desktop app, this would open a native file dialog
+    showNotification("File browser not available in web version. Please enter the path manually.", "info");
+}
+
+function loadConfigFromPath() {
+    const configPath = document.getElementById('config-path').value;
+    if (!configPath) {
+        showNotification("Please enter a configuration file path", "error");
+        return;
+    }
+    
+    fetch('/api/config/load', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            config_path: configPath
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showNotification(`Failed to load config: ${data.error}`, 'error');
+            return;
+        }
+        
+        showNotification('Configuration loaded successfully', 'success');
+        document.getElementById('config-status').textContent = `Loaded: ${configPath}`;
+        document.getElementById('save-config-btn').disabled = false;
+        
+        // Load current config for editing
+        loadCurrentConfig();
+    })
+    .catch(error => {
+        showNotification(`Error loading config: ${error.message}`, 'error');
+    });
+}
+
+function loadCurrentConfig() {
+    fetch('/api/config')
+        .then(response => response.json())
+        .then(data => {
+            if (data.loaded && data.config) {
+                currentConfig = data.config;
+                populateConfigEditor(data.config);
+                document.getElementById('config-editor').style.display = 'block';
+                document.getElementById('config-preview').style.display = 'block';
+                updateConfigPreview();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading current config:', error);
+        });
+}
+
+function populateConfigEditor(config) {
+    // Populate app configuration
+    if (config.App) {
+        document.getElementById('app-name').value = config.App.Name || '';
+        document.getElementById('app-binary').value = config.App.Binary || '';
+        document.getElementById('app-port').value = config.App.Port || '';
+        document.getElementById('app-health-path').value = config.App.HealthPath || '';
+    }
+    
+    // Populate servers
+    const serversDiv = document.getElementById('servers-config');
+    serversDiv.innerHTML = '';
+    
+    if (config.Servers) {
+        Object.entries(config.Servers).forEach(([name, server]) => {
+            addServerToEditor(name, server);
+        });
+    }
+    
+    // Populate deploy configuration
+    if (config.Deploy) {
+        document.getElementById('deploy-strategy').value = config.Deploy.Strategy || 'blue-green';
+        document.getElementById('deploy-health-timeout').value = config.Deploy.HealthTimeout || '2m';
+    }
+}
+
+function addServer() {
+    addServerToEditor('', {});
+}
+
+function addServerToEditor(name, server) {
+    const serversDiv = document.getElementById('servers-config');
+    const serverDiv = document.createElement('div');
+    serverDiv.className = 'border border-gray-200 rounded-md p-4 mb-4';
+    
+    serverDiv.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+            <h5 class="text-sm font-medium text-gray-900">Server Configuration</h5>
+            <button onclick="removeServer(this)" class="text-red-600 hover:text-red-800">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Server Name</label>
+                <input type="text" class="server-name mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value="${name}">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Host</label>
+                <input type="text" class="server-host mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value="${server.Host || ''}">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Port</label>
+                <input type="number" class="server-port mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value="${server.Port || 22}">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">User</label>
+                <input type="text" class="server-user mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value="${server.User || ''}">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700">SSH Key File</label>
+                <input type="text" class="server-key mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value="${server.KeyFile || ''}">
+            </div>
+        </div>
+    `;
+    
+    serversDiv.appendChild(serverDiv);
+    
+    // Add event listeners for real-time preview updates
+    serverDiv.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', updateConfigPreview);
+    });
+}
+
+function removeServer(button) {
+    button.closest('.border').remove();
+    updateConfigPreview();
+}
+
+function updateConfigPreview() {
+    const config = gatherConfigFromEditor();
+    const yamlContent = JSON.stringify(config, null, 2); // In a real app, you'd use a YAML library
+    document.getElementById('config-yaml').textContent = yamlContent;
+}
+
+function gatherConfigFromEditor() {
+    const config = {
+        App: {
+            Name: document.getElementById('app-name').value,
+            Binary: document.getElementById('app-binary').value,
+            Port: parseInt(document.getElementById('app-port').value) || 8080,
+            HealthPath: document.getElementById('app-health-path').value
+        },
+        Servers: {},
+        Deploy: {
+            Strategy: document.getElementById('deploy-strategy').value,
+            HealthTimeout: document.getElementById('deploy-health-timeout').value
+        }
+    };
+    
+    // Gather servers
+    document.querySelectorAll('#servers-config .border').forEach(serverDiv => {
+        const name = serverDiv.querySelector('.server-name').value;
+        if (name) {
+            config.Servers[name] = {
+                Host: serverDiv.querySelector('.server-host').value,
+                Port: parseInt(serverDiv.querySelector('.server-port').value) || 22,
+                User: serverDiv.querySelector('.server-user').value,
+                KeyFile: serverDiv.querySelector('.server-key').value
+            };
+        }
+    });
+    
+    return config;
+}
+
+function saveConfig() {
+    const config = gatherConfigFromEditor();
+    
+    fetch('/api/config', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(config)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showNotification(`Failed to save config: ${data.error}`, 'error');
+            return;
+        }
+        
+        showNotification('Configuration saved successfully', 'success');
+        currentConfig = config;
+    })
+    .catch(error => {
+        showNotification(`Error saving config: ${error.message}`, 'error');
+    });
+}
+
+// Add event listeners for real-time preview updates
+document.addEventListener('DOMContentLoaded', function() {
+    ['app-name', 'app-binary', 'app-port', 'app-health-path', 'deploy-strategy', 'deploy-health-timeout'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', updateConfigPreview);
+        }
+    });
+    
+    // Load current config if available
+    loadCurrentConfig();
+});
+</script>
+{{end}}

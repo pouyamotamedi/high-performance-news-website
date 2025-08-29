@@ -1,0 +1,273 @@
+{{define "content"}}
+<div class="space-y-6">
+    <!-- Server Header -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">{{.ServerName}}</h3>
+                    <p class="mt-1 max-w-2xl text-sm text-gray-500">Server details and management</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 bg-gray-400 rounded-full" id="server-status-indicator"></div>
+                    <span class="text-sm text-gray-600" id="server-status-text">Checking...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server Actions -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Actions</h3>
+            <div class="mt-4 flex space-x-4">
+                <button onclick="checkStatus()" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                    <i class="fas fa-heartbeat mr-2"></i>Check Status
+                </button>
+                <button onclick="setupServer()" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700">
+                    <i class="fas fa-cog mr-2"></i>Setup Server
+                </button>
+                <button onclick="deployToServer()" class="bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-700">
+                    <i class="fas fa-rocket mr-2"></i>Deploy
+                </button>
+                <button onclick="refreshHistory()" class="bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                    <i class="fas fa-history mr-2"></i>Refresh History
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server Information -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Server Information</h3>
+        </div>
+        <div class="border-t border-gray-200">
+            <dl>
+                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Connection Status</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2" id="connection-status">Checking...</dd>
+                </div>
+                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Host</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2" id="server-host">-</dd>
+                </div>
+                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Operating System</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2" id="server-os">-</dd>
+                </div>
+                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">CPU Cores</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2" id="server-cpu">-</dd>
+                </div>
+                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Memory</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2" id="server-memory">-</dd>
+                </div>
+                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Disk Space</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2" id="server-disk">-</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Resource Usage -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Resource Usage</h3>
+        </div>
+        <div class="px-4 py-5 sm:px-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="cpu-usage">-</div>
+                    <div class="text-sm text-gray-500">CPU Usage</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600" id="memory-usage">-</div>
+                    <div class="text-sm text-gray-500">Memory Usage</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-yellow-600" id="disk-usage">-</div>
+                    <div class="text-sm text-gray-500">Disk Usage</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-600" id="load-average">-</div>
+                    <div class="text-sm text-gray-500">Load Average</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deployment History -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Deployment History</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Recent deployment activities for this server</p>
+        </div>
+        <div id="deployment-history">
+            <div class="px-4 py-5 sm:px-6 text-center text-gray-500">
+                Loading deployment history...
+            </div>
+        </div>
+    </div>
+
+    <!-- Server Logs -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Server Logs</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Recent log entries from the server</p>
+        </div>
+        <div class="px-4 py-5 sm:px-6">
+            <div id="server-logs" class="bg-gray-900 text-green-400 p-4 rounded-md font-mono text-sm max-h-64 overflow-y-auto">
+                <div class="text-gray-500">No logs available</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const serverName = '{{.ServerName}}';
+
+function checkStatus() {
+    const statusIndicator = document.getElementById('server-status-indicator');
+    const statusText = document.getElementById('server-status-text');
+    
+    statusIndicator.className = 'w-3 h-3 bg-yellow-400 rounded-full animate-pulse';
+    statusText.textContent = 'Checking...';
+    
+    fetch(`/api/servers/${serverName}/status`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.Connected) {
+                statusIndicator.className = 'w-3 h-3 bg-green-400 rounded-full';
+                statusText.textContent = 'Connected';
+                
+                // Update server information
+                document.getElementById('connection-status').textContent = 'Connected';
+                document.getElementById('server-host').textContent = data.Host || '-';
+                
+                if (data.SystemInfo) {
+                    document.getElementById('server-os').textContent = data.SystemInfo.OS || '-';
+                    document.getElementById('server-cpu').textContent = data.SystemInfo.CPUCores || '-';
+                    document.getElementById('server-memory').textContent = data.SystemInfo.Memory || '-';
+                    document.getElementById('server-disk').textContent = data.SystemInfo.DiskSpace || '-';
+                }
+                
+                if (data.ResourceUsage) {
+                    document.getElementById('cpu-usage').textContent = data.ResourceUsage.CPUUsage || '-';
+                    document.getElementById('memory-usage').textContent = data.ResourceUsage.MemoryUsage || '-';
+                    document.getElementById('disk-usage').textContent = data.ResourceUsage.DiskUsage || '-';
+                    document.getElementById('load-average').textContent = data.ResourceUsage.LoadAverage || '-';
+                }
+            } else {
+                statusIndicator.className = 'w-3 h-3 bg-red-400 rounded-full';
+                statusText.textContent = 'Disconnected';
+                document.getElementById('connection-status').textContent = data.Error || 'Disconnected';
+            }
+        })
+        .catch(error => {
+            statusIndicator.className = 'w-3 h-3 bg-red-400 rounded-full';
+            statusText.textContent = 'Error';
+            document.getElementById('connection-status').textContent = 'Error: ' + error.message;
+        });
+}
+
+function setupServer() {
+    if (confirm(`Are you sure you want to setup server "${serverName}"? This will install dependencies and configure the server.`)) {
+        fetch(`/api/servers/${serverName}/setup`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showNotification(`Server setup started for ${serverName}`, 'info');
+        })
+        .catch(error => {
+            showNotification(`Failed to start setup: ${error.message}`, 'error');
+        });
+    }
+}
+
+function deployToServer() {
+    if (confirm(`Are you sure you want to deploy to server "${serverName}"?`)) {
+        fetch(`/api/servers/${serverName}/deploy`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showNotification(`Deployment started for ${serverName}`, 'info');
+        })
+        .catch(error => {
+            showNotification(`Failed to start deployment: ${error.message}`, 'error');
+        });
+    }
+}
+
+function refreshHistory() {
+    const historyDiv = document.getElementById('deployment-history');
+    historyDiv.innerHTML = '<div class="px-4 py-5 sm:px-6 text-center text-gray-500">Loading deployment history...</div>';
+    
+    fetch(`/api/servers/${serverName}/history?limit=10`)
+        .then(response => response.json())
+        .then(data => {
+            const history = data.history || [];
+            
+            if (history.length === 0) {
+                historyDiv.innerHTML = '<div class="px-4 py-5 sm:px-6 text-center text-gray-500">No deployment history found</div>';
+                return;
+            }
+            
+            const historyHTML = history.map(record => `
+                <div class="border-t border-gray-200 px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">Version: ${record.new_version || 'Unknown'}</div>
+                            <div class="text-sm text-gray-500">App: ${record.app_name || 'Unknown'}</div>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            ${record.timestamp ? new Date(record.timestamp).toLocaleString() : 'Unknown time'}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            historyDiv.innerHTML = historyHTML;
+        })
+        .catch(error => {
+            historyDiv.innerHTML = `<div class="px-4 py-5 sm:px-6 text-center text-red-600">Error loading history: ${error.message}</div>`;
+        });
+}
+
+function refreshLogs() {
+    fetch(`/api/servers/${serverName}/logs`)
+        .then(response => response.json())
+        .then(data => {
+            const logsDiv = document.getElementById('server-logs');
+            const logs = data.logs || [];
+            
+            if (logs.length === 0) {
+                logsDiv.innerHTML = '<div class="text-gray-500">No logs available</div>';
+                return;
+            }
+            
+            const logsHTML = logs.map(log => `<div>${log}</div>`).join('');
+            logsDiv.innerHTML = logsHTML;
+        })
+        .catch(error => {
+            document.getElementById('server-logs').innerHTML = `<div class="text-red-400">Error loading logs: ${error.message}</div>`;
+        });
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkStatus();
+    refreshHistory();
+    refreshLogs();
+});
+
+// Auto-refresh every 30 seconds
+setInterval(checkStatus, 30000);
+setInterval(refreshHistory, 60000);
+setInterval(refreshLogs, 30000);
+</script>
+{{end}}

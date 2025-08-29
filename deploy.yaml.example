@@ -1,0 +1,102 @@
+# Zero-Touch Deployment Configuration for High-Performance News Website
+# Copy this file to deploy.yaml and customize for your environment
+
+# Server configurations
+servers:
+  production:
+    host: "your-production-server.com"
+    port: 22
+    user: "deploy"
+    key_file: "~/.ssh/id_rsa"
+    # password: "your-password"  # Use either key_file or password, not both
+  
+  staging:
+    host: "staging.example.com"
+    port: 2222
+    user: "deploy"
+    key_file: "~/.ssh/staging_key"
+  
+  development:
+    host: "dev.example.com"
+    user: "deploy"
+    password: "dev-password"
+
+# Application configuration
+app:
+  name: "news-website"
+  binary: "./news-server"
+  config_file: "./config.yaml"
+  port: 8080
+  health_path: "/health"
+  
+  # Environment variables for the application
+  environment:
+    ENV: "production"
+    LOG_LEVEL: "info"
+    DATABASE_URL: "postgres://user:pass@localhost:5432/newsdb"
+    REDIS_URL: "redis://localhost:6379/0"
+    DRAGONFLY_URL: "redis://localhost:6380/0"
+    MEILISEARCH_URL: "http://localhost:7700"
+    JWT_SECRET: "your-jwt-secret-here"
+    UPLOAD_PATH: "/var/lib/news-website/uploads"
+  
+  # System dependencies to install
+  dependencies:
+    - "postgresql-client"
+    - "redis-tools"
+    - "curl"
+    - "htop"
+    - "nginx"
+
+# SSH connection settings
+ssh:
+  timeout: 30s
+  connect_retries: 3
+  command_timeout: 10m
+  keep_alive: 30s
+
+# Deployment configuration
+deploy:
+  strategy: "blue-green"  # or "rolling"
+  health_check_url: "http://localhost:8080/health"
+  health_timeout: 3m
+  rollback_timeout: 5m
+  backup_retention: 5  # Number of old versions to keep
+  
+  # Hooks to execute during deployment
+  pre_deploy_hooks:
+    - "echo 'Starting deployment at $(date)'"
+    - "sudo systemctl status nginx || true"
+    - "df -h /opt"
+    - "free -h"
+  
+  post_deploy_hooks:
+    - "echo 'Deployment completed at $(date)'"
+    - "sudo systemctl reload nginx"
+    - "sudo systemctl status news-website"
+    - "curl -f http://localhost:8080/health"
+  
+  # Validation checks before deployment
+  validation_checks:
+    - "which curl"
+    - "which systemctl"
+    - "sudo -n true"
+    - "nginx -t"
+    - "test -f /etc/systemd/system/nginx.service"
+
+# Example usage:
+# 
+# Deploy to production:
+#   ./scripts/deploy.sh --target production
+# 
+# Deploy to staging with dry run:
+#   ./scripts/deploy.sh --target staging --dry-run
+# 
+# Rollback production to previous version:
+#   ./scripts/deploy.sh --action rollback --target production --version news-website-1640995200
+# 
+# Setup a new server:
+#   ./scripts/deploy.sh --action setup --target production
+# 
+# Check health:
+#   ./scripts/deploy.sh --action health-check --target production

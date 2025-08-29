@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - News Website Deployment</title>
+    <link href="/static/css/app.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <div class="bg-gray-800 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out">
+            <div class="text-white flex items-center space-x-2 px-4">
+                <i class="fas fa-rocket text-2xl"></i>
+                <span class="text-2xl font-extrabold">Deploy</span>
+            </div>
+            
+            <nav class="space-y-2">
+                <a href="/" class="nav-link {{if eq .Page "dashboard"}}active{{end}}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/servers" class="nav-link {{if eq .Page "servers"}}active{{end}}">
+                    <i class="fas fa-server"></i>
+                    <span>Servers</span>
+                </a>
+                <a href="/config" class="nav-link {{if eq .Page "config"}}active{{end}}">
+                    <i class="fas fa-cog"></i>
+                    <span>Configuration</span>
+                </a>
+                <a href="/logs" class="nav-link {{if eq .Page "logs"}}active{{end}}">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Logs</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top bar -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+                    <div class="flex items-center justify-between">
+                        <h1 class="text-2xl font-bold text-gray-900">{{.Title}}</h1>
+                        <div class="flex items-center space-x-4">
+                            <div id="connection-status" class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-gray-400 rounded-full" id="status-indicator"></div>
+                                <span class="text-sm text-gray-600" id="status-text">Connecting...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page content -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    {{template "content" .}}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Notification area -->
+    <div id="notifications" class="fixed top-4 right-4 space-y-2 z-50"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

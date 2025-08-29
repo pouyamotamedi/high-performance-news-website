@@ -1,0 +1,304 @@
+{{define "content"}}
+<div class="space-y-6">
+    <!-- Log Controls -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Deployment Logs</h3>
+                    <p class="mt-1 max-w-2xl text-sm text-gray-500">View and monitor deployment activities</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="clearLogs()" class="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i>Clear Logs
+                    </button>
+                    <button onclick="refreshLogs()" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                    <button onclick="toggleAutoScroll()" class="bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700" id="auto-scroll-btn">
+                        <i class="fas fa-arrow-down mr-2"></i>Auto Scroll: ON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Filters -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Filters</h3>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Log Level</label>
+                    <select id="log-level-filter" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" onchange="applyFilters()">
+                        <option value="">All Levels</option>
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="error">Error</option>
+                        <option value="success">Success</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Server</label>
+                    <select id="server-filter" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" onchange="applyFilters()">
+                        <option value="">All Servers</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Operation</label>
+                    <select id="operation-filter" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" onchange="applyFilters()">
+                        <option value="">All Operations</option>
+                        <option value="setup">Setup</option>
+                        <option value="deploy">Deploy</option>
+                        <option value="rollback">Rollback</option>
+                        <option value="health-check">Health Check</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Search</label>
+                    <input type="text" id="search-filter" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Search logs..." onkeyup="applyFilters()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Viewer -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Log Output</h3>
+        </div>
+        <div class="border-t border-gray-200">
+            <div id="log-viewer" class="bg-gray-900 text-green-400 p-4 font-mono text-sm h-96 overflow-y-auto">
+                <div class="text-gray-500">Connecting to log stream...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Statistics -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Log Statistics</h3>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="total-logs">0</div>
+                    <div class="text-sm text-gray-500">Total Logs</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-red-600" id="error-logs">0</div>
+                    <div class="text-sm text-gray-500">Errors</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-yellow-600" id="warning-logs">0</div>
+                    <div class="text-sm text-gray-500">Warnings</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600" id="success-logs">0</div>
+                    <div class="text-sm text-gray-500">Success</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let logs = [];
+let filteredLogs = [];
+let autoScroll = true;
+let logStats = {
+    total: 0,
+    error: 0,
+    warning: 0,
+    success: 0
+};
+
+function addLog(message, level = 'info', server = '', operation = '') {
+    const timestamp = new Date().toISOString();
+    const log = {
+        timestamp,
+        message,
+        level,
+        server,
+        operation,
+        id: Date.now() + Math.random()
+    };
+    
+    logs.unshift(log);
+    
+    // Keep only last 1000 logs
+    if (logs.length > 1000) {
+        logs = logs.slice(0, 1000);
+    }
+    
+    updateLogStats();
+    applyFilters();
+}
+
+function updateLogStats() {
+    logStats.total = logs.length;
+    logStats.error = logs.filter(log => log.level === 'error').length;
+    logStats.warning = logs.filter(log => log.level === 'warning').length;
+    logStats.success = logs.filter(log => log.level === 'success').length;
+    
+    document.getElementById('total-logs').textContent = logStats.total;
+    document.getElementById('error-logs').textContent = logStats.error;
+    document.getElementById('warning-logs').textContent = logStats.warning;
+    document.getElementById('success-logs').textContent = logStats.success;
+}
+
+function applyFilters() {
+    const levelFilter = document.getElementById('log-level-filter').value;
+    const serverFilter = document.getElementById('server-filter').value;
+    const operationFilter = document.getElementById('operation-filter').value;
+    const searchFilter = document.getElementById('search-filter').value.toLowerCase();
+    
+    filteredLogs = logs.filter(log => {
+        if (levelFilter && log.level !== levelFilter) return false;
+        if (serverFilter && log.server !== serverFilter) return false;
+        if (operationFilter && log.operation !== operationFilter) return false;
+        if (searchFilter && !log.message.toLowerCase().includes(searchFilter)) return false;
+        return true;
+    });
+    
+    renderLogs();
+}
+
+function renderLogs() {
+    const logViewer = document.getElementById('log-viewer');
+    
+    if (filteredLogs.length === 0) {
+        logViewer.innerHTML = '<div class="text-gray-500">No logs match the current filters</div>';
+        return;
+    }
+    
+    const logsHTML = filteredLogs.map(log => {
+        const levelClass = {
+            'error': 'text-red-400',
+            'warning': 'text-yellow-400',
+            'success': 'text-green-400',
+            'info': 'text-blue-400'
+        }[log.level] || 'text-gray-400';
+        
+        const timestamp = new Date(log.timestamp).toLocaleTimeString();
+        
+        return `
+            <div class="log-entry mb-1">
+                <span class="text-gray-500">[${timestamp}]</span>
+                <span class="${levelClass}">[${log.level.toUpperCase()}]</span>
+                ${log.server ? `<span class="text-purple-400">[${log.server}]</span>` : ''}
+                ${log.operation ? `<span class="text-cyan-400">[${log.operation}]</span>` : ''}
+                <span class="text-green-400">${log.message}</span>
+            </div>
+        `;
+    }).join('');
+    
+    logViewer.innerHTML = logsHTML;
+    
+    // Auto-scroll to bottom if enabled
+    if (autoScroll) {
+        logViewer.scrollTop = logViewer.scrollHeight;
+    }
+}
+
+function clearLogs() {
+    if (confirm('Are you sure you want to clear all logs?')) {
+        logs = [];
+        filteredLogs = [];
+        updateLogStats();
+        renderLogs();
+        showNotification('Logs cleared', 'info');
+    }
+}
+
+function refreshLogs() {
+    // In a real implementation, this would fetch logs from the server
+    showNotification('Logs refreshed', 'info');
+}
+
+function toggleAutoScroll() {
+    autoScroll = !autoScroll;
+    const btn = document.getElementById('auto-scroll-btn');
+    btn.innerHTML = `<i class="fas fa-arrow-down mr-2"></i>Auto Scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+    btn.className = autoScroll 
+        ? 'bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700'
+        : 'bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700';
+}
+
+// Populate server filter options
+function populateServerFilter() {
+    fetch('/api/servers')
+        .then(response => response.json())
+        .then(data => {
+            const serverFilter = document.getElementById('server-filter');
+            const servers = data.servers || [];
+            
+            // Clear existing options except "All Servers"
+            while (serverFilter.children.length > 1) {
+                serverFilter.removeChild(serverFilter.lastChild);
+            }
+            
+            servers.forEach(server => {
+                const option = document.createElement('option');
+                option.value = server.name;
+                option.textContent = server.name;
+                serverFilter.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading servers for filter:', error);
+        });
+}
+
+// Listen for WebSocket messages to add logs in real-time
+if (window.ws) {
+    window.ws.addEventListener('message', function(event) {
+        const data = JSON.parse(event.data);
+        
+        switch (data.type) {
+            case 'setup_start':
+                addLog(`Setup started for ${data.server}`, 'info', data.server, 'setup');
+                break;
+            case 'setup_complete':
+                addLog(`Setup completed successfully for ${data.server}`, 'success', data.server, 'setup');
+                break;
+            case 'setup_error':
+                addLog(`Setup failed for ${data.server}: ${data.message}`, 'error', data.server, 'setup');
+                break;
+            case 'deploy_start':
+                addLog(`Deployment started for ${data.server}`, 'info', data.server, 'deploy');
+                break;
+            case 'deploy_complete':
+                addLog(`Deployment completed successfully for ${data.server}`, 'success', data.server, 'deploy');
+                break;
+            case 'deploy_error':
+                addLog(`Deployment failed for ${data.server}: ${data.message}`, 'error', data.server, 'deploy');
+                break;
+            case 'connected':
+                addLog('WebSocket connection established', 'success', '', 'system');
+                break;
+        }
+    });
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    populateServerFilter();
+    
+    // Add some sample logs
+    addLog('Desktop deployment application started', 'success', '', 'system');
+    addLog('Waiting for configuration to be loaded...', 'info', '', 'system');
+    
+    applyFilters();
+});
+
+// Simulate some log activity for demo purposes
+setTimeout(() => {
+    addLog('Checking server connectivity...', 'info', '', 'system');
+}, 2000);
+
+setTimeout(() => {
+    addLog('Ready for deployment operations', 'success', '', 'system');
+}, 3000);
+</script>
+{{end}}

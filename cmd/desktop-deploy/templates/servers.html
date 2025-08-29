@@ -1,0 +1,196 @@
+{{define "content"}}
+<div class="space-y-6">
+    <!-- Server List -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+            <div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Servers</h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Manage your deployment servers</p>
+            </div>
+            <button onclick="refreshServers()" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+        </div>
+        <div id="servers-list">
+            <div class="px-4 py-5 sm:px-6 text-center text-gray-500">
+                Loading servers...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let servers = [];
+
+function refreshServers() {
+    fetch('/api/servers')
+        .then(response => response.json())
+        .then(data => {
+            servers = data.servers || [];
+            renderServers();
+        })
+        .catch(error => {
+            document.getElementById('servers-list').innerHTML = `
+                <div class="px-4 py-5 sm:px-6 text-center text-red-600">
+                    Error loading servers: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function renderServers() {
+    const serversList = document.getElementById('servers-list');
+    
+    if (servers.length === 0) {
+        serversList.innerHTML = `
+            <div class="px-4 py-5 sm:px-6 text-center text-gray-500">
+                No servers configured. Please load a configuration file.
+            </div>
+        `;
+        return;
+    }
+    
+    const serversHTML = servers.map(server => `
+        <div class="border-t border-gray-200">
+            <div class="px-4 py-4 sm:px-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-3 h-3 bg-gray-400 rounded-full server-status" data-server="${server.name}"></div>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">${server.name}</div>
+                            <div class="text-sm text-gray-500">${server.host}:${server.port}</div>
+                            <div class="text-sm text-gray-500">User: ${server.user}</div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="checkServerStatus('${server.name}')" class="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">
+                            <i class="fas fa-heartbeat mr-1"></i>Status
+                        </button>
+                        <button onclick="setupServer('${server.name}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            <i class="fas fa-cog mr-1"></i>Setup
+                        </button>
+                        <button onclick="deployToServer('${server.name}')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                            <i class="fas fa-rocket mr-1"></i>Deploy
+                        </button>
+                        <a href="/servers/${server.name}" class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700">
+                            <i class="fas fa-info-circle mr-1"></i>Details
+                        </a>
+                    </div>
+                </div>
+                <div id="server-details-${server.name}" class="mt-4 hidden">
+                    <div class="bg-gray-50 rounded-md p-4">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <div class="font-medium text-gray-500">Status</div>
+                                <div id="status-${server.name}">Checking...</div>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-500">CPU Usage</div>
+                                <div id="cpu-${server.name}">-</div>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-500">Memory Usage</div>
+                                <div id="memory-${server.name}">-</div>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-500">Disk Usage</div>
+                                <div id="disk-${server.name}">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    serversList.innerHTML = serversHTML;
+    
+    // Check status for all servers
+    servers.forEach(server => {
+        checkServerStatus(server.name);
+    });
+}
+
+function checkServerStatus(serverName) {
+    const statusIndicator = document.querySelector(`.server-status[data-server="${serverName}"]`);
+    const detailsDiv = document.getElementById(`server-details-${serverName}`);
+    
+    statusIndicator.className = 'w-3 h-3 bg-yellow-400 rounded-full server-status animate-pulse';
+    
+    fetch(`/api/servers/${serverName}/status`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.Connected) {
+                statusIndicator.className = 'w-3 h-3 bg-green-400 rounded-full server-status';
+                
+                // Update details if visible
+                if (!detailsDiv.classList.contains('hidden')) {
+                    document.getElementById(`status-${serverName}`).textContent = 'Connected';
+                    
+                    if (data.ResourceUsage) {
+                        document.getElementById(`cpu-${serverName}`).textContent = data.ResourceUsage.CPUUsage || '-';
+                        document.getElementById(`memory-${serverName}`).textContent = data.ResourceUsage.MemoryUsage || '-';
+                        document.getElementById(`disk-${serverName}`).textContent = data.ResourceUsage.DiskUsage || '-';
+                    }
+                }
+            } else {
+                statusIndicator.className = 'w-3 h-3 bg-red-400 rounded-full server-status';
+                
+                if (!detailsDiv.classList.contains('hidden')) {
+                    document.getElementById(`status-${serverName}`).textContent = data.Error || 'Disconnected';
+                }
+            }
+        })
+        .catch(error => {
+            statusIndicator.className = 'w-3 h-3 bg-red-400 rounded-full server-status';
+            
+            if (!detailsDiv.classList.contains('hidden')) {
+                document.getElementById(`status-${serverName}`).textContent = 'Error: ' + error.message;
+            }
+        });
+    
+    // Toggle details visibility
+    detailsDiv.classList.toggle('hidden');
+}
+
+function setupServer(serverName) {
+    if (confirm(`Are you sure you want to setup server "${serverName}"? This will install dependencies and configure the server.`)) {
+        fetch(`/api/servers/${serverName}/setup`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showNotification(`Server setup started for ${serverName}`, 'info');
+        })
+        .catch(error => {
+            showNotification(`Failed to start setup: ${error.message}`, 'error');
+        });
+    }
+}
+
+function deployToServer(serverName) {
+    if (confirm(`Are you sure you want to deploy to server "${serverName}"?`)) {
+        fetch(`/api/servers/${serverName}/deploy`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showNotification(`Deployment started for ${serverName}`, 'info');
+        })
+        .catch(error => {
+            showNotification(`Failed to start deployment: ${error.message}`, 'error');
+        });
+    }
+}
+
+// Load servers on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshServers();
+});
+
+// Auto-refresh every 30 seconds
+setInterval(refreshServers, 30000);
+</script>
+{{end}}
