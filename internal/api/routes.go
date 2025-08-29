@@ -18,6 +18,7 @@ type Router struct {
 	imageHandlers             *ImageHandlers
 	adminHandlers             *AdminHandlers
 	contentManagementHandlers *ContentManagementHandlers
+	configurationHandlers     *ConfigurationHandlers
 	monitoringHandler         *MonitoringHandler
 	widgetHandlers            *WidgetHandlers
 	themeHandlers             *ThemeHandlers
@@ -80,6 +81,9 @@ func NewRouter(
 	widgetHandlers := NewWidgetHandlers(widgetService)
 	themeHandlers := NewThemeHandlers(themeService)
 	
+	// Create configuration handlers
+	configurationHandlers := NewConfigurationHandlers(configService)
+	
 	// Create CDN handlers
 	var cdnHandlers *CDNHandlers
 	if cdnService != nil {
@@ -93,6 +97,7 @@ func NewRouter(
 		imageHandlers:             imageHandlers,
 		adminHandlers:             adminHandlers,
 		contentManagementHandlers: contentManagementHandlers,
+		configurationHandlers:     configurationHandlers,
 		monitoringHandler:         monitoringHandler,
 		widgetHandlers:            widgetHandlers,
 		themeHandlers:             themeHandlers,
@@ -399,6 +404,9 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 					cdn.GET("/failover/status", r.cdnHandlers.GetFailoverStatus)   // GET /api/v1/admin/cdn/failover/status
 				}
 			}
+			
+			// Configuration management routes
+			r.configurationHandlers.RegisterConfigurationRoutes(admin)
 		}
 	}
 }

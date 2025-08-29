@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -29,779 +28,580 @@ const (
 	LogLevelFatal   LogLevel = "fatal"
 )
 
-// LogEntry represents a structured log entry
+// LogEntry represents a single log entry
 type LogEntry struct {
-	ID        uint64                 `json:"id" db:"id"`
-	Timestamp time.Time              `json:"timestamp" db:"timestamp"`
-	Level     LogLevel               `json:"level" db:"level"`
-	Component string                 `json:"component" db:"component"`
-	Message   string                 `json:"message" db:"message"`
-	Context   map[string]interface{} `json:"context" db:"context"`
-	Source    string                 `json:"source" db:"source"`
-	TraceID   string                 `json:"trace_id" db:"trace_id"`
-	UserID    *uint64                `json:"user_id" db:"user_id"`
-	RequestID string                 `json:"request_id" db:"request_id"`
-	CreatedAt time.Time              `json:"created_at" db:"created_at"`
+	ID        uint64                 `json:"id"`
+	Timestamp time.Time              `json:"timestamp"`
+	Level     LogLevel               `json:"level"`
+	Component string                 `json:"component"`
+	Message   string                 `json:"message"`
+	Context   map[string]interface{} `json:"context"`
+	Source    string                 `json:"source"`
+	TraceID   string                 `json:"trace_id,omitempty"`
+	UserID    *uint64                `json:"user_id,omitempty"`
+	RequestID string                 `json:"request_id,omitempty"`
+	CreatedAt time.Time              `json:"created_at"`
 }
 
-// LogPattern represents a log pattern for parsing
-type LogPattern struct {
-	Name    string         `json:"name"`
-	Pattern *regexp.Regexp `json:"pattern"`
-	Fields  []string       `json:"fields"`
+// LogFile represents a monitored log file
+type LogFile struct {
+	Path      string
+	Component string
+	Parser    LogParser
+	Watcher   *LogWatcher
 }
 
-// LogAggregationService handles log collection, parsing, and analysis
-type LogAggregationService struct {
-	db           *sql.DB
-	config       *config.MonitoringConfig
-	logPatterns  []LogPattern
-	logBuffer    []LogEntry
-	bufferMutex  sync.RWMutex
-	alertService *AlertingService
-	
-	// Log file watchers
-	watchers map[string]*LogWatcher
-	watcherMutex sync.RWMutex
+// LogParser interface for parsing different log formats
+type LogParser interface {
+	Parse(line string) (*LogEntry, error)
 }
 
-// LogWatcher watches a log file for changes
+// LogWatcher monitors a log file for changes
 type LogWatcher struct {
-	FilePath    string
-	LastOffset  int64
-	LastModTime time.Time
-	Component   string
+	file     *os.File
+	scanner  *bufio.Scanner
+	stopChan chan struct{}
+	mutex    sync.Mutex
+}
+
+// LogAggregationService handles log collection and analysis
+type LogAggregationService struct {
+	db              *sql.DB
+	config          *config.MonitoringConfig
+	alertingService *AlertingService
+	
+	// Log files being monitored
+	logFiles map[string]*LogFile
+	mutex    sync.RWMutex
+	
+	// Log processing
+	logChannel  chan *LogEntry
+	stopChannel chan struct{}
+	isRunning   bool
+	
+	// Pattern matching for anomaly detection
+	errorPatterns []*regexp.Regexp
+	
+	// Statistics
+	stats LogStatistics
+	statsMutex sync.RWMutex
+}
+
+// LogStatistics tracks log processing statistics
+type LogStatistics struct {
+	TotalEntries    int64            `json:"total_entries"`
+	EntriesByLevel  map[string]int64 `json:"entries_by_level"`
+	EntriesByComponent map[string]int64 `json:"entries_by_component"`
+	ErrorsLastHour  int64            `json:"errors_last_hour"`
+	LastProcessed   time.Time        `json:"last_processed"`
 }
 
 // NewLogAggregationService creates a new LogAggregationService
-func NewLogAggregationService(db *sql.DB, config *config.MonitoringConfig, alertService *AlertingService) *LogAggregationService {
-	las := &LogAggregationService{
-		db:           db,
-		config:       config,
-		logBuffer:    make([]LogEntry, 0),
-		alertService: alertService,
-		watchers:     make(map[string]*LogWatcher),
-	}
-	
-	// Initialize log patterns
-	las.initLogPatterns()
-	
-	return las
-}
-
-// initLogPatterns initializes common log patterns for parsing
-func (las *LogAggregationService) initLogPatterns() {
-	las.logPatterns = []LogPattern{
-		{
-			Name:    "nginx_access",
-			Pattern: regexp.MustCompile(`^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+) (\S+)" (\d+) (\d+) "([^"]*)" "([^"]*)"$`),
-			Fields:  []string{"ip", "timestamp", "method", "path", "protocol", "status", "size", "referer", "user_agent"},
-		},
-		{
-			Name:    "nginx_error",
-			Pattern: regexp.MustCompile(`^(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}) \[(\w+)\] (\d+)#(\d+): (.+)$`),
-			Fields:  []string{"timestamp", "level", "pid", "tid", "message"},
-		},
-		{
-			Name:    "go_structured",
-			Pattern: regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z) (\w+) (.+)$`),
-			Fields:  []string{"timestamp", "level", "message"},
-		},
-		{
-			Name:    "postgresql",
-			Pattern: regexp.MustCompile(`^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d+) (\w+) \[(\d+)\] (.+)$`),
-			Fields:  []string{"timestamp", "level", "pid", "message"},
+func NewLogAggregationService(
+	db *sql.DB,
+	config *config.MonitoringConfig,
+	alertingService *AlertingService,
+) *LogAggregationService {
+	service := &LogAggregationService{
+		db:              db,
+		config:          config,
+		alertingService: alertingService,
+		logFiles:        make(map[string]*LogFile),
+		logChannel:      make(chan *LogEntry, 10000), // Buffered channel
+		stopChannel:     make(chan struct{}),
+		stats: LogStatistics{
+			EntriesByLevel:     make(map[string]int64),
+			EntriesByComponent: make(map[string]int64),
 		},
 	}
+	
+	// Initialize error patterns for anomaly detection
+	service.initializeErrorPatterns()
+	
+	return service
 }
 
-// StartLogAggregation starts the log aggregation system
+// StartLogAggregation starts the log aggregation service
 func (las *LogAggregationService) StartLogAggregation(ctx context.Context) {
-	log.Println("Starting log aggregation system...")
+	las.mutex.Lock()
+	defer las.mutex.Unlock()
+	
+	if las.isRunning {
+		return
+	}
+	
+	log.Println("Starting log aggregation service...")
+	las.isRunning = true
+	
+	// Start log processing goroutine
+	go las.processLogs(ctx)
 	
 	// Start log file watchers
 	go las.startLogWatchers(ctx)
 	
-	// Start log buffer flusher
-	go las.startBufferFlusher(ctx)
+	log.Println("Log aggregation service started")
+}
+
+// StopLogAggregation stops the log aggregation service
+func (las *LogAggregationService) StopLogAggregation() {
+	las.mutex.Lock()
+	defer las.mutex.Unlock()
 	
-	// Start log analysis
-	go las.startLogAnalysis(ctx)
+	if !las.isRunning {
+		return
+	}
 	
-	log.Println("Log aggregation system started")
+	log.Println("Stopping log aggregation service...")
+	close(las.stopChannel)
+	
+	// Stop all log watchers
+	for _, logFile := range las.logFiles {
+		if logFile.Watcher != nil {
+			logFile.Watcher.Stop()
+		}
+	}
+	
+	las.isRunning = false
+	log.Println("Log aggregation service stopped")
 }
 
 // AddLogFile adds a log file to be monitored
 func (las *LogAggregationService) AddLogFile(filePath, component string) error {
-	las.watcherMutex.Lock()
-	defer las.watcherMutex.Unlock()
+	las.mutex.Lock()
+	defer las.mutex.Unlock()
 	
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return fmt.Errorf("log file does not exist: %s", filePath)
+	if _, exists := las.logFiles[filePath]; exists {
+		return fmt.Errorf("log file already being monitored: %s", filePath)
 	}
 	
-	// Create watcher
-	watcher := &LogWatcher{
-		FilePath:    filePath,
-		LastOffset:  0,
-		LastModTime: time.Time{},
-		Component:   component,
+	// Create appropriate parser based on component
+	parser := las.createParser(component)
+	
+	logFile := &LogFile{
+		Path:      filePath,
+		Component: component,
+		Parser:    parser,
 	}
 	
-	las.watchers[filePath] = watcher
-	log.Printf("Added log file watcher: %s (component: %s)", filePath, component)
+	las.logFiles[filePath] = logFile
 	
+	// Start watching if service is running
+	if las.isRunning {
+		go las.watchLogFile(logFile)
+	}
+	
+	log.Printf("Added log file for monitoring: %s (%s)", filePath, component)
 	return nil
 }
 
-// startLogWatchers starts monitoring log files
-func (las *LogAggregationService) startLogWatchers(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Second) // Check every 5 seconds
-	defer ticker.Stop()
+// RemoveLogFile removes a log file from monitoring
+func (las *LogAggregationService) RemoveLogFile(filePath string) error {
+	las.mutex.Lock()
+	defer las.mutex.Unlock()
+	
+	logFile, exists := las.logFiles[filePath]
+	if !exists {
+		return fmt.Errorf("log file not being monitored: %s", filePath)
+	}
+	
+	// Stop watcher
+	if logFile.Watcher != nil {
+		logFile.Watcher.Stop()
+	}
+	
+	delete(las.logFiles, filePath)
+	log.Printf("Removed log file from monitoring: %s", filePath)
+	return nil
+}
+
+// processLogs processes incoming log entries
+func (las *LogAggregationService) processLogs(ctx context.Context) {
+	log.Println("Starting log processing goroutine...")
 	
 	for {
 		select {
 		case <-ctx.Done():
+			log.Println("Log processing stopped")
 			return
-		case <-ticker.C:
-			las.checkLogFiles()
+		case <-las.stopChannel:
+			log.Println("Log processing stopped")
+			return
+		case logEntry := <-las.logChannel:
+			if logEntry != nil {
+				las.processLogEntry(logEntry)
+			}
 		}
 	}
 }
 
-// checkLogFiles checks all monitored log files for changes
-func (las *LogAggregationService) checkLogFiles() {
-	las.watcherMutex.RLock()
-	watchers := make(map[string]*LogWatcher)
-	for k, v := range las.watchers {
-		watchers[k] = v
-	}
-	las.watcherMutex.RUnlock()
+// processLogEntry processes a single log entry
+func (las *LogAggregationService) processLogEntry(entry *LogEntry) {
+	// Update statistics
+	las.updateStatistics(entry)
 	
-	for filePath, watcher := range watchers {
-		las.checkLogFile(watcher)
+	// Save to database
+	if err := las.saveLogEntry(entry); err != nil {
+		log.Printf("Error saving log entry: %v", err)
+	}
+	
+	// Check for anomalies and trigger alerts
+	las.checkForAnomalies(entry)
+	
+	// Pattern matching for specific issues
+	las.analyzeLogEntry(entry)
+}
+
+// updateStatistics updates log processing statistics
+func (las *LogAggregationService) updateStatistics(entry *LogEntry) {
+	las.statsMutex.Lock()
+	defer las.statsMutex.Unlock()
+	
+	las.stats.TotalEntries++
+	las.stats.EntriesByLevel[string(entry.Level)]++
+	las.stats.EntriesByComponent[entry.Component]++
+	las.stats.LastProcessed = time.Now()
+	
+	// Count errors in the last hour
+	if entry.Level == LogLevelError || entry.Level == LogLevelFatal {
+		if time.Since(entry.Timestamp) <= time.Hour {
+			las.stats.ErrorsLastHour++
+		}
 	}
 }
 
-// checkLogFile checks a single log file for changes
-func (las *LogAggregationService) checkLogFile(watcher *LogWatcher) {
-	fileInfo, err := os.Stat(watcher.FilePath)
-	if err != nil {
-		log.Printf("Error checking log file %s: %v", watcher.FilePath, err)
+// saveLogEntry saves a log entry to the database
+func (las *LogAggregationService) saveLogEntry(entry *LogEntry) error {
+	if las.db == nil {
+		return nil
+	}
+	
+	contextJSON, _ := json.Marshal(entry.Context)
+	
+	query := `
+		INSERT INTO log_entries 
+		(timestamp, level, component, message, context, source, trace_id, user_id, request_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`
+	
+	_, err := las.db.Exec(
+		query, entry.Timestamp, entry.Level, entry.Component, entry.Message,
+		contextJSON, entry.Source, entry.TraceID, entry.UserID, entry.RequestID, entry.CreatedAt,
+	)
+	
+	return err
+}
+
+// checkForAnomalies checks for log anomalies and triggers alerts
+func (las *LogAggregationService) checkForAnomalies(entry *LogEntry) {
+	// Check for high error rates
+	if entry.Level == LogLevelError || entry.Level == LogLevelFatal {
+		las.statsMutex.RLock()
+		errorCount := las.stats.ErrorsLastHour
+		las.statsMutex.RUnlock()
+		
+		// Alert if error rate is too high
+		if errorCount > 100 { // Configurable threshold
+			alert := &models.Alert{
+				Name:         "high_error_rate",
+				Description:  fmt.Sprintf("High error rate detected: %d errors in the last hour", errorCount),
+				Severity:     models.AlertSeverityWarning,
+				Status:       models.AlertStatusActive,
+				Component:    "logging",
+				Metric:       "error_rate",
+				Threshold:    100,
+				CurrentValue: float64(errorCount),
+				Metadata:     map[string]interface{}{"component": entry.Component},
+				TriggeredAt:  time.Now(),
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+			}
+			
+			if las.alertingService != nil {
+				las.alertingService.SendAlert(alert)
+			}
+		}
+	}
+}
+
+// analyzeLogEntry analyzes log entries for specific patterns
+func (las *LogAggregationService) analyzeLogEntry(entry *LogEntry) {
+	message := strings.ToLower(entry.Message)
+	
+	// Check for critical patterns
+	criticalPatterns := map[string]string{
+		"out of memory":     "system_out_of_memory",
+		"disk full":         "disk_full",
+		"connection refused": "connection_refused",
+		"database error":    "database_error",
+		"timeout":           "timeout_error",
+		"panic":             "application_panic",
+	}
+	
+	for pattern, alertName := range criticalPatterns {
+		if strings.Contains(message, pattern) {
+			alert := &models.Alert{
+				Name:         alertName,
+				Description:  fmt.Sprintf("Critical pattern detected in logs: %s", pattern),
+				Severity:     models.AlertSeverityCritical,
+				Status:       models.AlertStatusActive,
+				Component:    entry.Component,
+				Metric:       "log_pattern",
+				Threshold:    1,
+				CurrentValue: 1,
+				Metadata: map[string]interface{}{
+					"pattern":    pattern,
+					"log_entry":  entry.Message,
+					"source":     entry.Source,
+					"timestamp":  entry.Timestamp,
+				},
+				TriggeredAt: time.Now(),
+				CreatedAt:   time.Now(),
+				UpdatedAt:   time.Now(),
+			}
+			
+			if las.alertingService != nil {
+				las.alertingService.SendAlert(alert)
+			}
+			break
+		}
+	}
+}
+
+// startLogWatchers starts watching all configured log files
+func (las *LogAggregationService) startLogWatchers(ctx context.Context) {
+	las.mutex.RLock()
+	defer las.mutex.RUnlock()
+	
+	for _, logFile := range las.logFiles {
+		go las.watchLogFile(logFile)
+	}
+}
+
+// watchLogFile watches a single log file for changes
+func (las *LogAggregationService) watchLogFile(logFile *LogFile) {
+	log.Printf("Starting to watch log file: %s", logFile.Path)
+	
+	// Check if file exists
+	if _, err := os.Stat(logFile.Path); os.IsNotExist(err) {
+		log.Printf("Log file does not exist: %s", logFile.Path)
 		return
 	}
 	
-	// Check if file has been modified
-	if fileInfo.ModTime().After(watcher.LastModTime) {
-		las.readLogFile(watcher, fileInfo)
-		watcher.LastModTime = fileInfo.ModTime()
-	}
-}
-
-// readLogFile reads new content from a log file
-func (las *LogAggregationService) readLogFile(watcher *LogWatcher, fileInfo os.FileInfo) {
-	file, err := os.Open(watcher.FilePath)
+	file, err := os.Open(logFile.Path)
 	if err != nil {
-		log.Printf("Error opening log file %s: %v", watcher.FilePath, err)
+		log.Printf("Error opening log file %s: %v", logFile.Path, err)
 		return
 	}
 	defer file.Close()
 	
-	// Seek to last read position
-	if watcher.LastOffset > fileInfo.Size() {
-		// File was truncated, start from beginning
-		watcher.LastOffset = 0
-	}
-	
-	_, err = file.Seek(watcher.LastOffset, 0)
-	if err != nil {
-		log.Printf("Error seeking log file %s: %v", watcher.FilePath, err)
-		return
-	}
+	// Seek to end of file to only read new entries
+	file.Seek(0, 2)
 	
 	scanner := bufio.NewScanner(file)
-	lineCount := 0
 	
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		
-		logEntry := las.parseLogLine(line, watcher.Component, watcher.FilePath)
-		if logEntry != nil {
-			las.addLogEntry(*logEntry)
-			lineCount++
-		}
+	watcher := &LogWatcher{
+		file:     file,
+		scanner:  scanner,
+		stopChan: make(chan struct{}),
 	}
 	
-	if err := scanner.Err(); err != nil {
-		log.Printf("Error reading log file %s: %v", watcher.FilePath, err)
-		return
-	}
+	logFile.Watcher = watcher
 	
-	// Update offset
-	currentPos, err := file.Seek(0, 1) // Get current position
-	if err == nil {
-		watcher.LastOffset = currentPos
-	}
+	// Watch for new lines
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
 	
-	if lineCount > 0 {
-		log.Printf("Read %d new log entries from %s", lineCount, watcher.FilePath)
-	}
-}
-
-// parseLogLine parses a log line using configured patterns
-func (las *LogAggregationService) parseLogLine(line, component, source string) *LogEntry {
-	// Try to parse with known patterns
-	for _, pattern := range las.logPatterns {
-		if matches := pattern.Pattern.FindStringSubmatch(line); matches != nil {
-			return las.createLogEntryFromPattern(matches, pattern, component, source)
-		}
-	}
-	
-	// If no pattern matches, create a generic log entry
-	return &LogEntry{
-		Timestamp: time.Now(),
-		Level:     las.inferLogLevel(line),
-		Component: component,
-		Message:   line,
-		Context:   make(map[string]interface{}),
-		Source:    source,
-		CreatedAt: time.Now(),
-	}
-}
-
-// createLogEntryFromPattern creates a log entry from pattern matches
-func (las *LogAggregationService) createLogEntryFromPattern(matches []string, pattern LogPattern, component, source string) *LogEntry {
-	entry := &LogEntry{
-		Component: component,
-		Source:    source,
-		Context:   make(map[string]interface{}),
-		CreatedAt: time.Now(),
-	}
-	
-	// Map matches to fields
-	for i, field := range pattern.Fields {
-		if i+1 < len(matches) {
-			value := matches[i+1]
-			
-			switch field {
-			case "timestamp":
-				if timestamp, err := las.parseTimestamp(value); err == nil {
-					entry.Timestamp = timestamp
-				} else {
-					entry.Timestamp = time.Now()
+	for {
+		select {
+		case <-las.stopChannel:
+			return
+		case <-watcher.stopChan:
+			return
+		case <-ticker.C:
+			for scanner.Scan() {
+				line := scanner.Text()
+				if line != "" {
+					entry, err := logFile.Parser.Parse(line)
+					if err != nil {
+						log.Printf("Error parsing log line from %s: %v", logFile.Path, err)
+						continue
+					}
+					
+					entry.Source = logFile.Path
+					entry.Component = logFile.Component
+					entry.CreatedAt = time.Now()
+					
+					// Send to processing channel
+					select {
+					case las.logChannel <- entry:
+					default:
+						log.Printf("Log channel full, dropping log entry")
+					}
 				}
-			case "level":
-				entry.Level = las.normalizeLogLevel(value)
-			case "message":
-				entry.Message = value
-			default:
-				entry.Context[field] = value
 			}
 		}
 	}
-	
-	// Set defaults if not set
-	if entry.Timestamp.IsZero() {
-		entry.Timestamp = time.Now()
-	}
-	if entry.Level == "" {
-		entry.Level = las.inferLogLevel(entry.Message)
-	}
-	if entry.Message == "" {
-		entry.Message = matches[0] // Use full match as message
-	}
-	
-	return entry
 }
 
-// parseTimestamp parses various timestamp formats
-func (las *LogAggregationService) parseTimestamp(timestampStr string) (time.Time, error) {
-	formats := []string{
-		time.RFC3339,
-		time.RFC3339Nano,
-		"2006-01-02 15:04:05.000",
-		"2006-01-02 15:04:05",
-		"02/Jan/2006:15:04:05 -0700",
-		"2006/01/02 15:04:05",
-	}
+// Stop stops a log watcher
+func (lw *LogWatcher) Stop() {
+	lw.mutex.Lock()
+	defer lw.mutex.Unlock()
 	
-	for _, format := range formats {
-		if t, err := time.Parse(format, timestampStr); err == nil {
-			return t, nil
-		}
-	}
-	
-	return time.Time{}, fmt.Errorf("unable to parse timestamp: %s", timestampStr)
+	close(lw.stopChan)
 }
 
-// normalizeLogLevel normalizes log level strings
-func (las *LogAggregationService) normalizeLogLevel(level string) LogLevel {
-	level = strings.ToLower(strings.TrimSpace(level))
-	
-	switch level {
-	case "debug", "dbg":
-		return LogLevelDebug
-	case "info", "information":
-		return LogLevelInfo
-	case "warn", "warning":
-		return LogLevelWarning
-	case "error", "err":
-		return LogLevelError
-	case "fatal", "critical", "crit":
-		return LogLevelFatal
+// createParser creates an appropriate log parser for the component
+func (las *LogAggregationService) createParser(component string) LogParser {
+	switch component {
+	case "nginx":
+		return &NginxLogParser{}
+	case "postgresql":
+		return &PostgreSQLLogParser{}
+	case "application":
+		return &ApplicationLogParser{}
 	default:
-		return LogLevelInfo
+		return &GenericLogParser{}
 	}
 }
 
-// inferLogLevel infers log level from message content
-func (las *LogAggregationService) inferLogLevel(message string) LogLevel {
-	message = strings.ToLower(message)
-	
-	if strings.Contains(message, "error") || strings.Contains(message, "failed") || strings.Contains(message, "exception") {
-		return LogLevelError
-	}
-	if strings.Contains(message, "warn") || strings.Contains(message, "warning") {
-		return LogLevelWarning
-	}
-	if strings.Contains(message, "debug") {
-		return LogLevelDebug
-	}
-	if strings.Contains(message, "fatal") || strings.Contains(message, "critical") {
-		return LogLevelFatal
+// initializeErrorPatterns initializes regex patterns for error detection
+func (las *LogAggregationService) initializeErrorPatterns() {
+	patterns := []string{
+		`(?i)error`,
+		`(?i)exception`,
+		`(?i)panic`,
+		`(?i)fatal`,
+		`(?i)critical`,
+		`(?i)timeout`,
+		`(?i)connection.*refused`,
+		`(?i)out of memory`,
+		`(?i)disk.*full`,
 	}
 	
-	return LogLevelInfo
-}
-
-// addLogEntry adds a log entry to the buffer
-func (las *LogAggregationService) addLogEntry(entry LogEntry) {
-	las.bufferMutex.Lock()
-	defer las.bufferMutex.Unlock()
-	
-	las.logBuffer = append(las.logBuffer, entry)
-	
-	// Check for immediate alerts
-	if entry.Level == LogLevelError || entry.Level == LogLevelFatal {
-		go las.checkLogAlert(entry)
-	}
-}
-
-// startBufferFlusher periodically flushes log buffer to database
-func (las *LogAggregationService) startBufferFlusher(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second) // Flush every 30 seconds
-	defer ticker.Stop()
-	
-	for {
-		select {
-		case <-ctx.Done():
-			// Final flush before shutdown
-			las.flushLogBuffer()
-			return
-		case <-ticker.C:
-			las.flushLogBuffer()
+	for _, pattern := range patterns {
+		if regex, err := regexp.Compile(pattern); err == nil {
+			las.errorPatterns = append(las.errorPatterns, regex)
 		}
 	}
 }
 
-// flushLogBuffer flushes the log buffer to database
-func (las *LogAggregationService) flushLogBuffer() {
-	las.bufferMutex.Lock()
-	if len(las.logBuffer) == 0 {
-		las.bufferMutex.Unlock()
-		return
-	}
-	
-	entries := make([]LogEntry, len(las.logBuffer))
-	copy(entries, las.logBuffer)
-	las.logBuffer = las.logBuffer[:0] // Clear buffer
-	las.bufferMutex.Unlock()
-	
-	if las.db == nil {
-		log.Printf("Database not available, discarding %d log entries", len(entries))
-		return
-	}
-	
-	// Batch insert log entries
-	if err := las.batchInsertLogEntries(entries); err != nil {
-		log.Printf("Error inserting log entries: %v", err)
-		
-		// Re-add entries to buffer for retry
-		las.bufferMutex.Lock()
-		las.logBuffer = append(entries, las.logBuffer...)
-		las.bufferMutex.Unlock()
-	} else {
-		log.Printf("Flushed %d log entries to database", len(entries))
-	}
-}
-
-// batchInsertLogEntries inserts log entries in batch
-func (las *LogAggregationService) batchInsertLogEntries(entries []LogEntry) error {
-	if len(entries) == 0 {
-		return nil
-	}
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	
-	tx, err := las.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %v", err)
-	}
-	defer tx.Rollback()
-	
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO log_entries (timestamp, level, component, message, context, source, trace_id, user_id, request_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-	`)
-	if err != nil {
-		return fmt.Errorf("failed to prepare statement: %v", err)
-	}
-	defer stmt.Close()
-	
-	for _, entry := range entries {
-		contextJSON, _ := json.Marshal(entry.Context)
-		
-		_, err = stmt.ExecContext(ctx,
-			entry.Timestamp,
-			string(entry.Level),
-			entry.Component,
-			entry.Message,
-			contextJSON,
-			entry.Source,
-			entry.TraceID,
-			entry.UserID,
-			entry.RequestID,
-			entry.CreatedAt,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to insert log entry: %v", err)
-		}
-	}
-	
-	return tx.Commit()
-}
-
-// startLogAnalysis starts log analysis for patterns and anomalies
-func (las *LogAggregationService) startLogAnalysis(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute) // Analyze every 5 minutes
-	defer ticker.Stop()
-	
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			las.analyzeRecentLogs()
-		}
-	}
-}
-
-// analyzeRecentLogs analyzes recent logs for patterns and anomalies
-func (las *LogAggregationService) analyzeRecentLogs() {
-	if las.db == nil {
-		return
-	}
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	
-	// Analyze error rate in last 5 minutes
-	las.analyzeErrorRate(ctx)
-	
-	// Analyze log volume
-	las.analyzeLogVolume(ctx)
-	
-	// Look for specific error patterns
-	las.analyzeErrorPatterns(ctx)
-}
-
-// analyzeErrorRate analyzes error rate and triggers alerts if necessary
-func (las *LogAggregationService) analyzeErrorRate(ctx context.Context) {
-	query := `
-		SELECT 
-			COUNT(*) FILTER (WHERE level = 'error' OR level = 'fatal') as error_count,
-			COUNT(*) as total_count
-		FROM log_entries 
-		WHERE timestamp >= NOW() - INTERVAL '5 minutes'
-	`
-	
-	var errorCount, totalCount int64
-	err := las.db.QueryRowContext(ctx, query).Scan(&errorCount, &totalCount)
-	if err != nil {
-		log.Printf("Error analyzing error rate: %v", err)
-		return
-	}
-	
-	if totalCount == 0 {
-		return
-	}
-	
-	errorRate := float64(errorCount) / float64(totalCount) * 100
-	
-	// Trigger alert if error rate is high
-	if errorRate > 10.0 { // 10% error rate threshold
-		alert := &models.Alert{
-			Name:         "high_error_rate",
-			Description:  fmt.Sprintf("High error rate detected: %.2f%% (%d errors out of %d logs)", errorRate, errorCount, totalCount),
-			Severity:     models.AlertSeverityWarning,
-			Status:       models.AlertStatusActive,
-			Component:    "logs",
-			Metric:       "error_rate",
-			Threshold:    10.0,
-			CurrentValue: errorRate,
-			Metadata:     map[string]interface{}{"error_count": errorCount, "total_count": totalCount},
-			TriggeredAt:  time.Now(),
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-		}
-		
-		if las.alertService != nil {
-			las.alertService.SendAlert(alert)
-		}
-	}
-}
-
-// analyzeLogVolume analyzes log volume for anomalies
-func (las *LogAggregationService) analyzeLogVolume(ctx context.Context) {
-	query := `
-		SELECT COUNT(*) 
-		FROM log_entries 
-		WHERE timestamp >= NOW() - INTERVAL '5 minutes'
-	`
-	
-	var logCount int64
-	err := las.db.QueryRowContext(ctx, query).Scan(&logCount)
-	if err != nil {
-		log.Printf("Error analyzing log volume: %v", err)
-		return
-	}
-	
-	// Calculate logs per minute
-	logsPerMinute := float64(logCount) / 5.0
-	
-	// Trigger alert if log volume is unusually high
-	if logsPerMinute > 1000 { // 1000 logs per minute threshold
-		alert := &models.Alert{
-			Name:         "high_log_volume",
-			Description:  fmt.Sprintf("High log volume detected: %.2f logs per minute", logsPerMinute),
-			Severity:     models.AlertSeverityWarning,
-			Status:       models.AlertStatusActive,
-			Component:    "logs",
-			Metric:       "logs_per_minute",
-			Threshold:    1000.0,
-			CurrentValue: logsPerMinute,
-			Metadata:     map[string]interface{}{"log_count": logCount},
-			TriggeredAt:  time.Now(),
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-		}
-		
-		if las.alertService != nil {
-			las.alertService.SendAlert(alert)
-		}
-	}
-}
-
-// analyzeErrorPatterns looks for specific error patterns
-func (las *LogAggregationService) analyzeErrorPatterns(ctx context.Context) {
-	// Look for database connection errors
-	las.checkErrorPattern(ctx, "database_connection_errors", 
-		"message ILIKE '%connection%' AND message ILIKE '%database%' AND (level = 'error' OR level = 'fatal')",
-		5, "Database connection errors detected")
-	
-	// Look for out of memory errors
-	las.checkErrorPattern(ctx, "out_of_memory_errors",
-		"message ILIKE '%out of memory%' OR message ILIKE '%oom%'",
-		3, "Out of memory errors detected")
-	
-	// Look for authentication failures
-	las.checkErrorPattern(ctx, "auth_failures",
-		"message ILIKE '%authentication%' AND message ILIKE '%failed%'",
-		10, "Multiple authentication failures detected")
-}
-
-// checkErrorPattern checks for a specific error pattern
-func (las *LogAggregationService) checkErrorPattern(ctx context.Context, alertName, whereClause string, threshold int, description string) {
-	query := fmt.Sprintf(`
-		SELECT COUNT(*) 
-		FROM log_entries 
-		WHERE timestamp >= NOW() - INTERVAL '5 minutes' AND %s
-	`, whereClause)
-	
-	var count int64
-	err := las.db.QueryRowContext(ctx, query).Scan(&count)
-	if err != nil {
-		log.Printf("Error checking error pattern %s: %v", alertName, err)
-		return
-	}
-	
-	if count >= int64(threshold) {
-		alert := &models.Alert{
-			Name:         alertName,
-			Description:  fmt.Sprintf("%s: %d occurrences in last 5 minutes", description, count),
-			Severity:     models.AlertSeverityWarning,
-			Status:       models.AlertStatusActive,
-			Component:    "logs",
-			Metric:       "error_pattern_count",
-			Threshold:    float64(threshold),
-			CurrentValue: float64(count),
-			Metadata:     map[string]interface{}{"pattern": whereClause, "count": count},
-			TriggeredAt:  time.Now(),
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-		}
-		
-		if las.alertService != nil {
-			las.alertService.SendAlert(alert)
-		}
-	}
-}
-
-// checkLogAlert checks if a log entry should trigger an immediate alert
-func (las *LogAggregationService) checkLogAlert(entry LogEntry) {
-	if las.alertService == nil {
-		return
-	}
-	
-	// Check for critical errors
-	if entry.Level == LogLevelFatal {
-		alert := &models.Alert{
-			Name:         "fatal_error_logged",
-			Description:  fmt.Sprintf("Fatal error in %s: %s", entry.Component, entry.Message),
-			Severity:     models.AlertSeverityCritical,
-			Status:       models.AlertStatusActive,
-			Component:    entry.Component,
-			Metric:       "fatal_error",
-			Threshold:    0,
-			CurrentValue: 1,
-			Metadata:     map[string]interface{}{"log_entry": entry},
-			TriggeredAt:  time.Now(),
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-		}
-		
-		las.alertService.SendAlert(alert)
-	}
-}
-
-// GetRecentLogs retrieves recent log entries
+// GetRecentLogs returns recent log entries
 func (las *LogAggregationService) GetRecentLogs(component string, level LogLevel, limit int, since time.Time) ([]LogEntry, error) {
 	if las.db == nil {
-		return nil, fmt.Errorf("database not available")
+		return []LogEntry{}, nil
 	}
 	
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	
-	var query string
-	var args []interface{}
-	argIndex := 1
-	
-	query = "SELECT id, timestamp, level, component, message, context, source, trace_id, user_id, request_id, created_at FROM log_entries WHERE 1=1"
-	
-	if !since.IsZero() {
-		query += fmt.Sprintf(" AND timestamp >= $%d", argIndex)
-		args = append(args, since)
-		argIndex++
-	}
+	query := `
+		SELECT id, timestamp, level, component, message, context, source, 
+		       trace_id, user_id, request_id, created_at
+		FROM log_entries
+		WHERE created_at >= $1
+	`
+	args := []interface{}{since}
+	argCount := 1
 	
 	if component != "" {
-		query += fmt.Sprintf(" AND component = $%d", argIndex)
+		argCount++
+		query += fmt.Sprintf(" AND component = $%d", argCount)
 		args = append(args, component)
-		argIndex++
 	}
 	
 	if level != "" {
-		query += fmt.Sprintf(" AND level = $%d", argIndex)
-		args = append(args, string(level))
-		argIndex++
+		argCount++
+		query += fmt.Sprintf(" AND level = $%d", argCount)
+		args = append(args, level)
 	}
 	
-	query += " ORDER BY timestamp DESC"
+	query += " ORDER BY created_at DESC"
 	
 	if limit > 0 {
-		query += fmt.Sprintf(" LIMIT $%d", argIndex)
+		argCount++
+		query += fmt.Sprintf(" LIMIT $%d", argCount)
 		args = append(args, limit)
 	}
 	
-	rows, err := las.db.QueryContext(ctx, query, args...)
+	rows, err := las.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query log entries: %v", err)
+		return nil, err
 	}
 	defer rows.Close()
 	
-	var entries []LogEntry
+	var logs []LogEntry
 	for rows.Next() {
 		var entry LogEntry
 		var contextJSON []byte
 		
 		err := rows.Scan(
-			&entry.ID,
-			&entry.Timestamp,
-			&entry.Level,
-			&entry.Component,
-			&entry.Message,
-			&contextJSON,
-			&entry.Source,
-			&entry.TraceID,
-			&entry.UserID,
-			&entry.RequestID,
-			&entry.CreatedAt,
+			&entry.ID, &entry.Timestamp, &entry.Level, &entry.Component,
+			&entry.Message, &contextJSON, &entry.Source, &entry.TraceID,
+			&entry.UserID, &entry.RequestID, &entry.CreatedAt,
 		)
 		if err != nil {
-			log.Printf("Error scanning log entry: %v", err)
 			continue
 		}
 		
 		// Parse context JSON
 		if len(contextJSON) > 0 {
-			if err := json.Unmarshal(contextJSON, &entry.Context); err != nil {
-				entry.Context = make(map[string]interface{})
-			}
+			json.Unmarshal(contextJSON, &entry.Context)
 		} else {
 			entry.Context = make(map[string]interface{})
 		}
 		
-		entries = append(entries, entry)
+		logs = append(logs, entry)
 	}
 	
-	return entries, nil
+	return logs, nil
 }
 
-// GetLogStatistics returns log statistics
+// GetLogStatistics returns log processing statistics
 func (las *LogAggregationService) GetLogStatistics(since time.Time) (map[string]interface{}, error) {
-	if las.db == nil {
-		return nil, fmt.Errorf("database not available")
+	las.statsMutex.RLock()
+	defer las.statsMutex.RUnlock()
+	
+	stats := map[string]interface{}{
+		"total_entries":       las.stats.TotalEntries,
+		"entries_by_level":    las.stats.EntriesByLevel,
+		"entries_by_component": las.stats.EntriesByComponent,
+		"errors_last_hour":    las.stats.ErrorsLastHour,
+		"last_processed":      las.stats.LastProcessed,
 	}
 	
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// Get database statistics if available
+	if las.db != nil {
+		dbStats, err := las.getDatabaseLogStatistics(since)
+		if err == nil {
+			for k, v := range dbStats {
+				stats[k] = v
+			}
+		}
+	}
 	
+	return stats, nil
+}
+
+// getDatabaseLogStatistics gets log statistics from database
+func (las *LogAggregationService) getDatabaseLogStatistics(since time.Time) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 	
-	// Get total log count
+	// Count total entries since timestamp
 	var totalCount int64
-	err := las.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM log_entries WHERE timestamp >= $1", since).Scan(&totalCount)
+	err := las.db.QueryRow("SELECT COUNT(*) FROM log_entries WHERE created_at >= $1", since).Scan(&totalCount)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get total log count: %v", err)
+		return stats, err
 	}
-	stats["total_logs"] = totalCount
+	stats["db_total_since"] = totalCount
 	
-	// Get log count by level
+	// Count by level
 	levelQuery := `
 		SELECT level, COUNT(*) 
 		FROM log_entries 
-		WHERE timestamp >= $1 
+		WHERE created_at >= $1 
 		GROUP BY level
 	`
-	rows, err := las.db.QueryContext(ctx, levelQuery, since)
+	rows, err := las.db.Query(levelQuery, since)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get log count by level: %v", err)
+		return stats, err
 	}
 	defer rows.Close()
 	
@@ -809,60 +609,151 @@ func (las *LogAggregationService) GetLogStatistics(since time.Time) (map[string]
 	for rows.Next() {
 		var level string
 		var count int64
-		if err := rows.Scan(&level, &count); err != nil {
-			continue
+		if err := rows.Scan(&level, &count); err == nil {
+			levelCounts[level] = count
 		}
-		levelCounts[level] = count
 	}
-	stats["by_level"] = levelCounts
-	
-	// Get log count by component
-	componentQuery := `
-		SELECT component, COUNT(*) 
-		FROM log_entries 
-		WHERE timestamp >= $1 
-		GROUP BY component 
-		ORDER BY COUNT(*) DESC 
-		LIMIT 10
-	`
-	rows, err = las.db.QueryContext(ctx, componentQuery, since)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get log count by component: %v", err)
-	}
-	defer rows.Close()
-	
-	componentCounts := make(map[string]int64)
-	for rows.Next() {
-		var component string
-		var count int64
-		if err := rows.Scan(&component, &count); err != nil {
-			continue
-		}
-		componentCounts[component] = count
-	}
-	stats["by_component"] = componentCounts
+	stats["db_entries_by_level"] = levelCounts
 	
 	return stats, nil
 }
 
-// CleanupOldLogs removes old log entries based on retention policy
+// CleanupOldLogs removes old log entries from database
 func (las *LogAggregationService) CleanupOldLogs(retentionDays int) error {
 	if las.db == nil {
-		return fmt.Errorf("database not available")
+		return nil
 	}
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 	
 	cutoffDate := time.Now().AddDate(0, 0, -retentionDays)
 	
-	result, err := las.db.ExecContext(ctx, "DELETE FROM log_entries WHERE timestamp < $1", cutoffDate)
+	query := "DELETE FROM log_entries WHERE created_at < $1"
+	result, err := las.db.Exec(query, cutoffDate)
 	if err != nil {
-		return fmt.Errorf("failed to cleanup old logs: %v", err)
+		return err
 	}
 	
 	rowsAffected, _ := result.RowsAffected()
 	log.Printf("Cleaned up %d old log entries (older than %d days)", rowsAffected, retentionDays)
 	
 	return nil
+}
+
+// Log Parser Implementations
+
+// GenericLogParser parses generic log format
+type GenericLogParser struct{}
+
+func (p *GenericLogParser) Parse(line string) (*LogEntry, error) {
+	entry := &LogEntry{
+		Timestamp: time.Now(),
+		Level:     LogLevelInfo,
+		Message:   line,
+		Context:   make(map[string]interface{}),
+	}
+	
+	// Try to extract log level from message
+	lowerLine := strings.ToLower(line)
+	if strings.Contains(lowerLine, "error") {
+		entry.Level = LogLevelError
+	} else if strings.Contains(lowerLine, "warn") {
+		entry.Level = LogLevelWarning
+	} else if strings.Contains(lowerLine, "debug") {
+		entry.Level = LogLevelDebug
+	} else if strings.Contains(lowerLine, "fatal") {
+		entry.Level = LogLevelFatal
+	}
+	
+	return entry, nil
+}
+
+// NginxLogParser parses Nginx access and error logs
+type NginxLogParser struct{}
+
+func (p *NginxLogParser) Parse(line string) (*LogEntry, error) {
+	entry := &LogEntry{
+		Timestamp: time.Now(),
+		Level:     LogLevelInfo,
+		Message:   line,
+		Context:   make(map[string]interface{}),
+	}
+	
+	// Parse Nginx error log format
+	if strings.Contains(line, "[error]") {
+		entry.Level = LogLevelError
+	} else if strings.Contains(line, "[warn]") {
+		entry.Level = LogLevelWarning
+	}
+	
+	return entry, nil
+}
+
+// PostgreSQLLogParser parses PostgreSQL logs
+type PostgreSQLLogParser struct{}
+
+func (p *PostgreSQLLogParser) Parse(line string) (*LogEntry, error) {
+	entry := &LogEntry{
+		Timestamp: time.Now(),
+		Level:     LogLevelInfo,
+		Message:   line,
+		Context:   make(map[string]interface{}),
+	}
+	
+	// Parse PostgreSQL log levels
+	if strings.Contains(line, "ERROR:") {
+		entry.Level = LogLevelError
+	} else if strings.Contains(line, "WARNING:") {
+		entry.Level = LogLevelWarning
+	} else if strings.Contains(line, "FATAL:") {
+		entry.Level = LogLevelFatal
+	}
+	
+	return entry, nil
+}
+
+// ApplicationLogParser parses application logs (JSON format)
+type ApplicationLogParser struct{}
+
+func (p *ApplicationLogParser) Parse(line string) (*LogEntry, error) {
+	entry := &LogEntry{
+		Timestamp: time.Now(),
+		Level:     LogLevelInfo,
+		Message:   line,
+		Context:   make(map[string]interface{}),
+	}
+	
+	// Try to parse as JSON
+	var jsonLog map[string]interface{}
+	if err := json.Unmarshal([]byte(line), &jsonLog); err == nil {
+		// Extract fields from JSON log
+		if timestamp, ok := jsonLog["timestamp"].(string); ok {
+			if t, err := time.Parse(time.RFC3339, timestamp); err == nil {
+				entry.Timestamp = t
+			}
+		}
+		
+		if level, ok := jsonLog["level"].(string); ok {
+			entry.Level = LogLevel(strings.ToLower(level))
+		}
+		
+		if message, ok := jsonLog["message"].(string); ok {
+			entry.Message = message
+		}
+		
+		if traceID, ok := jsonLog["trace_id"].(string); ok {
+			entry.TraceID = traceID
+		}
+		
+		if requestID, ok := jsonLog["request_id"].(string); ok {
+			entry.RequestID = requestID
+		}
+		
+		// Store additional context
+		for k, v := range jsonLog {
+			if k != "timestamp" && k != "level" && k != "message" && k != "trace_id" && k != "request_id" {
+				entry.Context[k] = v
+			}
+		}
+	}
+	
+	return entry, nil
 }

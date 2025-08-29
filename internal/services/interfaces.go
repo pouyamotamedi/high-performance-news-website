@@ -129,3 +129,18 @@ type BackupServiceInterface interface {
 	StopBackupScheduler() error
 	GetSchedulerStatus() (map[string]interface{}, error)
 }
+
+// EmailService interface to avoid import cycles
+type EmailService interface {
+	SendEmail(ctx context.Context, to, subject, textBody, htmlBody string) error
+}
+
+// ValidationError represents a validation error
+type ValidationError struct {
+	Message string   `json:"message"`
+	Fields  []string `json:"fields"`
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}

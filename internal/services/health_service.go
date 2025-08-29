@@ -11,6 +11,24 @@ import (
 	"high-performance-news-website/pkg/cache"
 )
 
+// ComponentHealth represents the health status of a system component
+type ComponentHealth struct {
+	Status       string                 `json:"status"`
+	Message      string                 `json:"message"`
+	ResponseTime time.Duration          `json:"response_time"`
+	Metadata     map[string]interface{} `json:"metadata"`
+	CheckedAt    time.Time              `json:"checked_at"`
+}
+
+// HealthResponse represents a comprehensive health check response
+type HealthResponse struct {
+	Status     string                      `json:"status"`
+	Timestamp  time.Time                   `json:"timestamp"`
+	Uptime     string                      `json:"uptime"`
+	Components map[string]ComponentHealth  `json:"components"`
+	Metrics    map[string]interface{}      `json:"metrics,omitempty"`
+}
+
 // HealthService handles health checks and system status monitoring
 type HealthService struct {
 	db           *sql.DB
