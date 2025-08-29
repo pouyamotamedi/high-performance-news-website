@@ -14,6 +14,7 @@ type Config struct {
 	Search   SearchConfig   `mapstructure:"search"`
 	App      AppConfig      `mapstructure:"app"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
+	Backup   BackupConfig   `mapstructure:"backup"`
 }
 
 type ServerConfig struct {
@@ -142,6 +143,41 @@ func setDefaults() {
 	viper.SetDefault("jwt.secret", "your-super-secret-jwt-key-change-this-in-production")
 	viper.SetDefault("jwt.access_token_duration", "15m")
 	viper.SetDefault("jwt.refresh_token_duration", "7d")
+
+	// Backup defaults
+	setBackupDefaults()
+}
+
+func setBackupDefaults() {
+	// General backup defaults
+	viper.SetDefault("backup.enabled", true)
+	viper.SetDefault("backup.backup_dir", "/var/backups/news-website")
+	viper.SetDefault("backup.retention_days", 30)
+	viper.SetDefault("backup.compression_level", 6)
+	viper.SetDefault("backup.encryption_enabled", true)
+	viper.SetDefault("backup.encryption_key", "")
+	
+	// Backup scheduling defaults
+	viper.SetDefault("backup.full_backup_interval", "24h")
+	viper.SetDefault("backup.incremental_backup_interval", "1h")
+	
+	// Cross-region replication defaults
+	viper.SetDefault("backup.cross_region_enabled", false)
+	viper.SetDefault("backup.replication_targets", []interface{}{})
+	
+	// Point-in-time recovery defaults
+	viper.SetDefault("backup.wal_archive_enabled", true)
+	viper.SetDefault("backup.wal_archive_dir", "/var/backups/news-website/wal")
+	
+	// Disaster recovery testing defaults
+	viper.SetDefault("backup.testing_enabled", true)
+	viper.SetDefault("backup.testing_interval", "168h") // Weekly
+	viper.SetDefault("backup.testing_retention", 5)
+	
+	// Notification defaults
+	viper.SetDefault("backup.notification_enabled", true)
+	viper.SetDefault("backup.notification_emails", []string{})
+	viper.SetDefault("backup.slack_webhook_url", "")
 }
 
 func (c *Config) GetDatabaseDSN() string {

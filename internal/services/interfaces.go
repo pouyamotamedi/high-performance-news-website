@@ -86,3 +86,46 @@ type CDNServiceInterface interface {
 	DisableFailover() error
 	IsFailoverActive() bool
 }
+
+// BackupServiceInterface defines the interface for backup and disaster recovery operations
+type BackupServiceInterface interface {
+	// Backup operations
+	CreateBackup(request *models.BackupRequest) (*models.Backup, error)
+	CreateFullBackup() (*models.Backup, error)
+	CreateIncrementalBackup() (*models.Backup, error)
+	GetBackup(id uint64) (*models.Backup, error)
+	ListBackups(limit, offset int) ([]*models.Backup, error)
+	DeleteBackup(id uint64) error
+	
+	// Restore operations
+	RestoreBackup(request *models.RestoreRequest) (*models.RestoreOperation, error)
+	GetRestoreOperation(id uint64) (*models.RestoreOperation, error)
+	ListRestoreOperations(limit, offset int) ([]*models.RestoreOperation, error)
+	
+	// Point-in-time recovery
+	RestoreToPointInTime(targetTime time.Time, targetDB string) (*models.RestoreOperation, error)
+	GetAvailableRecoveryPoints() ([]time.Time, error)
+	
+	// Validation and testing
+	ValidateBackup(backupID uint64) (*models.BackupValidation, error)
+	RunDisasterRecoveryTest(testName string, backupID uint64) (*models.DisasterRecoveryTest, error)
+	GetDRTestResults(testID uint64) (*models.DisasterRecoveryTest, error)
+	ListDRTests(limit, offset int) ([]*models.DisasterRecoveryTest, error)
+	
+	// Cross-region replication
+	ReplicateBackup(backupID uint64, targetName string) (*models.BackupReplication, error)
+	GetReplicationStatus(backupID uint64) ([]*models.BackupReplication, error)
+	
+	// Metrics and monitoring
+	GetBackupMetrics() (*models.BackupMetrics, error)
+	GetBackupHealth() (map[string]interface{}, error)
+	
+	// Maintenance operations
+	CleanupOldBackups() error
+	ArchiveOldBackups(olderThan time.Time) error
+	
+	// Scheduling
+	StartBackupScheduler() error
+	StopBackupScheduler() error
+	GetSchedulerStatus() (map[string]interface{}, error)
+}
