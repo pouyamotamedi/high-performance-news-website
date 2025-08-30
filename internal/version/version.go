@@ -7,7 +7,7 @@ import (
 
 const (
 	// Version represents the current version of the application
-	Version = "1.2.0"
+	Version = "1.3.0"
 	
 	// BuildDate will be set during build time
 	BuildDate = "development"
