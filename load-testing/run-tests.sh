@@ -10,6 +10,7 @@ BASE_URL="${BASE_URL:-http://localhost:8080}"
 TEST_USERNAME="${TEST_USERNAME:-testuser}"
 TEST_PASSWORD="${TEST_PASSWORD:-testpass123}"
 OUTPUT_DIR="${OUTPUT_DIR:-./results}"
+ENVIRONMENT="${ENVIRONMENT:-development}"
 K6_VERSION="${K6_VERSION:-latest}"
 
 # Colors for output
@@ -147,6 +148,112 @@ run_comprehensive_test() {
     fi
 }
 
+# Establish performance baseline
+establish_baseline() {
+    log_info "Establishing performance baseline..."
+    
+    k6 run \
+        --env BASE_URL="$BASE_URL" \
+        --env TEST_USERNAME="$TEST_USERNAME" \
+        --env TEST_PASSWORD="$TEST_PASSWORD" \
+        --env ENVIRONMENT="$ENVIRONMENT" \
+        --out json="$OUTPUT_DIR/baseline-establishment.json" \
+        establish-baseline.js
+    
+    if [ $? -eq 0 ]; then
+        log_success "Baseline establishment completed"
+        log_info "Copy the baseline environment variables from the output above"
+    else
+        log_error "Baseline establishment failed"
+        return 1
+    fi
+}
+
+# Run performance regression test
+run_regression_test() {
+    log_info "Running performance regression detection test..."
+    
+    # Check if baseline exists
+    if [[ -z "$BASELINE_HOMEPAGE_P95" ]]; then
+        log_warning "No baseline metrics found. Establishing baseline first..."
+        establish_baseline
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+        log_info "Baseline established. Please set the baseline environment variables and run again."
+        log_info "Example:"
+        log_info "export BASELINE_HOMEPAGE_P95=500"
+        log_info "export BASELINE_API_P95=100"
+        log_info "export BASELINE_ARTICLE_CREATION_P95=1000"
+        log_info "export BASELINE_DB_QUERY_P95=10"
+        log_info "export BASELINE_CACHE_HIT_RATE=0.8"
+        log_info "export BASELINE_ERROR_RATE=0.02"
+        return 0
+    fi
+    
+    k6 run \
+        --env BASE_URL="$BASE_URL" \
+        --env TEST_USERNAME="$TEST_USERNAME" \
+        --env TEST_PASSWORD="$TEST_PASSWORD" \
+        --env BASELINE_HOMEPAGE_P95="$BASELINE_HOMEPAGE_P95" \
+        --env BASELINE_API_P95="$BASELINE_API_P95" \
+        --env BASELINE_ARTICLE_CREATION_P95="$BASELINE_ARTICLE_CREATION_P95" \
+        --env BASELINE_DB_QUERY_P95="$BASELINE_DB_QUERY_P95" \
+        --env BASELINE_CACHE_HIT_RATE="$BASELINE_CACHE_HIT_RATE" \
+        --env BASELINE_ERROR_RATE="$BASELINE_ERROR_RATE" \
+        --env ENVIRONMENT="$ENVIRONMENT" \
+        --env BUILD_ID="$BUILD_ID" \
+        --env COMMIT_HASH="$COMMIT_HASH" \
+        --env BRANCH="$BRANCH" \
+        --out json="$OUTPUT_DIR/regression-results.json" \
+        --summary-export="$OUTPUT_DIR/regression-summary.json" \
+        integrated-regression-test.js
+    
+    if [ $? -eq 0 ]; then
+        log_success "Performance regression test completed - no regressions detected"
+        generate_regression_report
+    else
+        log_error "Performance regression test failed - regressions detected!"
+        generate_regression_report
+        return 1
+    fi
+}
+
+# Generate regression test report
+generate_regression_report() {
+    log_info "Generating regression test report..."
+    
+    cat > "$OUTPUT_DIR/regression-report.md" << EOF
+# Performance Regression Test Report
+
+Generated on: $(date)
+Server: $BASE_URL
+Environment: $ENVIRONMENT
+Build ID: $BUILD_ID
+Commit: $COMMIT_HASH
+Branch: $BRANCH
+
+## Regression Test Results
+
+### Test Configuration
+- **Baseline Homepage P95**: ${BASELINE_HOMEPAGE_P95}ms
+- **Baseline API P95**: ${BASELINE_API_P95}ms  
+- **Baseline Article Creation P95**: ${BASELINE_ARTICLE_CREATION_P95}ms
+- **Baseline DB Query P95**: ${BASELINE_DB_QUERY_P95}ms
+- **Baseline Cache Hit Rate**: $BASELINE_CACHE_HIT_RATE
+- **Baseline Error Rate**: $BASELINE_ERROR_RATE
+
+### Results Files
+- **Regression Results**: regression-results.json
+- **Regression Summary**: regression-summary.json
+
+Check the test output above for detailed regression analysis and recommendations.
+
+EOF
+    
+    log_success "Regression test report generated: $OUTPUT_DIR/regression-report.md"
+}
+
 # Generate test report
 generate_report() {
     log_info "Generating test report..."
@@ -220,7 +327,13 @@ main() {
     setup_output_dir
     
     # Run tests based on arguments
-    case "${1:-all}" in
+    case "${1:-regression}" in
+        "regression")
+            run_regression_test
+            ;;
+        "establish-baseline")
+            establish_baseline
+            ;;
         "baseline")
             run_baseline_test
             ;;
@@ -234,7 +347,7 @@ main() {
             run_comprehensive_test
             ;;
         "all")
-            log_info "Running all test scenarios..."
+            log_info "Running all traditional test scenarios..."
             run_baseline_test && \
             run_article_creation_test && \
             run_database_test && \
@@ -242,7 +355,7 @@ main() {
             ;;
         *)
             log_error "Unknown test scenario: $1"
-            log_info "Usage: $0 [baseline|articles|database|comprehensive|all]"
+            log_info "Usage: $0 [regression|establish-baseline|baseline|articles|database|comprehensive|all]"
             exit 1
             ;;
     esac
@@ -266,11 +379,13 @@ Load Testing Framework for High-Performance News Website
 Usage: $0 [OPTION] [TEST_SCENARIO]
 
 Test Scenarios:
+  regression    - Run performance regression detection test (default)
+  establish-baseline - Establish new performance baseline
   baseline      - Run performance baseline measurements
   articles      - Test article creation at 35/minute rate
   database      - Test database bottlenecks and connection handling
   comprehensive - Run comprehensive load test with 100 concurrent users
-  all           - Run all test scenarios (default)
+  all           - Run all traditional test scenarios
 
 Options:
   -h, --help    - Show this help message
@@ -280,6 +395,20 @@ Environment Variables:
   TEST_USERNAME - Test user username (default: testuser)
   TEST_PASSWORD - Test user password (default: testpass123)
   OUTPUT_DIR    - Results output directory (default: ./results)
+  ENVIRONMENT   - Environment name (default: development)
+
+Baseline Variables (for regression testing):
+  BASELINE_HOMEPAGE_P95        - Homepage 95th percentile (ms)
+  BASELINE_API_P95             - API 95th percentile (ms)
+  BASELINE_ARTICLE_CREATION_P95 - Article creation 95th percentile (ms)
+  BASELINE_DB_QUERY_P95        - Database query 95th percentile (ms)
+  BASELINE_CACHE_HIT_RATE      - Cache hit rate (0.0-1.0)
+  BASELINE_ERROR_RATE          - Error rate (0.0-1.0)
+
+CI/CD Variables:
+  BUILD_ID      - Build identifier
+  COMMIT_HASH   - Git commit hash
+  BRANCH        - Git branch name
 
 Examples:
   $0                          # Run all tests

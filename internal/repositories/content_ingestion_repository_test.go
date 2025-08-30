@@ -2,11 +2,11 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
 	"high-performance-news-website/internal/models"
-	"high-performance-news-website/pkg/database"
 )
 
 func TestContentIngestionRepository_CreateContentSource(t *testing.T) {
@@ -352,17 +352,17 @@ func TestContentIngestionRepository_URLValidation(t *testing.T) {
 // Mock database for testing (in a real implementation, you'd use a test database)
 type mockDB struct{}
 
-func (m *mockDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *database.Row {
+func (m *mockDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	// Mock implementation
 	return nil
 }
 
-func (m *mockDB) QueryContext(ctx context.Context, query string, args ...interface{}) (*database.Rows, error) {
+func (m *mockDB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	// Mock implementation
 	return nil, nil
 }
 
-func (m *mockDB) ExecContext(ctx context.Context, query string, args ...interface{}) (*database.Result, error) {
+func (m *mockDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	// Mock implementation
 	return nil, nil
 }

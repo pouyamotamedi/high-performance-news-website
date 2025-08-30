@@ -69,3 +69,8 @@ web/static/generated/
 
 # Migration lock files
 *.lock
+
+# AI validation reports
+reports/*.json
+reports/*.xml
+reports/*.html

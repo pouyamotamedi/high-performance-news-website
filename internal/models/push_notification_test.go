@@ -302,16 +302,4 @@ func TestPushDeliveryTracking(t *testing.T) {
 	}
 }
 
-// Helper function for tests (assuming it exists in models package)
-func NewValidationError(message string) error {
-	// This would be implemented in your actual models package
-	return &ValidationError{Message: message}
-}
-
-type ValidationError struct {
-	Message string
-}
-
-func (e *ValidationError) Error() string {
-	return e.Message
-}
+// ValidationError and NewValidationError are imported from errors.go

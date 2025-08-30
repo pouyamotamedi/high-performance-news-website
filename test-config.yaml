@@ -1,0 +1,68 @@
+# Comprehensive Testing Configuration
+testing:
+  # Coverage requirements
+  coverage:
+    minimum: 95.0
+    target: 98.0
+    fail_under: 95.0
+  
+  # Test execution settings
+  execution:
+    parallel: true
+    verbose: false
+    fail_fast: false
+    timeout: "30m"
+    benchmark_time: "10s"
+  
+  # Database settings
+  database:
+    url: "postgres://postgres:postgres@localhost:5432/news_website_test?sslmode=disable"
+    migrations_path: "./migrations"
+    cleanup_after_tests: true
+  
+  # Cache settings
+  cache:
+    url: "redis://localhost:6379/1"
+    cleanup_after_tests: true
+  
+  # Output settings
+  output:
+    directory: "./test-results"
+    coverage_html: true
+    junit_xml: true
+    benchmark_results: true
+  
+  # Test categories
+  categories:
+    unit:
+      enabled: true
+      packages:
+        - "./internal/models/..."
+        - "./internal/repositories/..."
+        - "./internal/services/..."
+        - "./internal/api/..."
+        - "./internal/auth/..."
+        - "./internal/validation/..."
+        - "./pkg/..."
+    
+    integration:
+      enabled: true
+      packages:
+        - "./internal/integration/..."
+        - "./internal/repositories/..."
+      tags: ["integration"]
+    
+    benchmark:
+      enabled: true
+      packages:
+        - "./internal/models/..."
+        - "./internal/repositories/..."
+        - "./internal/services/..."
+        - "./pkg/..."
+  
+  # Quality gates
+  quality_gates:
+    coverage_threshold: 95.0
+    max_test_duration: "30m"
+    max_benchmark_duration: "10m"
+    max_memory_usage: "1GB"

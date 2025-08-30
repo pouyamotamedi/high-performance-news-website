@@ -1,0 +1,256 @@
+# AI Code Validator Configuration
+# This file configures the AI-generated code validation system
+
+# Global settings
+global:
+  # Minimum severity level to report (critical, high, medium, low)
+  min_severity: "medium"
+  
+  # Whether to block deployment on validation failures
+  block_deployment: true
+  
+  # Maximum number of high severity issues before blocking
+  max_high_issues: 3
+  
+  # Enable verbose logging
+  verbose: false
+
+# Rule configuration
+rules:
+  # Error handling rules
+  error_handling:
+    enabled: true
+    severity: "critical"
+    patterns:
+      - "missing-error-handling"
+      - "ignored-error-return"
+    
+  # Security rules
+  security:
+    enabled: true
+    severity: "critical"
+    patterns:
+      - "sql-injection-risk"
+      - "missing-auth-check"
+      - "unsafe-file-upload"
+      - "missing-rate-limiting"
+    
+  # Performance rules
+  performance:
+    enabled: true
+    severity: "high"
+    patterns:
+      - "n-plus-one-query"
+      - "missing-cache-check"
+      - "inefficient-pagination"
+      - "unbounded-slice"
+    
+  # Business logic rules
+  business_logic:
+    enabled: true
+    severity: "high"
+    patterns:
+      - "missing-article-validation"
+      - "missing-slug-generation"
+      - "missing-canonical-url"
+    
+  # SEO rules
+  seo:
+    enabled: true
+    severity: "medium"
+    patterns:
+      - "missing-meta-tags"
+      - "missing-schema-markup"
+      - "invalid-hreflang"
+      - "circular-canonical"
+    
+  # Maintainability rules
+  maintainability:
+    enabled: true
+    severity: "medium"
+    patterns:
+      - "hardcoded-values"
+      - "missing-validation"
+
+# File patterns to include/exclude
+files:
+  # Include patterns (glob format)
+  include:
+    - "**/*.go"
+  
+  # Exclude patterns
+  exclude:
+    - "**/*_test.go"
+    - "**/vendor/**"
+    - "**/node_modules/**"
+    - "**/.git/**"
+    - "**/testdata/**"
+
+# Manual review triggers
+manual_review:
+  enabled: true
+  patterns:
+    - "complex_database_transaction"
+    - "complex_concurrency"
+    - "reflection_usage"
+    - "unsafe_operations"
+  
+  # Minimum complexity score to trigger manual review
+  complexity_threshold: 10
+
+# Business-specific validation
+business_validation:
+  # News website specific rules
+  news_website:
+    enabled: true
+    rules:
+      # Article management
+      article_rules:
+        - name: "article_slug_required"
+          description: "Articles must have slugs generated"
+          pattern: "CreateArticle.*without.*slug"
+          severity: "high"
+        
+        - name: "article_seo_metadata"
+          description: "Articles must have SEO metadata"
+          pattern: "Article.*without.*meta"
+          severity: "medium"
+      
+      # SEO compliance
+      seo_rules:
+        - name: "canonical_url_required"
+          description: "Articles must have canonical URLs"
+          pattern: "Article.*without.*canonical"
+          severity: "medium"
+        
+        - name: "schema_markup_required"
+          description: "Articles must have schema markup"
+          pattern: "generateHTML.*without.*schema"
+          severity: "medium"
+      
+      # Performance requirements
+      performance_rules:
+        - name: "cache_first_pattern"
+          description: "Database queries should check cache first"
+          pattern: "db\\.Query.*without.*cache"
+          severity: "high"
+        
+        - name: "batch_operations"
+          description: "Use batch operations for multiple queries"
+          pattern: "for.*range.*db\\.Query"
+          severity: "critical"
+
+# Integration settings
+integration:
+  # CI/CD integration
+  cicd:
+    enabled: true
+    
+    # Pre-commit hooks
+    pre_commit:
+      enabled: true
+      rules: ["critical", "high"]
+    
+    # Pre-deployment validation
+    pre_deployment:
+      enabled: true
+      rules: ["all"]
+      require_manual_review: true
+  
+  # IDE integration
+  ide:
+    enabled: true
+    real_time_validation: true
+    show_suggestions: true
+
+# Reporting configuration
+reporting:
+  # Output formats
+  formats:
+    - "text"
+    - "json"
+    - "junit"
+  
+  # Report destinations
+  destinations:
+    - type: "file"
+      path: "reports/ai-validation-report.json"
+    
+    - type: "webhook"
+      url: "https://your-webhook-url.com/validation"
+      enabled: false
+  
+  # Include in reports
+  include:
+    code_snippets: true
+    suggestions: true
+    file_paths: true
+    line_numbers: true
+
+# Custom rules (examples)
+custom_rules:
+  - name: "database_transaction_timeout"
+    description: "Database transactions should have timeouts"
+    pattern: "tx\\.Begin\\(\\).*without.*timeout"
+    severity: "high"
+    category: "reliability"
+    suggestion: "Add context with timeout: ctx, cancel := context.WithTimeout(ctx, 30*time.Second)"
+  
+  - name: "api_response_validation"
+    description: "API responses should be validated"
+    pattern: "json\\.Encode.*without.*validation"
+    severity: "medium"
+    category: "data-integrity"
+    suggestion: "Validate response data before encoding"
+
+# Performance tuning
+performance:
+  # Maximum files to process concurrently
+  max_concurrent_files: 10
+  
+  # Timeout for processing single file (seconds)
+  file_timeout: 30
+  
+  # Enable caching of validation results
+  enable_caching: true
+  
+  # Cache TTL in minutes
+  cache_ttl: 60
+
+# Notification settings
+notifications:
+  # Slack integration
+  slack:
+    enabled: false
+    webhook_url: ""
+    channel: "#dev-alerts"
+    mention_on_critical: true
+  
+  # Email notifications
+  email:
+    enabled: false
+    smtp_server: ""
+    recipients: []
+    send_on_critical: true
+
+# Metrics and monitoring
+metrics:
+  enabled: true
+  
+  # Metrics to track
+  track:
+    - "validation_duration"
+    - "issues_by_severity"
+    - "issues_by_category"
+    - "files_processed"
+    - "manual_review_rate"
+  
+  # Export to monitoring systems
+  export:
+    prometheus:
+      enabled: false
+      port: 9090
+    
+    statsd:
+      enabled: false
+      host: "localhost:8125"

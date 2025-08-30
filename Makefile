@@ -29,6 +29,62 @@ test-coverage: test ## Run tests and show coverage report
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
+# Comprehensive testing commands
+test-unit: ## Run unit tests with 95% coverage requirement
+	@echo "Running unit tests with coverage tracking..."
+	@mkdir -p test-results
+	CGO_ENABLED=1 go test -v -race -coverprofile=test-results/coverage.out \
+		-covermode=atomic -timeout=30m \
+		./internal/models/... ./internal/repositories/... ./internal/services/... \
+		./internal/api/... ./internal/auth/... ./internal/validation/... ./pkg/...
+	@go tool cover -func=test-results/coverage.out | grep total | awk '{print "Coverage: " $$3}'
+	@go tool cover -html=test-results/coverage.out -o test-results/coverage.html
+	@echo "Unit test coverage report: test-results/coverage.html"
+
+test-integration: ## Run integration tests
+	@echo "Running integration tests..."
+	@mkdir -p test-results
+	CGO_ENABLED=1 go test -v -tags=integration -timeout=30m \
+		./internal/integration/... ./internal/repositories/...
+
+test-benchmark: ## Run performance benchmarks
+	@echo "Running performance benchmarks..."
+	@mkdir -p test-results
+	go test -bench=. -benchmem -benchtime=10s -timeout=10m \
+		./internal/models/... ./internal/repositories/... ./internal/services/... ./pkg/... \
+		| tee test-results/benchmark.txt
+
+test-comprehensive: ## Run comprehensive test suite with all validations
+	@echo "Running comprehensive test suite..."
+	@mkdir -p test-results
+	@$(MAKE) test-unit
+	@$(MAKE) test-integration
+	@$(MAKE) test-benchmark
+	@echo "Comprehensive testing complete. Results in test-results/"
+
+test-coverage-check: test-unit ## Validate coverage meets 95% requirement
+	@echo "Validating coverage requirements..."
+	@COVERAGE=$$(go tool cover -func=test-results/coverage.out | grep total | awk '{print $$3}' | sed 's/%//'); \
+	if [ $$(echo "$$COVERAGE < 95" | bc -l) -eq 1 ]; then \
+		echo "❌ Coverage $$COVERAGE% is below required 95%"; \
+		exit 1; \
+	else \
+		echo "✅ Coverage $$COVERAGE% meets requirement (≥95%)"; \
+	fi
+
+test-parallel: ## Run tests in parallel with optimal performance
+	@echo "Running tests in parallel..."
+	@mkdir -p test-results
+	CGO_ENABLED=1 go test -v -race -parallel=$$(nproc) -coverprofile=test-results/coverage.out \
+		-covermode=atomic -timeout=30m ./...
+
+test-clean: ## Clean test artifacts and results
+	@echo "Cleaning test artifacts..."
+	rm -rf test-results/
+	rm -f coverage.out coverage.html
+	rm -f *.test
+	rm -f *.prof
+
 # Lint code
 lint: ## Run golangci-lint
 	@echo "Running linter..."
@@ -121,5 +177,30 @@ build-prod: ## Build for production
 # Quality checks
 quality: fmt vet lint test ## Run all quality checks
 
+# AI Code Validation
+ai-validate: ## Run AI code validation on all Go files
+	@echo "Running AI code validation..."
+	go run cmd/ai-validator/main.go -dir . -format text -severity medium
+
+ai-validate-critical: ## Run AI code validation for critical issues only
+	@echo "Running AI code validation (critical issues only)..."
+	go run cmd/ai-validator/main.go -dir . -format text -severity critical
+
+ai-validate-business: ## Run business logic validation
+	@echo "Running business logic validation..."
+	go run cmd/ai-validator/main.go -dir . -format text -business
+
+ai-validate-json: ## Run AI code validation with JSON output
+	@echo "Running AI code validation (JSON output)..."
+	go run cmd/ai-validator/main.go -dir . -format json > reports/ai-validation.json
+
+ai-validate-file: ## Run AI code validation on specific file (usage: make ai-validate-file FILE=path/to/file.go)
+	@if [ -z "$(FILE)" ]; then echo "Usage: make ai-validate-file FILE=path/to/file.go"; exit 1; fi
+	go run cmd/ai-validator/main.go -file $(FILE) -format text -verbose
+
+build-ai-validator: ## Build AI validator binary
+	@echo "Building AI validator..."
+	go build -o bin/ai-validator cmd/ai-validator/main.go
+
 # CI pipeline
-ci: deps quality build ## Run CI pipeline
+ci: deps quality ai-validate build ## Run CI pipeline with AI validation
