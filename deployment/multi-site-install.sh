@@ -310,6 +310,35 @@ if [ "$ADMIN_CREATED" != true ]; then
     log_warning "Restarting app to ensure database connection..."
     docker compose -p ${PROJECT_NAME} restart app
     sleep 15
+    
+    # Check again after restart
+    USER_COUNT=$(docker compose -p ${PROJECT_NAME} exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -t -c "SELECT COUNT(*) FROM users WHERE role='admin';" 2>/dev/null | tr -d ' ' || echo "0")
+    if [ "$USER_COUNT" -gt 0 ] 2>/dev/null; then
+        log_success "Admin user created after restart"
+    else
+        log_warning "Admin user may not be created - manual check required"
+    fi
+fi
+
+# Final verification - check app logs for database connection
+APP_LOG=$(docker logs ${PROJECT_NAME}_app 2>&1 | tail -20)
+if echo "$APP_LOG" | grep -q "mock\|Mock\|development mode"; then
+    log_warning "App may be running in mock mode. Attempting final fix..."
+    
+    # Force password reset and schema reload
+    docker compose -p ${PROJECT_NAME} exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -c "ALTER USER ${SITE_NAME}app WITH PASSWORD '${DB_PASSWORD}';" > /dev/null 2>&1
+    cat $INSTALL_DIR/deployment/init-db.sql | docker compose -p ${PROJECT_NAME} exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db > /dev/null 2>&1
+    
+    docker compose -p ${PROJECT_NAME} restart app
+    sleep 10
+    
+    # Final check
+    APP_LOG=$(docker logs ${PROJECT_NAME}_app 2>&1 | tail -10)
+    if echo "$APP_LOG" | grep -q "Monitoring system started"; then
+        log_success "App connected to database successfully"
+    else
+        log_warning "Please check manually: docker logs ${PROJECT_NAME}_app"
+    fi
 fi
 
 log_success "Application started on port $APP_PORT"
