@@ -1,0 +1,102 @@
+{{define "tag.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/tag.css">
+{{end}}
+
+{{define "content"}}
+<div class="tag-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">{{.Title}}</h1>
+            {{if .Description}}
+            <p class="page-description">{{.Description}}</p>
+            {{end}}
+        </div>
+    </section>
+    
+    {{if .Tag}}
+    <!-- Single tag info -->
+    <section class="tag-info-section">
+        <div class="section-container">
+            <div class="tag-info">
+                <h2 class="tag-name">{{.Tag.Name}}</h2>
+                {{if .Tag.Description}}
+                <p class="tag-description">{{.Tag.Description}}</p>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    {{if .Tags}}
+    <!-- All tags listing -->
+    <section class="tags-section">
+        <div class="section-container">
+            <div class="tags-cloud">
+                {{range .Tags}}
+                <a href="/tag/{{.Slug}}" class="tag-link">
+                    <span class="tag-name">{{.Name}}</span>
+                    {{if .Count}}
+                    <span class="tag-count">({{.Count}})</span>
+                    {{end}}
+                </a>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    {{if .Articles}}
+    <!-- Articles with tag -->
+    <section class="articles-section">
+        <div class="section-container">
+            <header class="section-header">
+                <h2 class="section-title">
+                    {{if .Tag}}
+                        Articles tagged with "{{.Tag.Name}}"
+                    {{else}}
+                        Articles
+                    {{end}}
+                </h2>
+            </header>
+            
+            <div class="articles-grid">
+                {{range .Articles}}
+                <article class="article-card">
+                    {{if .FeaturedImage}}
+                    <div class="article-image">
+                        <a href="/{{.Slug}}">
+                            <img src="{{.FeaturedImage}}" alt="{{.Title}}" class="featured-image">
+                        </a>
+                    </div>
+                    {{end}}
+                    <div class="article-content">
+                        <header class="article-header">
+                            <h3 class="article-title">
+                                <a href="/{{.Slug}}" class="title-link">{{.Title}}</a>
+                            </h3>
+                            {{if .Excerpt}}
+                            <p class="article-excerpt">{{.Excerpt}}</p>
+                            {{end}}
+                        </header>
+                        <footer class="article-meta">
+                            {{if .Author}}<span class="article-author">{{.Author}}</span>{{end}}
+                            {{if .TimeAgo}}<time class="article-date">{{.TimeAgo}}</time>{{end}}
+                        </footer>
+                    </div>
+                </article>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/tag.js"></script>
+{{end}}

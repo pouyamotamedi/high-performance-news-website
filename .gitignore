@@ -1,0 +1,68 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+news-server
+news-server-test
+static_gen
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage
+coverage.html
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Uploads (user content)
+uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# Build artifacts
+bin/
+dist/
+
+# Test results
+test-results/
+reports/security/*.html
+reports/security/*.json
+
+# Database dumps
+*.sql.backup
+database_data.sql
+
+# Compressed files
+*.rar
+*.zip
+*.tar.gz

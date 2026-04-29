@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - High Performance News Website</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        /* Prevent flashing by hiding content initially */
+        body {
+            visibility: hidden;
+        }
+        body.loaded {
+            visibility: visible;
+        }
+        
+        /* Loading overlay */
+        .auth-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .auth-loading.hidden {
+            display: none;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 2FA specific styles */
+        .form-help {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        #twoFactorCode {
+            text-align: center;
+            letter-spacing: 0.1em;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="authLoading" class="auth-loading">
+        <div>
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: #6b7280;">Checking authentication...</p>
+        </div>
+    </div>
+
+    <div class="container" id="loginContainer" style="display: none;">
+        <div class="login-form">
+            <div class="login-header">
+                <h2 class="login-title">Admin Panel Login</h2>
+                <p class="login-subtitle">Sign in to access the admin dashboard</p> 
+            </div>
+
+            <div id="errorMessage" class="error-message hidden"></div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email" class="form-label">Email address</label>     
+                    <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autocomplete="email"
+                        required
+                        class="form-input"
+                        placeholder="Enter your email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>       
+                    <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        required
+                        class="form-input"
+                        placeholder="Enter your password"
+                    >
+                </div>
+
+                <!-- 2FA Section (initially hidden) -->
+                <div id="twoFactorSection" class="form-group" style="display: none;">
+                    <label for="twoFactorCode" class="form-label">Two-Factor Authentication Code</label>
+                    <input
+                        id="twoFactorCode"
+                        name="twoFactorCode"
+                        type="text"
+                        maxlength="6"
+                        class="form-input"
+                        placeholder="Enter 6-digit code"
+                        autocomplete="one-time-code"
+                    >
+                    <p class="form-help">Enter the 6-digit code from your authenticator app</p>
+                </div>
+
+                <button type="submit" id="loginButton" class="btn">
+                    <span id="loadingSpan" class="loading hidden"></span>
+                    <span id="buttonText">Sign in</span>
+                </button>
+            </form>
+
+
+        </div>
+    </div>
+
+    <script>
+        // Enhanced login with authentication check
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if already logged in first
+            checkExistingAuth();
+        });
+
+        async function checkExistingAuth() {
+            // For now, just clear any existing tokens and show login form
+            // This prevents the infinite redirect loop
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_role');
+            
+            // Show login form immediately
+            document.getElementById('authLoading').classList.add('hidden');
+            document.getElementById('loginContainer').style.display = 'flex';
+            document.body.classList.add('loaded');
+            
+            // Initialize login form
+            initializeLoginForm();
+        }
+
+        function initializeLoginForm() {
+            const loginForm = document.getElementById('loginForm');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const twoFactorSection = document.getElementById('twoFactorSection');
+            const twoFactorInput = document.getElementById('twoFactorCode');
+            const loginButton = document.getElementById('loginButton');
+            const errorDiv = document.getElementById('errorMessage');
+            const loadingSpan = document.getElementById('loadingSpan');
+            const buttonText = document.getElementById('buttonText');
+
+            let requiresTwoFactor = false;
+            let tempToken = null;
+
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const email = emailInput.value.trim();
+                const password = passwordInput.value.trim();
+                const twoFactorCode = twoFactorInput.value.trim();
+                
+                if (!email || !password) {
+                    showError('Please enter both email and password');
+                    return;
+                }
+
+                if (requiresTwoFactor && !twoFactorCode) {
+                    showError('Please enter the 2FA code');
+                    return;
+                }
+
+                setLoading(true);
+                hideError();
+
+                try {
+                    let requestBody = {
+                        username: email,
+                        password: password
+                    };
+
+                    // Add 2FA code if required
+                    if (requiresTwoFactor && twoFactorCode) {
+                        requestBody.two_factor_code = twoFactorCode;
+                        requestBody.temp_token = tempToken;
+                    }
+
+                    const response = await fetch('/api/v1/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        if (data.requires_2fa && !requiresTwoFactor) {
+                            // First step passed, now require 2FA
+                            requiresTwoFactor = true;
+                            tempToken = data.temp_token;
+                            twoFactorSection.style.display = 'block';
+                            twoFactorInput.focus();
+                            buttonText.textContent = 'Verify & Sign in';
+                            showError('Please enter your 2FA code to complete login');
+                        } else {
+                            // Login successful
+                            localStorage.setItem('auth_token', data.data.tokens.access_token);
+                            localStorage.setItem('user_role', data.data.user.role);
+                            
+                            // Also set cookie for server-side authentication
+                            document.cookie = `auth_token=${data.data.tokens.access_token}; path=/; max-age=86400; secure; samesite=strict`;
+                            
+                            // Check if user is admin or editor
+                            if (data.data.user.role === 'admin' || data.data.user.role === 'editor') {
+                                // Redirect to admin dashboard
+                                window.location.href = '/admin/dashboard';
+                            } else {
+                                showError('Access denied. Admin or Editor role required.');
+                            }
+                        }
+                    } else {
+                        if (data.error === 'invalid_2fa_code') {
+                            showError('Invalid 2FA code. Please try again.');
+                            twoFactorInput.value = '';
+                            twoFactorInput.focus();
+                        } else {
+                            showError(data.message || 'Login failed. Please check your credentials.');
+                            // Reset 2FA state on login failure
+                            requiresTwoFactor = false;
+                            tempToken = null;
+                            twoFactorSection.style.display = 'none';
+                            buttonText.textContent = 'Sign in';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showError('Login failed. Please try again.');
+                } finally {
+                    setLoading(false);
+                }
+            });
+
+            function setLoading(loading) {
+                loginButton.disabled = loading;
+                if (loading) {
+                    loadingSpan.classList.remove('hidden');
+                    buttonText.textContent = 'Signing in...';
+                } else {
+                    loadingSpan.classList.add('hidden');
+                    buttonText.textContent = 'Sign in';
+                }
+            }
+
+            function showError(message) {
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+            }
+
+            function hideError() {
+                errorDiv.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

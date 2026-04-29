@@ -1,0 +1,226 @@
+/* Keyword Banks Management Styles */
+
+.kb-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.kb-header {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.kb-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+}
+
+.kb-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.kb-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.kb-table th,
+.kb-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.kb-table th {
+    background-color: #f9fafb;
+    font-weight: 600;
+}
+
+.kb-table tr:hover {
+    background-color: #f9fafb;
+}
+
+.kb-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.kb-badge-active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.kb-badge-inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.kb-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.kb-modal-content {
+    background: white;
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.kb-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.kb-form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.kb-form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.kb-form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+textarea.kb-form-control {
+    min-height: 100px;
+    resize: vertical;
+    font-family: monospace;
+}
+
+.kb-loading {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.kb-empty {
+    text-align: center;
+    padding: 3rem;
+    color: #6b7280;
+}
+
+/* Button Styles */
+.kb-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.kb-btn-primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.kb-btn-primary:hover {
+    background-color: #2563eb;
+}
+
+.kb-btn-secondary {
+    background-color: #6b7280;
+    color: white;
+}
+
+.kb-btn-secondary:hover {
+    background-color: #4b5563;
+}
+
+.kb-btn-success {
+    background-color: #10b981;
+    color: white;
+}
+
+.kb-btn-success:hover {
+    background-color: #059669;
+}
+
+.kb-btn-danger {
+    background-color: #ef4444;
+    color: white;
+}
+
+.kb-btn-danger:hover {
+    background-color: #dc2626;
+}
+
+.kb-btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.kb-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Notification Styles */
+.kb-notification {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    padding: 1rem 1.5rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 2000 !important;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.kb-notification-success {
+    background-color: #10b981;
+    color: white;
+}
+
+.kb-notification-error {
+    background-color: #ef4444;
+    color: white;
+}
+
+.kb-notification-info {
+    background-color: #3b82f6;
+    color: white;
+}

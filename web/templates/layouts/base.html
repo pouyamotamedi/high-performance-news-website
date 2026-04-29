@@ -1,0 +1,338 @@
+{{define "base.html"}}
+<!DOCTYPE html>
+<html lang="{{.LanguageCode}}" dir="{{.LanguageDirection}}" data-theme="{{.ThemeMode}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Performance hints -->
+    {{range .PreloadResources}}
+    <link rel="preload" href="{{.URL}}" as="{{.As}}" type="{{.Type}}">
+    {{end}}
+    {{if .HeroImage}}
+    <link rel="preload" href="{{.HeroImage}}" as="image" fetchpriority="high">
+    {{end}}
+    
+    <!-- SEO Meta Tags -->
+    <title>{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}</title>
+    <meta name="description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    {{if .SEOKeywords}}
+    <meta name="keywords" content="{{join .SEOKeywords ", "}}">
+    {{end}}
+    
+    <!-- Canonical URL -->
+    {{if .CanonicalURL}}
+    <link rel="canonical" href="{{.CanonicalURL}}">
+    {{end}}
+    
+    <!-- Language alternates -->
+    {{range $lang, $url := .AlternateURLs}}
+    <link rel="alternate" hreflang="{{$lang}}" href="{{$url}}">
+    {{end}}
+    
+    <!-- RSS Feed Links -->
+    <link rel="alternate" type="application/rss+xml" title="{{.SiteName}} RSS Feed" href="/rss">
+    <link rel="alternate" type="application/rss+xml" title="{{.SiteName}} Google News Feed" href="/rss/googlenews">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{if .OGTitle}}{{.OGTitle}}{{else if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}">
+    <meta property="og:description" content="{{if .OGDescription}}{{.OGDescription}}{{else if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    <meta property="og:type" content="{{.OGType}}">
+    <meta property="og:url" content="{{if .OGURL}}{{.OGURL}}{{else}}{{.CanonicalURL}}{{end}}">
+    {{if .OGImage}}
+    <meta property="og:image" content="{{.OGImage}}">
+    {{end}}
+    <meta property="og:locale" content="{{.LanguageCode}}">
+    <meta property="og:site_name" content="{{.SiteName}}">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="{{.TwitterCard}}">
+    <meta name="twitter:title" content="{{if .TwitterTitle}}{{.TwitterTitle}}{{else if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}">
+    <meta name="twitter:description" content="{{if .TwitterDescription}}{{.TwitterDescription}}{{else if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
+    {{if .TwitterImage}}
+    <meta name="twitter:image" content="{{.TwitterImage}}">
+    {{end}}
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1f2937">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{.SiteName}}">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    
+    <!-- Critical CSS - Inlined for above-the-fold content (LCP optimization) -->
+    <style>
+        /* Critical CSS - Above the fold styles for instant rendering */
+        :root{--color-primary:#2563eb;--color-primary-hover:#1d4ed8;--color-bg-primary:#ffffff;--color-bg-secondary:#f8fafc;--color-text-primary:#1e293b;--color-text-secondary:#64748b;--color-text-inverse:#ffffff;--color-border-primary:#e2e8f0;--font-family-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--space-2:0.5rem;--space-4:1rem;--space-6:1.5rem;--space-8:2rem;--radius-md:0.375rem;--radius-lg:0.5rem;--shadow-sm:0 1px 2px 0 rgba(0,0,0,0.05);--transition-fast:150ms ease-in-out}
+        [data-theme="dark"]{--color-bg-primary:#0f172a;--color-bg-secondary:#1e293b;--color-text-primary:#f1f5f9;--color-text-secondary:#cbd5e1;--color-border-primary:#334155}
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        html{font-size:16px;scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+        body{font-family:var(--font-family-sans);line-height:1.6;color:var(--color-text-primary);background-color:var(--color-bg-primary);-webkit-font-smoothing:antialiased}
+        .skip-link{position:absolute;top:-40px;left:6px;background:var(--color-primary);color:var(--color-text-inverse);padding:8px 16px;text-decoration:none;border-radius:var(--radius-md);z-index:9999}
+        .skip-link:focus{top:6px}
+        .site-header{background:var(--color-bg-primary);border-bottom:1px solid var(--color-border-primary);position:sticky;top:0;z-index:100;box-shadow:var(--shadow-sm)}
+        .header-container{display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-6);max-width:1280px;margin:0 auto}
+        .site-logo .logo-link{display:flex;align-items:center;text-decoration:none;color:var(--color-text-primary);font-weight:700;font-size:1.25rem;gap:var(--space-2)}
+        .logo-image{height:32px;width:auto}
+        .mobile-menu-toggle{display:flex;flex-direction:column;justify-content:space-around;width:24px;height:24px;background:transparent;border:none;cursor:pointer;padding:0;min-width:44px;min-height:44px;align-items:center}
+        .hamburger-line{width:20px;height:2px;background:var(--color-text-primary);transition:var(--transition-fast)}
+        .main-navigation{display:none}
+        @media(min-width:1024px){.mobile-menu-toggle{display:none}.main-navigation{display:block}.nav-menu{display:flex;list-style:none;gap:var(--space-6)}.nav-link{display:flex;align-items:center;padding:var(--space-2) var(--space-4);text-decoration:none;color:var(--color-text-secondary);font-weight:500;border-radius:var(--radius-md);min-height:44px}.nav-link:hover{color:var(--color-primary);background:var(--color-bg-secondary)}}
+        .hero-section{background:linear-gradient(135deg,var(--color-primary) 0%,var(--color-primary-hover) 100%);color:var(--color-text-inverse);padding:var(--space-8) 0}
+        .hero-grid{display:grid;grid-template-columns:1fr;gap:var(--space-6);max-width:1280px;margin:0 auto;padding:0 var(--space-4)}
+        @media(min-width:1024px){.hero-grid{grid-template-columns:2fr 1fr}}
+        .hero-img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:var(--radius-lg)}
+        .hero-title{font-size:1.5rem;font-weight:800;line-height:1.2;margin:var(--space-4) 0}
+        @media(min-width:768px){.hero-title{font-size:2rem}}
+        @media(min-width:1024px){.hero-title{font-size:2.5rem}}
+        .container{width:100%;max-width:1280px;margin:0 auto;padding:0 var(--space-4)}
+        @media(min-width:640px){.container{padding:0 var(--space-6)}}
+        .breaking-news-banner{background:#dc2626;color:white;padding:var(--space-2) 0;font-size:0.875rem;font-weight:500}
+        .breaking-label{background:white;color:#dc2626;padding:2px 8px;border-radius:var(--radius-md);font-weight:700;margin-right:var(--space-4)}
+        .content-grid{display:grid;grid-template-columns:1fr;gap:var(--space-8)}
+        @media(min-width:1024px){.content-grid{grid-template-columns:2fr 1fr}}
+        .article-card{background:var(--color-bg-primary);border:1px solid var(--color-border-primary);border-radius:var(--radius-lg);overflow:hidden;transition:box-shadow var(--transition-fast)}
+        .article-card:hover{box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)}
+        .articles-grid{display:grid;grid-template-columns:1fr;gap:var(--space-6)}
+        @media(min-width:640px){.articles-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(min-width:1024px){.articles-grid{grid-template-columns:repeat(3,1fr)}}
+        .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-6)}
+        .section-title{font-size:1.5rem;font-weight:700;color:var(--color-text-primary)}
+        .sidebar{display:none}
+        @media(min-width:1024px){.sidebar{display:block}}
+        .reading-progress{position:fixed;top:0;left:0;width:0;height:3px;background:linear-gradient(90deg,var(--color-primary),#8b5cf6);z-index:10001;transition:width 0.1s ease-out}
+        .main-content{min-height:50vh}
+        .btn,button,[role="button"]{min-height:44px;min-width:44px}
+        .text-size-controls{display:flex;gap:0.5rem;align-items:center}
+        .text-size-btn{width:44px;height:44px;border:1px solid var(--color-border-primary);border-radius:var(--radius-lg);background:var(--color-bg-secondary);color:var(--color-text-primary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:600;transition:all 0.2s}
+        .text-size-btn:hover{border-color:var(--color-primary);color:var(--color-primary)}
+        body.text-size-small .article-content-enhanced{font-size:0.875rem}
+        body.text-size-large .article-content-enhanced{font-size:1.25rem}
+        body.text-size-xlarge .article-content-enhanced{font-size:1.5rem}
+        img,video{max-width:100%;height:auto}
+        img[width][height]{aspect-ratio:attr(width)/attr(height)}
+        .skeleton{background:linear-gradient(90deg,var(--color-bg-secondary) 25%,var(--color-bg-primary) 50%,var(--color-bg-secondary) 75%);background-size:200% 100%;animation:skeleton-loading 1.5s infinite}
+        @keyframes skeleton-loading{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        @font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:local('Inter Regular'),local('Inter-Regular'),url('/static/fonts/inter-regular.woff2') format('woff2')}
+        @font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;src:local('Inter Bold'),local('Inter-Bold'),url('/static/fonts/inter-bold.woff2') format('woff2')}
+    </style>
+    
+    <!-- Stylesheets - loaded asynchronously for non-critical CSS -->
+    <link rel="stylesheet" href="/static/css/main.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/main.css"></noscript>
+    <link rel="stylesheet" href="/static/css/responsive-utils.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/responsive-utils.css"></noscript>
+    <link rel="stylesheet" href="/static/css/breaking-ticker.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/breaking-ticker.css"></noscript>
+    <link rel="stylesheet" href="/static/css/mobile-menu-fallback.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/mobile-menu-fallback.css"></noscript>
+    {{if eq .LanguageDirection "rtl"}}
+    <link rel="stylesheet" href="/static/css/rtl.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/rtl.css"></noscript>
+    {{end}}
+    
+    <!-- Theme CSS -->
+    <link rel="stylesheet" href="/static/css/themes.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/themes.css"></noscript>
+    <link rel="stylesheet" href="/static/css/dark-mode-fixes.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/dark-mode-fixes.css"></noscript>
+    
+    <!-- Self-hosted fonts (eliminates Google Fonts dependency) -->
+    <link rel="preload" href="/static/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+    {{if eq .LanguageCode "fa"}}
+    <link rel="preload" href="/static/fonts/vazir-regular.woff2" as="font" type="font/woff2" crossorigin>
+    {{else if eq .LanguageCode "ar"}}
+    <link rel="preload" href="/static/fonts/amiri-regular.woff2" as="font" type="font/woff2" crossorigin>
+    {{end}}
+    <link rel="stylesheet" href="/static/css/fonts.css">
+    
+    <!-- Additional head content -->
+    {{block "head" .}}{{end}}
+    
+    <!-- UI Fixes - MUST load last to override all other styles -->
+    <link rel="stylesheet" href="/static/css/ui-fixes.css">
+    
+    <!-- Analytics -->
+    {{if .GoogleAnalyticsID}}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{.GoogleAnalyticsID}}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{.GoogleAnalyticsID}}');
+    </script>
+    {{end}}
+</head>
+<body class="{{.LanguageCode}}-lang {{.LanguageDirection}}-dir">
+    <!-- Reading Progress Bar -->
+    <div class="reading-progress" id="reading-progress" aria-hidden="true"></div>
+    
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-link">
+        {{if eq .LanguageCode "fa"}}
+            پرش به محتوا
+        {{else if eq .LanguageCode "ar"}}
+            انتقال إلى المحتوى
+        {{else}}
+            Skip to content
+        {{end}}
+    </a>
+    
+    <!-- Header -->
+    {{template "header" .}}
+    
+    <!-- Breadcrumbs -->
+    {{if .Breadcrumbs}}
+    <div class="breadcrumb-container">
+        <div class="container">
+            {{.Breadcrumbs.HTML | safeHTML}}
+        </div>
+    </div>
+    {{end}}
+    
+    <!-- Main content -->
+    <main id="main-content" class="main-content" role="main">
+        {{block "content" .}}{{end}}
+    </main>
+    
+    <!-- Footer -->
+    {{template "footer" .}}
+    
+    <!-- Theme toggle -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <img src="/static/icons/phosphor/sun.svg" alt="Light mode" class="theme-icon light-icon">
+        <img src="/static/icons/phosphor/moon.svg" alt="Dark mode" class="theme-icon dark-icon">
+        <img src="/static/icons/phosphor/circle-half.svg" alt="Auto mode" class="theme-icon auto-icon">
+    </button>
+    
+    <!-- Back to top button -->
+    <button id="back-to-top" class="back-to-top" aria-label="Back to top">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+    
+    <!-- JavaScript -->
+    <script src="/static/js/main.js" defer></script>
+    <script src="/static/js/theme.js" defer></script>
+    <script src="/static/js/pwa.js" defer></script>
+    {{block "scripts" .}}{{end}}
+    
+    <!-- Reading Progress & Text Size Script -->
+    <script>
+        // Reading Progress Bar
+        (function() {
+            const progressBar = document.getElementById('reading-progress');
+            if (!progressBar) return;
+            
+            let ticking = false;
+            function updateProgress() {
+                const scrollTop = window.scrollY;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+                progressBar.style.width = Math.min(progress, 100) + '%';
+                ticking = false;
+            }
+            
+            window.addEventListener('scroll', function() {
+                if (!ticking) {
+                    requestAnimationFrame(updateProgress);
+                    ticking = true;
+                }
+            }, { passive: true });
+        })();
+        
+        // Text Size Controls
+        window.setTextSize = function(size) {
+            document.body.classList.remove('text-size-small', 'text-size-normal', 'text-size-large', 'text-size-xlarge');
+            if (size !== 'normal') {
+                document.body.classList.add('text-size-' + size);
+            }
+            localStorage.setItem('textSize', size);
+        };
+        
+        // Restore saved text size
+        (function() {
+            const savedSize = localStorage.getItem('textSize');
+            if (savedSize && savedSize !== 'normal') {
+                document.body.classList.add('text-size-' + savedSize);
+            }
+        })();
+    </script>
+    
+    <!-- Structured data -->
+    {{if .StructuredData}}
+    <script type="application/ld+json">
+{{.StructuredData | safeJS}}
+    </script>
+    {{end}}
+    
+    <!-- Breadcrumb structured data -->
+    {{if .BreadcrumbSchema}}
+    <script type="application/ld+json">
+{{.BreadcrumbSchema | safeJS}}
+    </script>
+    {{end}}
+    
+    <!-- Service Worker Registration with Update Notification -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful');
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', function() {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', function() {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New content available, show update notification
+                                    showUpdateNotification();
+                                }
+                            });
+                        });
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+            
+            // Listen for controller change
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                window.location.reload();
+            });
+        }
+        
+        function showUpdateNotification() {
+            const notification = document.createElement('div');
+            notification.id = 'sw-update-notification';
+            notification.innerHTML = `
+                <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--color-primary);color:white;padding:16px 24px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.2);z-index:10000;display:flex;align-items:center;gap:16px;font-family:var(--font-family-sans);">
+                    <span>New version available!</span>
+                    <button onclick="updateServiceWorker()" style="background:white;color:var(--color-primary);border:none;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;">Update</button>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background:transparent;color:white;border:1px solid white;padding:8px 16px;border-radius:6px;cursor:pointer;">Later</button>
+                </div>
+            `;
+            document.body.appendChild(notification);
+        }
+        
+        function updateServiceWorker() {
+            navigator.serviceWorker.getRegistration().then(function(reg) {
+                if (reg && reg.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+{{end}}

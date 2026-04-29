@@ -1,0 +1,91 @@
+{{define "article-card"}}
+<article class="article-card" itemscope itemtype="https://schema.org/NewsArticle">
+    {{if or .FeaturedImage (hasResponsiveImage .ImageData)}}
+    <div class="article-image">
+        <a href="/article/{{.Slug}}" class="image-link">
+            {{if hasResponsiveImage .ImageData}}
+            {{responsiveImageSimple .ImageData true "article-thumbnail"}}
+            {{else if .FeaturedImage}}
+            <img src="{{.FeaturedImage}}" alt="{{if .ImageAlt}}{{.ImageAlt}}{{else}}{{.Title}}{{end}}" 
+                 class="article-thumbnail" loading="lazy" decoding="async" itemprop="image">
+            {{end}}
+        </a>
+    </div>
+    {{end}}
+    
+    <div class="article-content">
+        <header class="article-header">
+            {{if .Category}}
+            <div class="article-category">
+                <a href="/category/{{.Category.Slug}}" class="category-link">{{.Category.Name}}</a>
+            </div>
+            {{end}}
+            
+            <h3 class="article-title" itemprop="headline">
+                <a href="/article/{{.Slug}}" class="title-link">{{.Title}}</a>
+            </h3>
+            
+            {{if .Excerpt}}
+            <p class="article-excerpt" itemprop="description">{{truncate .Excerpt 150}}</p>
+            {{end}}
+        </header>
+        
+        <footer class="article-meta">
+            <div class="meta-primary">
+                {{if .Author}}
+                <span class="article-author" itemprop="author" itemscope itemtype="https://schema.org/Person">
+                    {{if .Author.Avatar}}
+                    <img src="{{.Author.Avatar}}" alt="{{.Author.FirstName}} {{.Author.LastName}}" class="author-avatar">
+                    {{end}}
+                    <span itemprop="name">{{.Author.FirstName}} {{.Author.LastName}}</span>
+                </span>
+                {{end}}
+                
+                <time class="article-date" datetime="{{.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}" itemprop="datePublished">
+                    {{timeAgo .PublishedAt}}
+                </time>
+            </div>
+            
+            <div class="meta-secondary">
+                {{if .ViewCount}}
+                <span class="article-views">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    {{.ViewCount}}
+                </span>
+                {{end}}
+                
+                {{if .LikeCount}}
+                <span class="article-likes">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    {{.LikeCount}}
+                </span>
+                {{end}}
+            </div>
+        </footer>
+        
+        {{if .Tags}}
+        <div class="article-tags">
+            {{range .Tags}}
+            <a href="/tag/{{.Slug}}" class="tag-link" style="{{if .Color}}--tag-color: {{.Color}};{{end}}">
+                {{.Name}}
+            </a>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+    
+    <!-- Hidden structured data -->
+    <meta itemprop="dateModified" content="{{.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">
+    <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization" style="display: none;">
+        <meta itemprop="name" content="{{$.SiteName}}">
+        <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+            <meta itemprop="url" content="{{$.SiteURL}}/static/images/logo.png">
+        </div>
+    </div>
+</article>
+{{end}}

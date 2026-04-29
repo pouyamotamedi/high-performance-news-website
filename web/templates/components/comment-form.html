@@ -1,0 +1,35 @@
+{{define "comment-form.html"}}
+<!-- Comment Form Component -->
+<div class="comment-form-section">
+    <h3 class="form-title">Leave a Comment</h3>
+    <form id="commentForm" class="comment-form">
+        <input type="hidden" name="article_id" value="{{.Article.ID}}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="author_name">Name *</label>
+                <input type="text" id="author_name" name="author_name" required maxlength="100" 
+                       placeholder="Your name">
+            </div>
+            <div class="form-group">
+                <label for="author_email">Email *</label>
+                <input type="email" id="author_email" name="author_email" required maxlength="255" 
+                       placeholder="your@email.com">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="content">Comment *</label>
+            <div class="textarea-wrapper">
+                <textarea id="content" name="content" required maxlength="2000" rows="4"
+                    placeholder="Share your thoughts..."></textarea>
+                <div class="char-counter">
+                    <span id="charCount">0</span>/2000
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="submit-comment-btn">
+            <img src="/static/icons/phosphor/paper-plane-tilt.svg" alt="" class="btn-icon">
+            Post Comment
+        </button>
+    </form>
+</div>
+{{end}}

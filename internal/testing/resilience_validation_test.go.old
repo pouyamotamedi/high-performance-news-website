@@ -1,0 +1,452 @@
+package testing
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestResilienceValidator_ValidateSystemRecoveryTime(t *testing.T) {
+	validator := NewResilienceValidator()
+	ctx := context.Background()
+	maxRecoveryTime := 30 * time.Second
+
+	t.Run("successful recovery time validation", func(t *testing.T) {
+		result, err := validator.ValidateSystemRecoveryTime(ctx, maxRecoveryTime)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "System Recovery Time Validation", result.TestName)
+		assert.True(t, result.Duration > 0)
+		assert.LessOrEqual(t, result.RecoveryTime, maxRecoveryTime*2) // Allow some variance in testing
+	})
+
+	t.Run("recovery time exceeds maximum", func(t *testing.T) {
+		shortMaxRecovery := 1 * time.Second // Very short recovery time
+		result, err := validator.ValidateSystemRecoveryTime(ctx, shortMaxRecovery)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		
+		// Should have errors due to exceeding recovery time
+		if result.RecoveryTime > shortMaxRecovery {
+			assert.False(t, result.Success)
+			assert.NotEmpty(t, result.Errors)
+			assert.NotEmpty(t, result.Recommendations)
+		}
+	})
+
+	t.Run("context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		
+		result, err := validator.ValidateSystemRecoveryTime(ctx, maxRecoveryTime)
+		
+		// Should complete even with short context (tests should be designed to handle this)
+		assert.NotNil(t, result)
+		if err != nil {
+			assert.Contains(t, err.Error(), "context")
+		}
+	})
+}
+
+func TestResilienceValidator_ValidateGracefulDegradation(t *testing.T) {
+	validator := NewResilienceValidator()
+	ctx := context.Background()
+
+	t.Run("successful graceful degradation validation", func(t *testing.T) {
+		result, err := validator.ValidateGracefulDegradation(ctx)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Graceful Degradation Validation", result.TestName)
+		assert.True(t, result.Duration > 0)
+		
+		// The result may or may not show graceful degradation depending on the implementation
+		// but it should complete without errors
+	})
+
+	t.Run("degradation validation with recommendations", func(t *testing.T) {
+		result, err := validator.ValidateGracefulDegradation(ctx)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		
+		// If graceful degradation is not detected, there should be recommendations
+		if !result.GracefulDegradation {
+			assert.NotEmpty(t, result.Recommendations)
+		}
+	})
+}
+
+func TestResilienceValidator_ValidateCascadeFailurePrevention(t *testing.T) {
+	validator := NewResilienceValidator()
+	ctx := context.Background()
+
+	t.Run("successful cascade failure prevention validation", func(t *testing.T) {
+		result, err := validator.ValidateCascadeFailurePrevention(ctx)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Cascade Failure Prevention Validation", result.TestName)
+		assert.True(t, result.Duration > 0)
+		
+		// Check that cascade failures are tracked
+		assert.NotNil(t, result.CascadeFailures)
+	})
+
+	t.Run("cascade failures detected", func(t *testing.T) {
+		result, err := validator.ValidateCascadeFailurePrevention(ctx)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		
+		// If cascade failures are detected, success should be false and recommendations provided
+		if len(result.CascadeFailures) > 0 {
+			assert.False(t, result.Success)
+			assert.NotEmpty(t, result.Recommendations)
+			assert.NotEmpty(t, result.Errors)
+			
+			// Validate cascade failure structure
+			for _, failure := range result.CascadeFailures {
+				assert.NotEmpty(t, failure.Component)
+				assert.NotEmpty(t, failure.Cause)
+				assert.NotEmpty(t, failure.Impact)
+				assert.False(t, failure.FailureTime.IsZero())
+			}
+		}
+	})
+
+	t.Run("context cancellation during monitoring", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		
+		result, err := validator.ValidateCascadeFailurePrevention(ctx)
+		
+		// Should handle context cancellation gracefully
+		assert.NotNil(t, result)
+		if err != nil {
+			assert.Contains(t, err.Error(), "context")
+		}
+	})
+}
+
+func TestResilienceValidator_ValidateSystemStabilityUnderChaos(t *testing.T) {
+	validator := NewResilienceValidator()
+	ctx := context.Background()
+	testDuration := 10 * time.Second
+
+	t.Run("successful stability validation", func(t *testing.T) {
+		result, err := validator.ValidateSystemStabilityUnderChaos(ctx, testDuration)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "System Stability Under Chaos Validation", result.TestName)
+		assert.True(t, result.Duration >= testDuration)
+		
+		// Validate system stability metrics
+		metrics := result.SystemStability
+		assert.GreaterOrEqual(t, metrics.AvailabilityPercent, 0.0)
+		assert.LessOrEqual(t, metrics.AvailabilityPercent, 100.0)
+		assert.GreaterOrEqual(t, metrics.ErrorRate, 0.0)
+		assert.LessOrEqual(t, metrics.ErrorRate, 1.0)
+		assert.GreaterOrEqual(t, metrics.ThroughputDegradation, 0.0)
+		assert.NotNil(t, metrics.ResourceUtilization)
+	})
+
+	t.Run("stability thresholds validation", func(t *testing.T) {
+		result, err := validator.ValidateSystemStabilityUnderChaos(ctx, testDuration)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		
+		metrics := result.SystemStability
+		
+		// Check if thresholds are violated and appropriate errors/recommendations are provided
+		if metrics.AvailabilityPercent < 95.0 {
+			assert.Contains(t, result.Errors, "Availability")
+			assert.Contains(t, result.Recommendations, "resilience")
+		}
+		
+		if metrics.ErrorRate > 0.05 {
+			assert.Contains(t, result.Errors, "Error rate")
+			assert.Contains(t, result.Recommendations, "error handling")
+		}
+		
+		if metrics.ResponseTimeP95 > 2*time.Second {
+			assert.Contains(t, result.Errors, "response time")
+			assert.Contains(t, result.Recommendations, "performance")
+		}
+		
+		if metrics.ThroughputDegradation > 0.5 {
+			assert.Contains(t, result.Errors, "Throughput degradation")
+			assert.Contains(t, result.Recommendations, "load shedding")
+		}
+	})
+
+	t.Run("short duration test", func(t *testing.T) {
+		shortDuration := 2 * time.Second
+		result, err := validator.ValidateSystemStabilityUnderChaos(ctx, shortDuration)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.True(t, result.Duration >= shortDuration)
+	})
+}
+
+func TestSystemMonitor(t *testing.T) {
+	monitor := NewSystemMonitor()
+	ctx := context.Background()
+
+	t.Run("start and stop stability monitoring", func(t *testing.T) {
+		stabilityMonitor := monitor.StartStabilityMonitoring(ctx)
+		assert.NotNil(t, stabilityMonitor)
+		
+		// Let it run for a short time
+		time.Sleep(2 * time.Second)
+		
+		metrics := stabilityMonitor.GetMetrics()
+		assert.GreaterOrEqual(t, metrics.AvailabilityPercent, 0.0)
+		assert.LessOrEqual(t, metrics.AvailabilityPercent, 100.0)
+		assert.NotNil(t, metrics.ResourceUtilization)
+		
+		stabilityMonitor.Stop()
+	})
+
+	t.Run("metrics collection over time", func(t *testing.T) {
+		stabilityMonitor := monitor.StartStabilityMonitoring(ctx)
+		defer stabilityMonitor.Stop()
+		
+		// Collect initial metrics
+		initialMetrics := stabilityMonitor.GetMetrics()
+		
+		// Wait and collect again
+		time.Sleep(3 * time.Second)
+		laterMetrics := stabilityMonitor.GetMetrics()
+		
+		// Should have more data points
+		assert.NotEqual(t, initialMetrics, laterMetrics)
+	})
+}
+
+func TestCascadeFailureMonitor(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("monitor creation and operation", func(t *testing.T) {
+		monitor := NewCascadeFailureMonitor(ctx)
+		assert.NotNil(t, monitor)
+		
+		// Let it run for a short time
+		time.Sleep(3 * time.Second)
+		
+		failures := monitor.GetNewFailures()
+		assert.NotNil(t, failures)
+		
+		monitor.Stop()
+	})
+
+	t.Run("failure detection", func(t *testing.T) {
+		monitor := NewCascadeFailureMonitor(ctx)
+		defer monitor.Stop()
+		
+		// Run for enough time to potentially detect failures
+		time.Sleep(5 * time.Second)
+		
+		failures := monitor.GetNewFailures()
+		
+		// Validate failure structure if any are detected
+		for _, failure := range failures {
+			assert.NotEmpty(t, failure.Component)
+			assert.NotEmpty(t, failure.Cause)
+			assert.NotEmpty(t, failure.Impact)
+			assert.False(t, failure.FailureTime.IsZero())
+		}
+		
+		// Second call should return empty (failures are cleared after retrieval)
+		secondFailures := monitor.GetNewFailures()
+		assert.Empty(t, secondFailures)
+	})
+
+	t.Run("context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		
+		monitor := NewCascadeFailureMonitor(ctx)
+		
+		// Wait for context to expire
+		time.Sleep(2 * time.Second)
+		
+		// Should still be able to get failures
+		failures := monitor.GetNewFailures()
+		assert.NotNil(t, failures)
+		
+		monitor.Stop()
+	})
+}
+
+func TestStabilityMonitor(t *testing.T) {
+	t.Run("metrics calculation", func(t *testing.T) {
+		monitor := &StabilityMonitor{
+			startTime:           time.Now(),
+			availabilityChecks:  []bool{true, true, false, true, true},
+			responseTimes:       []time.Duration{100 * time.Millisecond, 200 * time.Millisecond, 300 * time.Millisecond},
+			errorCount:          2,
+			requestCount:        10,
+			throughputBaseline:  100.0,
+			currentThroughput:   80.0,
+			resourceUtilization: map[string]float64{"cpu": 75.0, "memory": 60.0},
+		}
+		
+		metrics := monitor.GetMetrics()
+		
+		// Availability should be 80% (4 out of 5 checks passed)
+		assert.Equal(t, 80.0, metrics.AvailabilityPercent)
+		
+		// Error rate should be 20% (2 errors out of 10 requests)
+		assert.Equal(t, 0.2, metrics.ErrorRate)
+		
+		// Throughput degradation should be 20% ((100-80)/100)
+		assert.Equal(t, 0.2, metrics.ThroughputDegradation)
+		
+		// Resource utilization should be preserved
+		assert.Equal(t, 75.0, metrics.ResourceUtilization["cpu"])
+		assert.Equal(t, 60.0, metrics.ResourceUtilization["memory"])
+	})
+
+	t.Run("P95 response time calculation", func(t *testing.T) {
+		monitor := &StabilityMonitor{
+			responseTimes: []time.Duration{
+				100 * time.Millisecond,
+				200 * time.Millisecond,
+				300 * time.Millisecond,
+				400 * time.Millisecond,
+				500 * time.Millisecond,
+			},
+		}
+		
+		p95 := monitor.calculateP95ResponseTime()
+		
+		// P95 of 5 values should be the 5th value (index 4)
+		assert.Equal(t, 500*time.Millisecond, p95)
+	})
+
+	t.Run("empty response times", func(t *testing.T) {
+		monitor := &StabilityMonitor{
+			responseTimes: []time.Duration{},
+		}
+		
+		p95 := monitor.calculateP95ResponseTime()
+		assert.Equal(t, time.Duration(0), p95)
+	})
+}
+
+func TestResilienceTestResult(t *testing.T) {
+	t.Run("result structure validation", func(t *testing.T) {
+		result := &ResilienceTestResult{
+			TestName:            "Test Resilience",
+			StartTime:           time.Now(),
+			EndTime:             time.Now().Add(10 * time.Second),
+			Duration:            10 * time.Second,
+			Success:             true,
+			RecoveryTime:        5 * time.Second,
+			GracefulDegradation: true,
+			CascadeFailures:     []CascadeFailure{},
+			SystemStability: SystemStabilityMetrics{
+				AvailabilityPercent:   99.5,
+				ResponseTimeP95:       500 * time.Millisecond,
+				ErrorRate:             0.01,
+				ThroughputDegradation: 0.1,
+				ResourceUtilization:   map[string]float64{"cpu": 70.0},
+			},
+			Errors:          []string{},
+			Recommendations: []string{},
+		}
+		
+		assert.Equal(t, "Test Resilience", result.TestName)
+		assert.True(t, result.Success)
+		assert.True(t, result.GracefulDegradation)
+		assert.Equal(t, 5*time.Second, result.RecoveryTime)
+		assert.Equal(t, 99.5, result.SystemStability.AvailabilityPercent)
+		assert.Empty(t, result.CascadeFailures)
+		assert.Empty(t, result.Errors)
+	})
+}
+
+// Integration test that combines multiple resilience validation components
+func TestResilienceValidation_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	validator := NewResilienceValidator()
+	ctx := context.Background()
+
+	t.Run("comprehensive resilience validation", func(t *testing.T) {
+		// Test recovery time
+		recoveryResult, err := validator.ValidateSystemRecoveryTime(ctx, 30*time.Second)
+		require.NoError(t, err)
+		assert.NotNil(t, recoveryResult)
+
+		// Test graceful degradation
+		degradationResult, err := validator.ValidateGracefulDegradation(ctx)
+		require.NoError(t, err)
+		assert.NotNil(t, degradationResult)
+
+		// Test cascade failure prevention
+		cascadeResult, err := validator.ValidateCascadeFailurePrevention(ctx)
+		require.NoError(t, err)
+		assert.NotNil(t, cascadeResult)
+
+		// Test system stability under chaos
+		stabilityResult, err := validator.ValidateSystemStabilityUnderChaos(ctx, 15*time.Second)
+		require.NoError(t, err)
+		assert.NotNil(t, stabilityResult)
+
+		// All tests should complete successfully
+		assert.True(t, recoveryResult.Duration > 0)
+		assert.True(t, degradationResult.Duration > 0)
+		assert.True(t, cascadeResult.Duration > 0)
+		assert.True(t, stabilityResult.Duration > 0)
+	})
+}
+
+// Benchmark tests for resilience validation performance
+func BenchmarkResilienceValidator_ValidateSystemRecoveryTime(b *testing.B) {
+	validator := NewResilienceValidator()
+	ctx := context.Background()
+	maxRecoveryTime := 10 * time.Second
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result, err := validator.ValidateSystemRecoveryTime(ctx, maxRecoveryTime)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if result == nil {
+			b.Fatal("Expected result")
+		}
+	}
+}
+
+func BenchmarkStabilityMonitor_GetMetrics(b *testing.B) {
+	monitor := &StabilityMonitor{
+		startTime:           time.Now(),
+		availabilityChecks:  make([]bool, 1000),
+		responseTimes:       make([]time.Duration, 1000),
+		resourceUtilization: map[string]float64{"cpu": 50.0, "memory": 60.0},
+	}
+
+	// Fill with sample data
+	for i := 0; i < 1000; i++ {
+		monitor.availabilityChecks[i] = true
+		monitor.responseTimes[i] = time.Duration(i) * time.Millisecond
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = monitor.GetMetrics()
+	}
+}

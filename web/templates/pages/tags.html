@@ -1,0 +1,37 @@
+{{define "tags.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/tag.css">
+{{end}}
+
+{{define "content"}}
+<div class="tags-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">All Tags</h1>
+            <p class="page-description">Browse all available news tags</p>
+        </div>
+    </section>
+    
+    <!-- All tags listing -->
+    <section class="tags-section">
+        <div class="section-container">
+            <div class="tags-cloud">
+                {{range .AllTags}}
+                <a href="/tag/{{.Slug}}" class="tag-item">
+                    {{.Name}}
+                    <span class="tag-count">{{if .Count}}{{.Count}}{{else}}0{{end}}</span>
+                </a>
+                {{end}}
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/tag.js"></script>
+{{end}}

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin-sidebar.css">
+</head>
+<body>
+    <!-- Authentication Loading Overlay -->
+    <div id="authLoading" class="auth-loading">
+        <div style="text-align: center;">
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: #64748b;">Verifying authentication...</p>
+        </div>
+    </div>
+
+    <div class="admin-layout" id="adminContent" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/admin/dashboard" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">📰</div>
+                    <span>News Admin</span>
+                </a>
+                <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+                    ☰
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <!-- Dashboard -->
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <a href="/admin/dashboard" class="nav-link active">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Content Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Content</div>
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">📝</span>
+                            <span class="nav-text">Content</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/content/create" class="nav-link">Create Article</a>
+                            <a href="/admin/content/articles" class="nav-link">Manage Articles</a>
+                            <a href="/admin/content/categories" class="nav-link">Categories</a>
+                            <a href="/admin/content/tags" class="nav-link">Tags</a>
+                            <a href="/admin/content/media" class="nav-link">Media Library</a>
+                            <a href="/admin/content/trash" class="nav-link">Trash</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Autolinking Section -->
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">🔗</span>
+                            <span class="nav-text">Autolinking</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/autolinking" class="nav-link">Overview</a>
+                            <a href="/admin/keyword-banks" class="nav-link">Keyword Banks</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comments Section -->
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">💬</span>
+                            <span class="nav-text">Comments</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/comments" class="nav-link">Moderate</a>
+                            <a href="/admin/comments/analytics" class="nav-link">Analytics</a>
+                            <a href="/admin/comments/settings" class="nav-link">Settings</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Management</div>
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">👥</span>
+                            <span class="nav-text">Users</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/users/list" class="nav-link">All Users</a>
+                            <a href="/admin/users/create" class="nav-link">Create User</a>
+                            <a href="/admin/users/roles" class="nav-link">Roles</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Ingestion -->
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <a href="/admin/content-ingestion" class="nav-link">
+                            <span class="nav-icon">📥</span>
+                            <span class="nav-text">Content Ingestion</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Analytics -->
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <a href="/admin/analytics" class="nav-link">
+                            <span class="nav-icon">📈</span>
+                            <span class="nav-text">Analytics</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Settings Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">⚙️</span>
+                            <span class="nav-text">Settings</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/settings/general" class="nav-link">General</a>
+                            <a href="/admin/settings/performance" class="nav-link">Performance</a>
+                            <a href="/admin/settings/security" class="nav-link">Security</a>
+                            <a href="/admin/settings/backup" class="nav-link">Backup</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System -->
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <a href="/admin/system" class="nav-link">
+                            <span class="nav-icon">🖥️</span>
+                            <span class="nav-text">System Monitor</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Top Header -->
+            <header class="admin-header">
+                <div class="header-left">
+                    <button class="header-btn mobile-menu-btn" onclick="toggleMobileSidebar()" style="display: none;">☰</button>
+                    <h1 class="page-title">Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" title="Notifications">🔔</button>
+                    <button class="header-btn" onclick="window.open('/', '_blank')" title="View Site">🌐</button>
+                    <div class="user-dropdown">
+                        <div class="user-menu" onclick="toggleUserDropdown()">
+                            <div class="user-avatar" id="userAvatar">A</div>
+                            <div class="user-info">
+                                <div class="user-name" id="userName">Admin</div>
+                                <div class="user-role" id="userRole">Administrator</div>
+                            </div>
+                        </div>
+                        <div class="dropdown-menu" id="userDropdown">
+                            <a href="/admin/profile" class="dropdown-item">👤 Profile</a>
+                            <button class="dropdown-item" onclick="setup2FA()">🔐 Setup 2FA</button>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item" onclick="logout()" style="color: #dc2626;">🚪 Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="admin-content">
+                <!-- Dashboard Content -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon blue">📄</div>
+                        </div>
+                        <div class="stat-value" id="totalArticles">0</div>
+                        <div class="stat-label">Total Articles</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon green">👁️</div>
+                        </div>
+                        <div class="stat-value" id="todayViews">0</div>
+                        <div class="stat-label">Today's Views</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon purple">💬</div>
+                        </div>
+                        <div class="stat-value" id="pendingComments">0</div>
+                        <div class="stat-label">Pending Comments</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon orange">👥</div>
+                        </div>
+                        <div class="stat-value" id="activeUsers">1</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Quick Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <a href="/admin/content/create" class="quick-action-card">
+                                <div class="quick-action-icon">✏️</div>
+                                <div class="quick-action-text">
+                                    <h4>Create Article</h4>
+                                    <p>Write a new article</p>
+                                </div>
+                            </a>
+                            <a href="/admin/comments" class="quick-action-card">
+                                <div class="quick-action-icon">💬</div>
+                                <div class="quick-action-text">
+                                    <h4>Moderate Comments</h4>
+                                    <p>Review pending comments</p>
+                                </div>
+                            </a>
+                            <a href="/admin/content-ingestion" class="quick-action-card">
+                                <div class="quick-action-icon">📥</div>
+                                <div class="quick-action-text">
+                                    <h4>Content Ingestion</h4>
+                                    <p>Manage content sources</p>
+                                </div>
+                            </a>
+                            <a href="/admin/analytics" class="quick-action-card">
+                                <div class="quick-action-icon">📊</div>
+                                <div class="quick-action-text">
+                                    <h4>View Analytics</h4>
+                                    <p>Check site performance</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">System Status</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Service</th>
+                                        <th>Status</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Database</td>
+                                        <td><span class="badge badge-success">Healthy</span></td>
+                                        <td>PostgreSQL connected</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cache</td>
+                                        <td><span class="badge badge-success">Operational</span></td>
+                                        <td>Redis available</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Search</td>
+                                        <td><span class="badge badge-warning">Limited</span></td>
+                                        <td>MeiliSearch not connected</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Web Server</td>
+                                        <td><span class="badge badge-success">Running</span></td>
+                                        <td>Nginx + Go backend</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 2FA Modal -->
+    <div id="twoFAModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Setup Two-Factor Authentication</h3>
+                <button class="modal-close" onclick="closeTwoFAModal()">&times;</button>
+            </div>
+            <p>Scan this QR code with your authenticator app:</p>
+            <div id="qrCodeContainer" style="text-align: center; margin: 1.5rem 0;"></div>
+            <div style="margin-top: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Enter verification code:</label>
+                <input type="text" id="totpCode" placeholder="123456" maxlength="6" 
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 1rem;">
+                <button onclick="verifyTwoFA()" class="btn btn-primary" style="width: 100%;">Verify & Enable 2FA</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Immediate auth check
+        (function() {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            if (!token || (role !== 'admin' && role !== 'editor')) {
+                window.location.href = '/admin/login';
+                return;
+            }
+            document.body.classList.add('authenticated');
+        })();
+
+        let csrfToken = null;
+
+        // Sidebar toggle
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', document.getElementById('sidebar').classList.contains('collapsed'));
+        }
+
+        function toggleMobileSidebar() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+        }
+
+        // Submenu toggle
+        function toggleSubmenu(element) {
+            const navItem = element.closest('.nav-item');
+            navItem.classList.toggle('open');
+        }
+
+        // User dropdown
+        function toggleUserDropdown() {
+            document.getElementById('userDropdown').classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.user-dropdown')) {
+                document.getElementById('userDropdown').classList.remove('show');
+            }
+        });
+
+        // Restore sidebar state
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.getElementById('sidebar').classList.add('collapsed');
+        }
+
+        // Auth functions
+        async function getCSRFToken() {
+            try {
+                const response = await fetch('/api/v1/auth/csrf-token');
+                const data = await response.json();
+                csrfToken = data.csrf_token;
+                return csrfToken;
+            } catch (error) {
+                console.error('Failed to get CSRF token:', error);
+                return null;
+            }
+        }
+
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            
+            if (!token || (role !== 'admin' && role !== 'editor')) {
+                window.location.href = '/admin/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/auth/verify', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_role');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+
+                await getCSRFToken();
+                document.getElementById('authLoading').classList.add('hidden');
+                document.getElementById('adminContent').style.display = 'flex';
+                
+                // Update user info
+                const username = localStorage.getItem('username') || 'Admin';
+                document.getElementById('userName').textContent = username;
+                document.getElementById('userAvatar').textContent = username.charAt(0).toUpperCase();
+                document.getElementById('userRole').textContent = role === 'admin' ? 'Administrator' : 'Editor';
+                
+                loadDashboardStats();
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = '/admin/login';
+            }
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('/api/v1/admin/comments/stats', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (data.stats) {
+                    document.getElementById('pendingComments').textContent = data.stats.pending || 0;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // 2FA functions
+        async function setup2FA() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/v1/auth/2fa/setup', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('qrCodeContainer').innerHTML = 
+                        `<img src="${data.qr_code}" alt="QR Code" style="max-width: 200px;">
+                         <p style="margin-top: 1rem;"><strong>Secret:</strong> ${data.secret}</p>`;
+                    document.getElementById('twoFAModal').style.display = 'block';
+                } else {
+                    alert('Failed to setup 2FA. Please try again.');
+                }
+            } catch (error) {
+                console.error('2FA setup failed:', error);
+                alert('Failed to setup 2FA. Please try again.');
+            }
+        }
+
+        async function verifyTwoFA() {
+            const code = document.getElementById('totpCode').value;
+            if (!code || code.length !== 6) {
+                alert('Please enter a 6-digit verification code');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/v1/auth/2fa/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                
+                if (response.ok) {
+                    closeTwoFAModal();
+                    alert('2FA enabled successfully!');
+                } else {
+                    alert('Invalid verification code. Please try again.');
+                }
+            } catch (error) {
+                console.error('2FA verification failed:', error);
+                alert('Failed to verify 2FA. Please try again.');
+            }
+        }
+
+        function closeTwoFAModal() {
+            document.getElementById('twoFAModal').style.display = 'none';
+            document.getElementById('totpCode').value = '';
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/v1/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+            } catch (error) {
+                console.error('Logout request failed:', error);
+            }
+            
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('username');
+            window.location.href = '/admin/login';
+        }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('twoFAModal');
+            if (event.target === modal) {
+                closeTwoFAModal();
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

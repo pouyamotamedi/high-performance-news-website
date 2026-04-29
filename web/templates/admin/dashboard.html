@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}} - High Performance News Website</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        /* Prevent flashing by hiding content initially */
+        body {
+            visibility: hidden;
+        }
+        body.authenticated {
+            visibility: visible;
+        }
+        /* Loading overlay to prevent flashing */
+        .auth-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .auth-loading.hidden {
+            display: none;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* 2FA Setup Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .security-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background-color: #10b981;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .dashboard-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .nav-item {
+            padding: 0.5rem 1rem;
+            background-color: #f3f4f6;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #374151;
+            transition: background-color 0.2s;
+        }
+        .nav-item:hover, .nav-item.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        .dashboard-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+        .metric {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .logout-btn {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .logout-btn:hover {
+            background-color: #dc2626;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-healthy {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .welcome-message {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .action-button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            transition: background-color 0.2s;
+            font-size: 0.9rem;
+        }
+        .action-button:hover {
+            background-color: #2563eb;
+            color: white;
+        }
+        .actions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Loading Overlay -->
+    <div id="authLoading" class="auth-loading">
+        <div>
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: #6b7280;">Verifying authentication...</p>
+        </div>
+    </div>
+
+    <!-- 2FA Setup Modal -->
+    <div id="twoFAModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTwoFAModal()">&times;</span>
+            <h2>Setup Two-Factor Authentication</h2>
+            <p>Scan this QR code with your authenticator app:</p>
+            <div class="qr-code" id="qrCodeContainer">
+                <!-- QR code will be inserted here -->
+            </div>
+            <div>
+                <label for="totpCode">Enter verification code:</label>
+                <input type="text" id="totpCode" placeholder="123456" maxlength="6" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #d1d5db; border-radius: 4px;">
+                <button onclick="verifyTwoFA()" class="action-button">Verify & Enable 2FA</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-container" id="adminContent" style="display: none;">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <h1>{{.title}}</h1>
+            <div>
+                <span>Welcome, Admin</span>
+                <span id="securityStatus" class="security-badge">2FA: Not Setup</span>
+                <button id="setup2FABtn" class="action-button" onclick="setup2FA()" style="margin: 0 0.5rem;">Setup 2FA</button>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="dashboard-nav">
+            <a href="/admin/dashboard" class="nav-item {{if not .page}}active{{end}}">Dashboard</a>
+            <a href="/admin/analytics" class="nav-item {{if eq .page "analytics"}}active{{end}}">Analytics</a>
+            <a href="/admin/users" class="nav-item {{if eq .page "users"}}active{{end}}">Users</a>
+            <a href="/admin/content" class="nav-item {{if eq .page "content"}}active{{end}}">Content</a>
+            <a href="/admin/content-ingestion" class="nav-item {{if eq .page "content-ingestion"}}active{{end}}">Content Ingestion</a>
+            <a href="/admin/comments" class="nav-item {{if eq .page "comments"}}active{{end}}">Comments</a>
+            <a href="/admin/settings" class="nav-item {{if eq .page "settings"}}active{{end}}">Settings</a>
+            <a href="/admin/system" class="nav-item {{if eq .page "system"}}active{{end}}">System</a>
+        </div>
+
+        <!-- Welcome Message -->
+        {{if not .page}}
+        <div class="welcome-message">
+            <h2>Welcome to the Admin Dashboard</h2>
+            <p>Manage your high-performance news website from here</p>
+        </div>
+        {{end}}
+
+        <!-- Main Content -->
+        <div class="dashboard-grid">
+            {{if not .page}}
+            <!-- Dashboard Overview -->
+            <div class="dashboard-card">
+                <div class="card-title">System Status</div>
+                <div>
+                    <p>Database: <span class="status-badge status-healthy">Healthy</span></p>
+                    <p>Cache: <span class="status-badge status-healthy">Operational</span></p>
+                    <p>Search: <span class="status-badge status-healthy">Available</span></p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-title">Quick Stats</div>
+                <div>
+                    <p>Total Articles: <span class="metric">0</span></p>
+                    <p>Active Users: <span class="metric">1</span></p>
+                    <p>Today's Views: <span class="metric">0</span></p>
+                    <p>Pending Comments: <span class="metric" id="pendingCommentsCount">-</span></p>
+                    <p>Total Comments: <span class="metric" id="totalCommentsCount">-</span></p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-title">Recent Activity</div>
+                <div>
+                    <p>• Admin user logged in</p>
+                    <p>• System started successfully</p>
+                    <p>• Database connection established</p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-title">Quick Actions</div>
+                <div class="actions-container">
+                    <a href="/admin/content" class="action-button">📝 Manage Content</a>
+                    <a href="/admin/comments" class="action-button">💬 Moderate Comments</a>
+                    <a href="/admin/users" class="action-button">👥 Manage Users</a>
+                    <a href="/admin/system" class="action-button">⚙️ System Monitor</a>
+                </div>
+            </div>
+            {{else}}
+            <!-- Page-specific content -->
+            <div class="dashboard-card">
+                <div class="card-title">{{.page}} Management</div>
+                <div>
+                    <p>This is the {{.page}} management page.</p>
+                    <p>Features for {{.page}} management will be implemented here.</p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-title">{{.page}} Statistics</div>
+                <div>
+                    <p>Statistics and metrics for {{.page}} will be displayed here.</p>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <script>
+        // Immediate authentication check to prevent flashing
+        (function() {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            
+            if (!token || (role !== 'admin' && role !== 'editor')) {
+                // No valid authentication, redirect immediately
+                window.location.href = '/admin/login';
+                return;
+            }
+            
+            // Show content since we have basic auth
+            document.body.classList.add('authenticated');
+        })();
+
+        // Global variables
+        let csrfToken = null;
+        let twoFAEnabled = false;
+
+        // Get CSRF token
+        async function getCSRFToken() {
+            try {
+                const response = await fetch('/api/v1/auth/csrf-token');
+                const data = await response.json();
+                csrfToken = data.csrf_token;
+                return csrfToken;
+            } catch (error) {
+                console.error('Failed to get CSRF token:', error);
+                return null;
+            }
+        }
+
+        // Enhanced authentication check
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            
+            if (!token || (role !== 'admin' && role !== 'editor')) {
+                window.location.href = '/admin/login';
+                return;
+            }
+
+            try {
+                // Verify token is still valid
+                const response = await fetch('/api/v1/auth/verify', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_role');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+
+                // Get CSRF token
+                await getCSRFToken();
+                
+                // Check 2FA status
+                await check2FAStatus();
+                
+                // Show admin content
+                document.getElementById('authLoading').classList.add('hidden');
+                document.getElementById('adminContent').style.display = 'block';
+                
+                // Load dashboard data
+                loadCommentStats();
+                
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = '/admin/login';
+            }
+        }
+
+        // Check 2FA status
+        async function check2FAStatus() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/v1/auth/2fa/status', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    twoFAEnabled = data.enabled;
+                    updateSecurityStatus();
+                }
+            } catch (error) {
+                console.error('Failed to check 2FA status:', error);
+            }
+        }
+
+        // Update security status display
+        function updateSecurityStatus() {
+            const statusElement = document.getElementById('securityStatus');
+            const setupButton = document.getElementById('setup2FABtn');
+            
+            if (twoFAEnabled) {
+                statusElement.textContent = '2FA: Enabled';
+                statusElement.style.backgroundColor = '#10b981';
+                setupButton.style.display = 'none';
+            } else {
+                statusElement.textContent = '2FA: Not Setup';
+                statusElement.style.backgroundColor = '#f59e0b';
+                setupButton.style.display = 'inline-block';
+            }
+        }
+
+        // Setup 2FA
+        async function setup2FA() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/v1/auth/2fa/setup', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('qrCodeContainer').innerHTML = 
+                        `<img src="${data.qr_code}" alt="QR Code" style="max-width: 200px;">
+                         <p><strong>Secret:</strong> ${data.secret}</p>`;
+                    document.getElementById('twoFAModal').style.display = 'block';
+                } else {
+                    alert('Failed to setup 2FA. Please try again.');
+                }
+            } catch (error) {
+                console.error('2FA setup failed:', error);
+                alert('Failed to setup 2FA. Please try again.');
+            }
+        }
+
+        // Verify 2FA
+        async function verifyTwoFA() {
+            const code = document.getElementById('totpCode').value;
+            if (!code || code.length !== 6) {
+                alert('Please enter a 6-digit verification code');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/v1/auth/2fa/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                
+                if (response.ok) {
+                    twoFAEnabled = true;
+                    updateSecurityStatus();
+                    closeTwoFAModal();
+                    alert('2FA enabled successfully!');
+                } else {
+                    alert('Invalid verification code. Please try again.');
+                }
+            } catch (error) {
+                console.error('2FA verification failed:', error);
+                alert('Failed to verify 2FA. Please try again.');
+            }
+        }
+
+        // Close 2FA modal
+        function closeTwoFAModal() {
+            document.getElementById('twoFAModal').style.display = 'none';
+            document.getElementById('totpCode').value = '';
+        }
+
+        // Enhanced form submission with CSRF
+        function submitFormWithCSRF(formData, url, method = 'POST') {
+            return fetch(url, {
+                method: method,
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify(formData)
+            });
+        }
+
+        // Enhanced logout with CSRF
+        async function logout() {
+            try {
+                await fetch('/api/v1/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+            } catch (error) {
+                console.error('Logout request failed:', error);
+            }
+            
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_role');
+            window.location.href = '/admin/login';
+        }
+
+        // Load comment statistics for dashboard
+        async function loadCommentStats() {
+            try {
+                const response = await fetch('/api/v1/admin/comments/stats', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.stats) {
+                    const pendingElement = document.getElementById('pendingCommentsCount');
+                    const totalElement = document.getElementById('totalCommentsCount');
+                    
+                    if (pendingElement) {
+                        pendingElement.textContent = data.stats.pending || 0;
+                        // Highlight if there are pending comments
+                        if (data.stats.pending > 0) {
+                            pendingElement.style.color = '#f59e0b';
+                            pendingElement.style.fontWeight = 'bold';
+                        }
+                    }
+                    
+                    if (totalElement) {
+                        totalElement.textContent = data.stats.total || 0;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading comment stats:', error);
+            }
+        }
+
+        // Initialize admin panel
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('twoFAModal');
+            if (event.target === modal) {
+                closeTwoFAModal();
+            }
+        }
+    </script>
+</body>
+</html>

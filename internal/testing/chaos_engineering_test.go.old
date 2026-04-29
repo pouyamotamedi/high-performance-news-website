@@ -1,0 +1,494 @@
+package testing
+
+import (
+	"context"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestFaultInjector_DatabaseFailure(t *testing.T) {
+	injector := NewFaultInjector()
+	ctx := context.Background()
+
+	t.Run("successful database failure injection", func(t *testing.T) {
+		result, err := injector.InjectDatabaseFailure(ctx, 0.5, 5*time.Second)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, FaultTypeDatabase, result.Type)
+		assert.True(t, result.Duration >= 5*time.Second)
+		assert.Contains(t, result.FaultID, "db_failure_")
+	})
+
+	t.Run("failure rate exceeds safety limit", func(t *testing.T) {
+		result, err := injector.InjectDatabaseFailure(ctx, 0.9, 5*time.Second)
+		
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "exceeds safety limit")
+	})
+
+	t.Run("multiple concurrent database failures", func(t *testing.T) {
+		// Start faults in goroutines so we can check active faults while they're running
+		var wg sync.WaitGroup
+		var result1, result2 *FaultResult
+		var err1, err2 error
+		
+		wg.Add(2)
+		
+		go func() {
+			defer wg.Done()
+			result1, err1 = injector.InjectDatabaseFailure(ctx, 0.3, 2*time.Second)
+		}()
+		
+		go func() {
+			defer wg.Done()
+			result2, err2 = injector.InjectDatabaseFailure(ctx, 0.2, 2*time.Second)
+		}()
+		
+		// Wait a moment for faults to start
+		time.Sleep(100 * time.Millisecond)
+		
+		// Check active faults while they're running
+		activeFaults := injector.GetActiveFaults()
+		assert.GreaterOrEqual(t, len(activeFaults), 1) // At least one should be active
+		
+		// Wait for completion
+		wg.Wait()
+		
+		require.NoError(t, err1)
+		require.NoError(t, err2)
+		require.NotNil(t, result1)
+		require.NotNil(t, result2)
+		assert.NotEqual(t, result1.FaultID, result2.FaultID)
+	})
+}
+
+func TestFaultInjector_CacheFailure(t *testing.T) {
+	injector := NewFaultInjector()
+	ctx := context.Background()
+
+	t.Run("timeout failure injection", func(t *testing.T) {
+		result, err := injector.InjectCacheFailure(ctx, "timeout", 5*time.Second)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, FaultTypeCache, result.Type)
+		assert.Contains(t, result.FaultID, "cache_failure_")
+	})
+
+	t.Run("connection error injection", func(t *testing.T) {
+		result, err := injector.InjectCacheFailure(ctx, "connection_error", 3*time.Second)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "connection_error", result.Parameters["failure_type"])
+	})
+
+	t.Run("data corruption injection", func(t *testing.T) {
+		result, err := injector.InjectCacheFailure(ctx, "data_corruption", 4*time.Second)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "data_corruption", result.Parameters["failure_type"])
+	})
+}
+
+func TestFaultInjector_NetworkPartition(t *testing.T) {
+	injector := NewFaultInjector()
+	ctx := context.Background()
+
+	t.Run("successful network partition injection", func(t *testing.T) {
+		result, err := injector.InjectNetworkPartition(ctx, 500, 0.1, 5*time.Second)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, FaultTypeNetwork, result.Type)
+		assert.Equal(t, 500, result.Parameters["latency_ms"])
+		assert.Equal(t, 0.1, result.Parameters["packet_loss"])
+	})
+
+	t.Run("latency exceeds safety limit", func(t *testing.T) {
+		result, err := injector.InjectNetworkPartition(ctx, 10000, 0.1, 5*time.Second)
+		
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "exceeds safety limit")
+	})
+
+	t.Run("high packet loss injection", func(t *testing.T) {
+		result, err := injector.InjectNetworkPartition(ctx, 200, 0.5, 3*time.Second)
+		
+		require.NoError(t, err)
+		assert.Equal(t, 0.5, result.Parameters["packet_loss"])
+	})
+}
+
+func TestFaultInjector_MemoryPressure(t *testing.T) {
+	injector := NewFaultInjector()
+	ctx := context.Background()
+
+	t.Run("successful memory pressure injection", func(t *testing.T) {
+		result, err := injector.InjectMemoryPressure(ctx, 0.6, 5*time.Second)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, FaultTypeMemory, result.Type)
+		assert.Equal(t, 0.6, result.Parameters["pressure_level"])
+	})
+
+	t.Run("memory pressure exceeds safety limit", func(t *testing.T) {
+		result, err := injector.InjectMemoryPressure(ctx, 0.9, 5*time.Second)
+		
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "exceeds safety limit")
+	})
+}
+
+func TestFaultInjector_DiskPressure(t *testing.T) {
+	injector := NewFaultInjector()
+	ctx := context.Background()
+
+	t.Run("successful disk pressure injection", func(t *testing.T) {
+		result, err := injector.InjectDiskPressure(ctx, 0.7, 5*time.Second)
+		
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, FaultTypeDisk, result.Type)
+		assert.Equal(t, 0.7, result.Parameters["pressure_level"])
+	})
+
+	t.Run("disk pressure exceeds safety limit", func(t *testing.T) {
+		result, err := injector.InjectDiskPressure(ctx, 0.95, 5*time.Second)
+		
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "exceeds safety limit")
+	})
+}
+
+func TestFaultInjector_StopAllFaults(t *testing.T) {
+	injector := NewFaultInjector()
+	ctx := context.Background()
+
+	// Inject multiple faults
+	_, err1 := injector.InjectDatabaseFailure(ctx, 0.3, 10*time.Second)
+	require.NoError(t, err1)
+	
+	_, err2 := injector.InjectCacheFailure(ctx, "timeout", 10*time.Second)
+	require.NoError(t, err2)
+	
+	_, err3 := injector.InjectMemoryPressure(ctx, 0.5, 10*time.Second)
+	require.NoError(t, err3)
+
+	// Verify faults are active
+	activeFaults := injector.GetActiveFaults()
+	assert.Equal(t, 3, len(activeFaults))
+
+	// Stop all faults
+	err := injector.StopAllFaults()
+	require.NoError(t, err)
+
+	// Verify no active faults
+	activeFaults = injector.GetActiveFaults()
+	assert.Equal(t, 0, len(activeFaults))
+}
+
+func TestDatabaseFaultInjector(t *testing.T) {
+	injector := NewDatabaseFaultInjector()
+
+	t.Run("initial state", func(t *testing.T) {
+		assert.False(t, injector.IsFailureActive())
+		assert.False(t, injector.ShouldFail())
+	})
+
+	t.Run("inject connection failures", func(t *testing.T) {
+		stopFunc, err := injector.InjectConnectionFailures(0.5)
+		require.NoError(t, err)
+		require.NotNil(t, stopFunc)
+
+		assert.True(t, injector.IsFailureActive())
+		
+		// Test failure probability (this is probabilistic, so we test multiple times)
+		failureCount := 0
+		totalTests := 1000
+		for i := 0; i < totalTests; i++ {
+			if injector.ShouldFail() {
+				failureCount++
+			}
+		}
+		
+		// Should be approximately 50% failure rate (allow some variance)
+		failureRate := float64(failureCount) / float64(totalTests)
+		assert.InDelta(t, 0.5, failureRate, 0.1)
+
+		// Stop injection
+		err = stopFunc()
+		require.NoError(t, err)
+		assert.False(t, injector.IsFailureActive())
+	})
+}
+
+func TestCacheFaultInjector(t *testing.T) {
+	injector := NewCacheFaultInjector()
+
+	t.Run("initial state", func(t *testing.T) {
+		assert.False(t, injector.IsFailureActive())
+		assert.False(t, injector.ShouldFail())
+		assert.Empty(t, injector.GetFailureType())
+	})
+
+	t.Run("inject timeout failure", func(t *testing.T) {
+		stopFunc, err := injector.InjectFailure("timeout")
+		require.NoError(t, err)
+		require.NotNil(t, stopFunc)
+
+		assert.True(t, injector.IsFailureActive())
+		assert.True(t, injector.ShouldFail())
+		assert.Equal(t, "timeout", injector.GetFailureType())
+
+		// Stop injection
+		err = stopFunc()
+		require.NoError(t, err)
+		assert.False(t, injector.IsFailureActive())
+		assert.Empty(t, injector.GetFailureType())
+	})
+}
+
+func TestNetworkFaultInjector(t *testing.T) {
+	injector := NewNetworkFaultInjector()
+
+	t.Run("initial state", func(t *testing.T) {
+		assert.False(t, injector.IsLatencyActive())
+		assert.Equal(t, 0, injector.GetLatency())
+		assert.False(t, injector.ShouldDropPacket())
+	})
+
+	t.Run("inject latency and packet loss", func(t *testing.T) {
+		stopFunc, err := injector.InjectLatencyAndLoss(100, 0.2)
+		require.NoError(t, err)
+		require.NotNil(t, stopFunc)
+
+		assert.True(t, injector.IsLatencyActive())
+		assert.Equal(t, 100, injector.GetLatency())
+
+		// Test packet loss probability
+		dropCount := 0
+		totalTests := 1000
+		for i := 0; i < totalTests; i++ {
+			if injector.ShouldDropPacket() {
+				dropCount++
+			}
+		}
+		
+		dropRate := float64(dropCount) / float64(totalTests)
+		assert.InDelta(t, 0.2, dropRate, 0.05)
+
+		// Test latency simulation
+		start := time.Now()
+		injector.SimulateLatency()
+		elapsed := time.Since(start)
+		assert.GreaterOrEqual(t, elapsed, 100*time.Millisecond)
+
+		// Stop injection
+		err = stopFunc()
+		require.NoError(t, err)
+		assert.False(t, injector.IsLatencyActive())
+	})
+}
+
+func TestResourceFaultInjector(t *testing.T) {
+	injector := NewResourceFaultInjector()
+
+	t.Run("initial state", func(t *testing.T) {
+		assert.False(t, injector.IsMemoryPressureActive())
+		assert.False(t, injector.IsDiskPressureActive())
+	})
+
+	t.Run("inject memory pressure", func(t *testing.T) {
+		stopFunc, err := injector.InjectMemoryPressure(0.5)
+		require.NoError(t, err)
+		require.NotNil(t, stopFunc)
+
+		assert.True(t, injector.IsMemoryPressureActive())
+
+		// Stop injection
+		err = stopFunc()
+		require.NoError(t, err)
+		assert.False(t, injector.IsMemoryPressureActive())
+	})
+
+	t.Run("inject disk pressure", func(t *testing.T) {
+		stopFunc, err := injector.InjectDiskPressure(0.6)
+		require.NoError(t, err)
+		require.NotNil(t, stopFunc)
+
+		assert.True(t, injector.IsDiskPressureActive())
+
+		// Stop injection
+		err = stopFunc()
+		require.NoError(t, err)
+		assert.False(t, injector.IsDiskPressureActive())
+	})
+}
+
+func TestChaosTestRunner(t *testing.T) {
+	runner := NewChaosTestRunner()
+	ctx := context.Background()
+
+	t.Run("add and run scenario", func(t *testing.T) {
+		scenario := ChaosTestScenario{
+			Name:        "Test Scenario",
+			Description: "A test chaos scenario",
+			Duration:    5 * time.Second,
+			Faults: []FaultConfig{
+				{
+					Type: FaultTypeDatabase,
+					Parameters: map[string]interface{}{
+						"failure_rate": 0.3,
+					},
+					StartDelay: 0,
+					Duration:   3 * time.Second,
+				},
+				{
+					Type: FaultTypeCache,
+					Parameters: map[string]interface{}{
+						"failure_type": "timeout",
+					},
+					StartDelay: 1 * time.Second,
+					Duration:   2 * time.Second,
+				},
+			},
+			Validation: func(result *FaultResult) bool {
+				return result.Duration >= 2*time.Second
+			},
+		}
+
+		runner.AddScenario(scenario)
+
+		result, err := runner.RunScenario(ctx, "Test Scenario")
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Test Scenario", result.ScenarioName)
+		assert.Equal(t, 2, len(result.FaultResults))
+		assert.True(t, result.Duration >= 5*time.Second)
+	})
+
+	t.Run("scenario not found", func(t *testing.T) {
+		result, err := runner.RunScenario(ctx, "Nonexistent Scenario")
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestFaultAwareDatabase(t *testing.T) {
+	// This test would require a real database connection in a full implementation
+	// For now, we'll test the fault injection logic
+	
+	injector := NewDatabaseFaultInjector()
+	
+	t.Run("normal operation", func(t *testing.T) {
+		assert.False(t, injector.ShouldFail())
+	})
+
+	t.Run("with fault injection", func(t *testing.T) {
+		stopFunc, err := injector.InjectConnectionFailures(1.0) // 100% failure rate
+		require.NoError(t, err)
+
+		assert.True(t, injector.ShouldFail())
+
+		err = stopFunc()
+		require.NoError(t, err)
+		assert.False(t, injector.ShouldFail())
+	})
+}
+
+func TestFaultAwareCache(t *testing.T) {
+	mockCache := NewMockCacheService()
+	injector := NewCacheFaultInjector()
+	faultAwareCache := NewFaultAwareCache(mockCache, injector)
+
+	t.Run("normal operation", func(t *testing.T) {
+		ctx := context.Background()
+		mockCache.On("Get", ctx, "test_key").Return([]byte("test_value"), nil)
+		
+		value, err := faultAwareCache.Get(ctx, "test_key")
+		require.NoError(t, err)
+		assert.Equal(t, []byte("test_value"), value)
+	})
+
+	t.Run("with timeout fault", func(t *testing.T) {
+		ctx := context.Background()
+		stopFunc, err := injector.InjectFailure("timeout")
+		require.NoError(t, err)
+
+		start := time.Now()
+		_, err = faultAwareCache.Get(ctx, "test_key")
+		elapsed := time.Since(start)
+		
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "timeout")
+		assert.GreaterOrEqual(t, elapsed, 5*time.Second)
+
+		err = stopFunc()
+		require.NoError(t, err)
+	})
+
+	t.Run("with connection error fault", func(t *testing.T) {
+		ctx := context.Background()
+		stopFunc, err := injector.InjectFailure("connection_error")
+		require.NoError(t, err)
+
+		_, err = faultAwareCache.Get(ctx, "test_key")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "connection error")
+
+		err = stopFunc()
+		require.NoError(t, err)
+	})
+}
+
+// Benchmark tests for fault injection performance
+func BenchmarkFaultInjector_DatabaseFailure(b *testing.B) {
+	injector := NewFaultInjector()
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result, err := injector.InjectDatabaseFailure(ctx, 0.1, 100*time.Millisecond)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if result == nil {
+			b.Fatal("Expected result")
+		}
+	}
+}
+
+func BenchmarkDatabaseFaultInjector_ShouldFail(b *testing.B) {
+	injector := NewDatabaseFaultInjector()
+	stopFunc, _ := injector.InjectConnectionFailures(0.5)
+	defer stopFunc()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = injector.ShouldFail()
+	}
+}
+
+func BenchmarkNetworkFaultInjector_SimulateLatency(b *testing.B) {
+	injector := NewNetworkFaultInjector()
+	stopFunc, _ := injector.InjectLatencyAndLoss(1, 0.0) // 1ms latency
+	defer stopFunc()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		injector.SimulateLatency()
+	}
+}

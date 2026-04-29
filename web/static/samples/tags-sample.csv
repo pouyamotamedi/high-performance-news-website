@@ -1,0 +1,10 @@
+name,slug,description,keywords,color
+JavaScript,javascript,JavaScript programming language,"javascript,js,programming,web development",#f7df1e
+React,react,React JavaScript library,"react,reactjs,frontend,component,jsx",#61dafb
+Node.js,nodejs,Node.js runtime environment,"nodejs,node,backend,server,javascript",#339933
+Python,python,Python programming language,"python,programming,scripting,data science",#3776ab
+Machine Learning,machine-learning,AI and ML topics,"machine learning,ml,ai,artificial intelligence,data science",#ff6f00
+Database,database,Database related content,"database,sql,nosql,mysql,postgresql,mongodb",#336791
+Security,security,Cybersecurity and web security,"security,cybersecurity,encryption,authentication,vulnerability",#dc3545
+Performance,performance,Performance optimization topics,"performance,optimization,speed,caching,scalability",#28a745
+Tutorial,tutorial,Step-by-step tutorials,"tutorial,guide,howto,learn,education",#17a2b8

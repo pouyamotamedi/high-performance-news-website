@@ -1,0 +1,10 @@
+name,slug,description,parent_id,sort_order,image_url,image_alt_text
+Technology,technology,Technology related articles,,1,,
+Programming,programming,Programming tutorials and guides,1,1,,
+Web Development,web-development,Frontend and backend development,1,2,,
+Sports,sports,Sports news and updates,,2,,
+Football,football,Football matches and news,4,1,,
+Basketball,basketball,Basketball games and players,4,2,,
+Health,health,Health and wellness articles,,3,,
+Fitness,fitness,Exercise and fitness tips,7,1,,
+Nutrition,nutrition,Diet and nutrition advice,7,2,,

@@ -1,0 +1,40 @@
+{{define "categories.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/category.css">
+{{end}}
+
+{{define "content"}}
+<div class="categories-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">All Categories</h1>
+            <p class="page-description">Browse all available news categories</p>
+        </div>
+    </section>
+    
+    <!-- All categories listing -->
+    <section class="categories-section">
+        <div class="section-container">
+            <div class="categories-grid">
+                {{range .Categories}}
+                <div class="category-card" {{if .ImageURL}}style="background-image: url('{{.ImageURL}}')"{{end}}>
+                    <a href="/category/{{.Slug}}" class="category-link">
+                        <h3 class="category-name">{{.Name}}</h3>
+                        <p class="category-description">{{.Description}}</p>
+                        <span class="category-count">{{.Count}} articles</span>
+                    </a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/category.js"></script>
+{{end}}

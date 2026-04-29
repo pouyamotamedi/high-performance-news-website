@@ -1,0 +1,107 @@
+{{define "category.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/category.css">
+{{end}}
+
+{{define "content"}}
+<div class="category-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">{{.Title}}</h1>
+            {{if .Description}}
+            <p class="page-description">{{.Description}}</p>
+            {{end}}
+        </div>
+    </section>
+    
+    {{if .Category}}
+    <!-- Single category info -->
+    <section class="category-info-section">
+        <div class="section-container">
+            <div class="category-info">
+                <h2 class="category-name">{{.Category.Name}}</h2>
+                {{if .Category.Description}}
+                <p class="category-description">{{.Category.Description}}</p>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    {{if .Categories}}
+    <!-- All categories listing -->
+    <section class="categories-section">
+        <div class="section-container">
+            <div class="categories-grid">
+                {{range .Categories}}
+                <div class="category-card">
+                    <a href="/category/{{.Slug}}" class="category-link">
+                        <h3 class="category-name">{{.Name}}</h3>
+                        {{if .Description}}
+                        <p class="category-description">{{.Description}}</p>
+                        {{end}}
+                        {{if .Count}}
+                        <span class="category-count">{{.Count}} articles</span>
+                        {{end}}
+                    </a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+    
+    {{if .Articles}}
+    <!-- Articles in category -->
+    <section class="articles-section">
+        <div class="section-container">
+            <header class="section-header">
+                <h2 class="section-title">
+                    {{if .Category}}
+                        Articles in {{.Category.Name}}
+                    {{else}}
+                        Articles
+                    {{end}}
+                </h2>
+            </header>
+            
+            <div class="articles-grid">
+                {{range .Articles}}
+                <article class="article-card">
+                    {{if .FeaturedImage}}
+                    <div class="article-image">
+                        <a href="/{{.Slug}}">
+                            <img src="{{.FeaturedImage}}" alt="{{.Title}}" class="featured-image">
+                        </a>
+                    </div>
+                    {{end}}
+                    <div class="article-content">
+                        <header class="article-header">
+                            <h3 class="article-title">
+                                <a href="/{{.Slug}}" class="title-link">{{.Title}}</a>
+                            </h3>
+                            {{if .Excerpt}}
+                            <p class="article-excerpt">{{.Excerpt}}</p>
+                            {{end}}
+                        </header>
+                        <footer class="article-meta">
+                            {{if .Author}}<span class="article-author">{{.Author}}</span>{{end}}
+                            {{if .TimeAgo}}<time class="article-date">{{.TimeAgo}}</time>{{end}}
+                        </footer>
+                    </div>
+                </article>
+                {{end}}
+            </div>
+        </div>
+    </section>
+    {{end}}
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/category.js"></script>
+{{end}}

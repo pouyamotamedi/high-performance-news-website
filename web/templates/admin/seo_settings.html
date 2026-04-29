@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Settings - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin-sidebar.css">
+    <style>
+        body { visibility: hidden; }
+        body.authenticated { visibility: visible; }
+        .seo-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0;
+            flex-wrap: wrap;
+        }
+        .seo-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .seo-tab:hover { color: #3b82f6; }
+        .seo-tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            font-weight: 600;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        @media (max-width: 1024px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        .settings-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .form-hint {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .char-counter {
+            font-size: 0.85rem;
+            color: #6b7280;
+            text-align: right;
+        }
+        .char-counter.warning { color: #f59e0b; }
+        .char-counter.error { color: #ef4444; }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px; width: 20px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider { background-color: #3b82f6; }
+        input:checked + .toggle-slider:before { transform: translateX(24px); }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .toggle-row:last-child { border-bottom: none; }
+        .preview-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .preview-title {
+            color: #1a0dab;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+        .preview-url {
+            color: #006621;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        .preview-desc {
+            color: #545454;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-success { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .alert-error { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .validation-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+        }
+        .validation-pass { color: #10b981; }
+        .validation-fail { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <!-- Authentication Loading Overlay -->
+    <div id="authLoading" class="auth-loading">
+        <div style="text-align: center;">
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: #64748b;">Verifying authentication...</p>
+        </div>
+    </div>
+
+    <div class="admin-layout" id="adminContent" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/admin/dashboard" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">📰</div>
+                    <span>News Admin</span>
+                </a>
+                <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <a href="/admin/dashboard" class="nav-link">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Content</div>
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">📝</span>
+                            <span class="nav-text">Content</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/content/create" class="nav-link">Create Article</a>
+                            <a href="/admin/content/articles" class="nav-link">Manage Articles</a>
+                            <a href="/admin/content/categories" class="nav-link">Categories</a>
+                            <a href="/admin/content/tags" class="nav-link">Tags</a>
+                            <a href="/admin/content/media" class="nav-link">Media Library</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">🔗</span>
+                            <span class="nav-text">Autolinking</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/autolinking" class="nav-link">Overview</a>
+                            <a href="/admin/keyword-banks" class="nav-link">Keyword Banks</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">💬</span>
+                            <span class="nav-text">Comments</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/comments" class="nav-link">Moderate</a>
+                            <a href="/admin/comments/analytics" class="nav-link">Analytics</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">SEO & Marketing</div>
+                    <div class="nav-item">
+                        <a href="/admin/seo" class="nav-link active">
+                            <span class="nav-icon">🔍</span>
+                            <span class="nav-text">SEO Settings</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <div class="nav-item">
+                        <a href="/admin/content-ingestion" class="nav-link">
+                            <span class="nav-icon">📥</span>
+                            <span class="nav-text">Content Ingestion</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/admin/analytics" class="nav-link">
+                            <span class="nav-icon">📈</span>
+                            <span class="nav-text">Analytics</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/admin/system" class="nav-link">
+                            <span class="nav-icon">🖥️</span>
+                            <span class="nav-text">System Monitor</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="header-left">
+                    <button class="header-btn mobile-menu-btn" onclick="toggleMobileSidebar()" style="display: none;">☰</button>
+                    <h1 class="page-title">🔍 SEO Settings</h1>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" onclick="window.open('/', '_blank')" title="View Site">🌐</button>
+                    <div class="user-dropdown">
+                        <div class="user-menu" onclick="toggleUserDropdown()">
+                            <div class="user-avatar" id="userAvatar">A</div>
+                            <div class="user-info">
+                                <div class="user-name" id="userName">Admin</div>
+                                <div class="user-role" id="userRole">Administrator</div>
+                            </div>
+                        </div>
+                        <div class="dropdown-menu" id="userDropdown">
+                            <a href="/admin/profile" class="dropdown-item">👤 Profile</a>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item" onclick="logout()" style="color: #dc2626;">🚪 Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="admin-content">
+                <div id="alertContainer"></div>
+
+                <div class="seo-tabs">
+                    <button class="seo-tab active" onclick="switchTab('general')">General</button>
+                    <button class="seo-tab" onclick="switchTab('meta')">Meta Templates</button>
+                    <button class="seo-tab" onclick="switchTab('social')">Social Media</button>
+                    <button class="seo-tab" onclick="switchTab('sitemap')">Sitemap & RSS</button>
+                    <button class="seo-tab" onclick="switchTab('robots')">Robots.txt</button>
+                    <button class="seo-tab" onclick="switchTab('validation')">Validation</button>
+                </div>
+
+                <!-- General Settings Tab -->
+                <div id="tab-general" class="tab-content active">
+                    <div class="grid-2">
+                        <div class="settings-card">
+                            <div class="card-title">📌 Site Identity</div>
+                            <div class="form-group">
+                                <label for="siteName">Site Name</label>
+                                <input type="text" id="siteName" placeholder="Your News Website">
+                                <div class="form-hint">Used in titles and schema markup</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="siteTagline">Site Tagline</label>
+                                <input type="text" id="siteTagline" placeholder="Breaking News & Latest Updates">
+                            </div>
+                            <div class="form-group">
+                                <label for="siteUrl">Site URL</label>
+                                <input type="url" id="siteUrl" placeholder="https://example.com">
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <div class="card-title">🏢 Publisher Information</div>
+                            <div class="form-group">
+                                <label for="publisherName">Publisher Name</label>
+                                <input type="text" id="publisherName" placeholder="News Organization Inc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="publisherLogo">Publisher Logo URL</label>
+                                <input type="url" id="publisherLogo" placeholder="/static/images/logo.png">
+                                <div class="form-hint">Recommended: 600x60 pixels for Google News</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="defaultLanguage">Default Language</label>
+                                <select id="defaultLanguage">
+                                    <option value="fa">Persian (fa)</option>
+                                    <option value="en">English (en)</option>
+                                    <option value="ar">Arabic (ar)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="card-title">⚙️ SEO Features</div>
+                        <div class="toggle-row">
+                            <div>
+                                <strong>Auto-generate Meta Descriptions</strong>
+                                <div class="form-hint">Automatically create meta descriptions from article excerpts</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoMetaDesc" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <div>
+                                <strong>Schema Markup</strong>
+                                <div class="form-hint">Add structured data (JSON-LD) to pages</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="enableSchema" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <div>
+                                <strong>Canonical URLs</strong>
+                                <div class="form-hint">Add canonical link tags to prevent duplicate content</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="enableCanonical" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveGeneralSettings()">Save General Settings</button>
+                    </div>
+                </div>
+
+                <!-- Meta Templates Tab -->
+                <div id="tab-meta" class="tab-content">
+                    <div class="settings-card">
+                        <div class="card-title">📝 Homepage Meta Tags</div>
+                        <div class="form-group">
+                            <label for="homeTitle">Homepage Title</label>
+                            <input type="text" id="homeTitle" placeholder="Your News Site - Breaking News" maxlength="70" oninput="updateCharCounter(this, 60)">
+                            <div class="char-counter" id="homeTitle-counter">0/60 characters</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="homeDesc">Homepage Description</label>
+                            <textarea id="homeDesc" placeholder="Get the latest breaking news..." maxlength="170" oninput="updateCharCounter(this, 160)"></textarea>
+                            <div class="char-counter" id="homeDesc-counter">0/160 characters</div>
+                        </div>
+                        <div class="preview-box">
+                            <div class="preview-title" id="homePreviewTitle">Your News Site - Breaking News</div>
+                            <div class="preview-url" id="homePreviewUrl">https://example.com</div>
+                            <div class="preview-desc" id="homePreviewDesc">Get the latest breaking news...</div>
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="settings-card">
+                            <div class="card-title">📰 Article Title Template</div>
+                            <div class="form-group">
+                                <label for="articleTitleTemplate">Title Format</label>
+                                <input type="text" id="articleTitleTemplate" placeholder="{title} - {site_name}">
+                                <div class="form-hint">Variables: {title}, {site_name}, {category}</div>
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <div class="card-title">📁 Category Title Template</div>
+                            <div class="form-group">
+                                <label for="categoryTitleTemplate">Title Format</label>
+                                <input type="text" id="categoryTitleTemplate" placeholder="{category} - {site_name}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="card-title">🏷️ Default Schema Type</div>
+                        <div class="form-group">
+                            <label for="defaultSchemaType">Article Schema Type</label>
+                            <select id="defaultSchemaType">
+                                <option value="NewsArticle" selected>NewsArticle (Recommended)</option>
+                                <option value="Article">Article</option>
+                                <option value="BlogPosting">BlogPosting</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveMetaTemplates()">Save Meta Templates</button>
+                    </div>
+                </div>
+
+                <!-- Social Media Tab -->
+                <div id="tab-social" class="tab-content">
+                    <div class="grid-2">
+                        <div class="settings-card">
+                            <div class="card-title">📘 Facebook / Open Graph</div>
+                            <div class="form-group">
+                                <label for="ogSiteName">OG Site Name</label>
+                                <input type="text" id="ogSiteName" placeholder="Your News Site">
+                            </div>
+                            <div class="form-group">
+                                <label for="ogDefaultImage">Default OG Image</label>
+                                <input type="url" id="ogDefaultImage" placeholder="/static/images/og-default.jpg">
+                                <div class="form-hint">Recommended: 1200x630 pixels</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="fbAppId">Facebook App ID (optional)</label>
+                                <input type="text" id="fbAppId" placeholder="123456789">
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <div class="card-title">🐦 Twitter Cards</div>
+                            <div class="form-group">
+                                <label for="twitterSite">Twitter @username</label>
+                                <input type="text" id="twitterSite" placeholder="@yournewssite">
+                            </div>
+                            <div class="form-group">
+                                <label for="twitterCardType">Card Type</label>
+                                <select id="twitterCardType">
+                                    <option value="summary_large_image" selected>Summary Large Image</option>
+                                    <option value="summary">Summary</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveSocialSettings()">Save Social Settings</button>
+                    </div>
+                </div>
+
+                <!-- Sitemap & RSS Tab -->
+                <div id="tab-sitemap" class="tab-content">
+                    <div class="grid-2">
+                        <div class="settings-card">
+                            <div class="card-title">🗺️ Sitemap Settings</div>
+                            <div class="toggle-row">
+                                <div>
+                                    <strong>Enable XML Sitemap</strong>
+                                    <div class="form-hint">Generate sitemap.xml for search engines</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="enableSitemap" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="toggle-row">
+                                <div>
+                                    <strong>Enable News Sitemap</strong>
+                                    <div class="form-hint">Google News specific sitemap</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="enableNewsSitemap" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-secondary" onclick="regenerateSitemap()">🔄 Regenerate</button>
+                                <button class="btn btn-secondary" onclick="viewSitemap()">👁️ View</button>
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <div class="card-title">📡 RSS Feed Settings</div>
+                            <div class="toggle-row">
+                                <div>
+                                    <strong>Enable RSS Feeds</strong>
+                                    <div class="form-hint">Generate RSS feeds for syndication</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="enableRSS" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label for="rssDelayHours">RSS Publishing Delay (hours)</label>
+                                <input type="number" id="rssDelayHours" value="2" min="0" max="24">
+                                <div class="form-hint">Delay before articles appear in RSS</div>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-secondary" onclick="refreshRSSCache()">🔄 Refresh Cache</button>
+                                <button class="btn btn-secondary" onclick="viewRSSFeed()">👁️ View Feed</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="card-title">🔗 Feed URLs</div>
+                        <div class="form-group">
+                            <label>Main RSS Feed</label>
+                            <input type="text" readonly id="mainRssUrl" onclick="copyToClipboard(this)">
+                        </div>
+                        <div class="form-group">
+                            <label>Google News RSS</label>
+                            <input type="text" readonly id="googleNewsRssUrl" onclick="copyToClipboard(this)">
+                        </div>
+                        <div class="form-group">
+                            <label>Sitemap Index</label>
+                            <input type="text" readonly id="sitemapUrl" onclick="copyToClipboard(this)">
+                        </div>
+                        <div class="form-hint">Click any URL to copy to clipboard</div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveSitemapSettings()">Save Settings</button>
+                    </div>
+                </div>
+
+                <!-- Robots.txt Tab -->
+                <div id="tab-robots" class="tab-content">
+                    <div class="settings-card">
+                        <div class="card-title">🤖 Robots.txt Configuration</div>
+                        <div class="form-group">
+                            <label for="robotsTxt">Robots.txt Content</label>
+                            <textarea id="robotsTxt" style="min-height: 300px; font-family: monospace;">User-agent: *
+Allow: /
+
+Sitemap: https://a.10top.shop/sitemap.xml
+
+Crawl-delay: 1
+
+Disallow: /admin/
+Disallow: /api/
+Allow: /api/v1/articles/
+Allow: /static/</textarea>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="saveRobotsTxt()">Save Robots.txt</button>
+                            <button class="btn btn-secondary" onclick="viewRobotsTxt()">👁️ View Live</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation Tab -->
+                <div id="tab-validation" class="tab-content">
+                    <div class="grid-2">
+                        <div class="settings-card">
+                            <div class="card-title">✅ SEO Health Check</div>
+                            <div id="healthCheckResults">
+                                <p style="color: #6b7280;">Click the button below to run a health check.</p>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="runHealthCheck()">Run Health Check</button>
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <div class="card-title">🔗 External Tools</div>
+                            <div class="form-group">
+                                <a href="https://search.google.com/search-console" target="_blank" class="btn btn-secondary" style="display: inline-block; text-decoration: none; margin-bottom: 0.5rem;">Google Search Console</a>
+                            </div>
+                            <div class="form-group">
+                                <a href="https://validator.w3.org/feed/" target="_blank" class="btn btn-secondary" style="display: inline-block; text-decoration: none; margin-bottom: 0.5rem;">W3C Feed Validator</a>
+                            </div>
+                            <div class="form-group">
+                                <a href="https://search.google.com/test/rich-results" target="_blank" class="btn btn-secondary" style="display: inline-block; text-decoration: none;">Rich Results Test</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Immediate auth check
+        (function() {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            if (!token || (role !== 'admin' && role !== 'editor')) {
+                window.location.href = '/admin/login';
+                return;
+            }
+            document.body.classList.add('authenticated');
+        })();
+
+        let csrfToken = null;
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', document.getElementById('sidebar').classList.contains('collapsed'));
+        }
+
+        function toggleMobileSidebar() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+        }
+
+        function toggleSubmenu(element) {
+            const navItem = element.closest('.nav-item');
+            navItem.classList.toggle('open');
+        }
+
+        function toggleUserDropdown() {
+            document.getElementById('userDropdown').classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.user-dropdown')) {
+                document.getElementById('userDropdown').classList.remove('show');
+            }
+        });
+
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.getElementById('sidebar').classList.add('collapsed');
+        }
+
+        async function getCSRFToken() {
+            try {
+                const response = await fetch('/api/v1/auth/csrf-token');
+                const data = await response.json();
+                csrfToken = data.csrf_token;
+                return csrfToken;
+            } catch (error) {
+                console.error('Failed to get CSRF token:', error);
+                return null;
+            }
+        }
+
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            
+            if (!token || (role !== 'admin' && role !== 'editor')) {
+                window.location.href = '/admin/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/auth/verify', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_role');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+
+                await getCSRFToken();
+                document.getElementById('authLoading').classList.add('hidden');
+                document.getElementById('adminContent').style.display = 'flex';
+                
+                const username = localStorage.getItem('username') || 'Admin';
+                document.getElementById('userName').textContent = username;
+                document.getElementById('userAvatar').textContent = username.charAt(0).toUpperCase();
+                document.getElementById('userRole').textContent = role === 'admin' ? 'Administrator' : 'Editor';
+                
+                loadSEOSettings();
+                initFeedUrls();
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = '/admin/login';
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/v1/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+            } catch (error) {
+                console.error('Logout request failed:', error);
+            }
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('username');
+            window.location.href = '/admin/login';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.seo-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
+
+        function updateCharCounter(input, limit) {
+            const counter = document.getElementById(input.id + '-counter');
+            const length = input.value.length;
+            counter.textContent = `${length}/${limit} characters`;
+            counter.classList.remove('warning', 'error');
+            if (length > limit) {
+                counter.classList.add('error');
+            } else if (length > limit * 0.9) {
+                counter.classList.add('warning');
+            }
+            // Update preview
+            if (input.id === 'homeTitle') {
+                document.getElementById('homePreviewTitle').textContent = input.value || 'Your News Site';
+            } else if (input.id === 'homeDesc') {
+                document.getElementById('homePreviewDesc').textContent = input.value || 'Description...';
+            }
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+
+        function initFeedUrls() {
+            const baseUrl = window.location.origin;
+            document.getElementById('mainRssUrl').value = baseUrl + '/rss';
+            document.getElementById('googleNewsRssUrl').value = baseUrl + '/rss/google-news';
+            document.getElementById('sitemapUrl').value = baseUrl + '/sitemap.xml';
+            document.getElementById('homePreviewUrl').textContent = baseUrl;
+        }
+
+        function copyToClipboard(input) {
+            input.select();
+            document.execCommand('copy');
+            showAlert('URL copied to clipboard!', 'success');
+        }
+
+        async function loadSEOSettings() {
+            try {
+                const response = await fetch('/api/v1/admin/seo/settings', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.settings) {
+                        // Populate form fields
+                        if (data.settings.site_name) document.getElementById('siteName').value = data.settings.site_name;
+                        if (data.settings.site_tagline) document.getElementById('siteTagline').value = data.settings.site_tagline;
+                        if (data.settings.site_url) document.getElementById('siteUrl').value = data.settings.site_url;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load SEO settings:', error);
+            }
+        }
+
+        async function saveGeneralSettings() {
+            const settings = {
+                site_name: document.getElementById('siteName').value,
+                site_tagline: document.getElementById('siteTagline').value,
+                site_url: document.getElementById('siteUrl').value,
+                publisher_name: document.getElementById('publisherName').value,
+                publisher_logo: document.getElementById('publisherLogo').value,
+                default_language: document.getElementById('defaultLanguage').value,
+                auto_meta_desc: document.getElementById('autoMetaDesc').checked,
+                enable_schema: document.getElementById('enableSchema').checked,
+                enable_canonical: document.getElementById('enableCanonical').checked
+            };
+            await saveSEOSettings(settings, 'General settings saved!');
+        }
+
+        async function saveMetaTemplates() {
+            const settings = {
+                home_title: document.getElementById('homeTitle').value,
+                home_desc: document.getElementById('homeDesc').value,
+                article_title_template: document.getElementById('articleTitleTemplate').value,
+                category_title_template: document.getElementById('categoryTitleTemplate').value,
+                default_schema_type: document.getElementById('defaultSchemaType').value
+            };
+            await saveSEOSettings(settings, 'Meta templates saved!');
+        }
+
+        async function saveSocialSettings() {
+            const settings = {
+                og_site_name: document.getElementById('ogSiteName').value,
+                og_default_image: document.getElementById('ogDefaultImage').value,
+                fb_app_id: document.getElementById('fbAppId').value,
+                twitter_site: document.getElementById('twitterSite').value,
+                twitter_card_type: document.getElementById('twitterCardType').value
+            };
+            await saveSEOSettings(settings, 'Social settings saved!');
+        }
+
+        async function saveSitemapSettings() {
+            const settings = {
+                enable_sitemap: document.getElementById('enableSitemap').checked,
+                enable_news_sitemap: document.getElementById('enableNewsSitemap').checked,
+                enable_rss: document.getElementById('enableRSS').checked,
+                rss_delay_hours: parseInt(document.getElementById('rssDelayHours').value)
+            };
+            await saveSEOSettings(settings, 'Sitemap & RSS settings saved!');
+        }
+
+        async function saveSEOSettings(settings, successMessage) {
+            try {
+                const response = await fetch('/api/v1/admin/seo/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify(settings)
+                });
+                if (response.ok) {
+                    showAlert(successMessage, 'success');
+                } else {
+                    showAlert('Failed to save settings', 'error');
+                }
+            } catch (error) {
+                console.error('Save failed:', error);
+                showAlert('Failed to save settings', 'error');
+            }
+        }
+
+        async function saveRobotsTxt() {
+            try {
+                const response = await fetch('/api/v1/admin/seo/robots', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ content: document.getElementById('robotsTxt').value })
+                });
+                if (response.ok) {
+                    showAlert('Robots.txt saved!', 'success');
+                } else {
+                    showAlert('Failed to save robots.txt', 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to save robots.txt', 'error');
+            }
+        }
+
+        function viewRobotsTxt() { window.open('/robots.txt', '_blank'); }
+        function viewSitemap() { window.open('/sitemap.xml', '_blank'); }
+        function viewRSSFeed() { window.open('/rss', '_blank'); }
+
+        async function regenerateSitemap() {
+            showAlert('Regenerating sitemap...', 'success');
+            // API call would go here
+        }
+
+        async function refreshRSSCache() {
+            showAlert('Refreshing RSS cache...', 'success');
+            // API call would go here
+        }
+
+        async function runHealthCheck() {
+            const results = document.getElementById('healthCheckResults');
+            results.innerHTML = '<p>Running health check...</p>';
+            
+            const checks = [
+                { name: 'Sitemap accessible', url: '/sitemap.xml' },
+                { name: 'RSS feed accessible', url: '/rss' },
+                { name: 'Robots.txt accessible', url: '/robots.txt' }
+            ];
+            
+            let html = '';
+            for (const check of checks) {
+                try {
+                    const response = await fetch(check.url, { method: 'HEAD' });
+                    const passed = response.ok;
+                    html += `<div class="validation-item">
+                        <span class="validation-icon ${passed ? 'validation-pass' : 'validation-fail'}">${passed ? '✓' : '✗'}</span>
+                        <span>${check.name}</span>
+                    </div>`;
+                } catch (e) {
+                    html += `<div class="validation-item">
+                        <span class="validation-icon validation-fail">✗</span>
+                        <span>${check.name}</span>
+                    </div>`;
+                }
+            }
+            results.innerHTML = html;
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

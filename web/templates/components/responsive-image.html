@@ -1,0 +1,156 @@
+{{/* Responsive Image Component with WebP/AVIF support and srcset */}}
+
+{{define "responsive-image"}}
+{{/*
+    Usage: {{template "responsive-image" (dict "src" .ImageURL "alt" .Title "class" "hero-img" "lazy" true "sizes" "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw")}}
+    
+    Parameters:
+    - src: Original image URL (required)
+    - alt: Alt text for accessibility (required)
+    - class: CSS class(es) to apply (optional)
+    - lazy: Whether to lazy load (default: true)
+    - sizes: Responsive sizes attribute (optional)
+    - width: Image width (optional)
+    - height: Image height (optional)
+    - priority: Whether this is a high-priority image like hero (default: false)
+*/}}
+<picture>
+    {{/* AVIF format - best compression */}}
+    {{if .src}}
+    <source 
+        type="image/avif"
+        srcset="{{imageVariant .src "320" "avif"}} 320w,
+                {{imageVariant .src "640" "avif"}} 640w,
+                {{imageVariant .src "1024" "avif"}} 1024w,
+                {{imageVariant .src "1280" "avif"}} 1280w"
+        {{if .sizes}}sizes="{{.sizes}}"{{end}}>
+    
+    {{/* WebP format - good compression, wide support */}}
+    <source 
+        type="image/webp"
+        srcset="{{imageVariant .src "320" "webp"}} 320w,
+                {{imageVariant .src "640" "webp"}} 640w,
+                {{imageVariant .src "1024" "webp"}} 1024w,
+                {{imageVariant .src "1280" "webp"}} 1280w"
+        {{if .sizes}}sizes="{{.sizes}}"{{end}}>
+    
+    {{/* JPEG/PNG fallback with srcset */}}
+    <img 
+        src="{{.src}}"
+        srcset="{{imageVariant .src "320" ""}} 320w,
+                {{imageVariant .src "640" ""}} 640w,
+                {{imageVariant .src "1024" ""}} 1024w,
+                {{imageVariant .src "1280" ""}} 1280w"
+        {{if .sizes}}sizes="{{.sizes}}"{{end}}
+        alt="{{.alt}}"
+        {{if .class}}class="{{.class}}"{{end}}
+        {{if .width}}width="{{.width}}"{{end}}
+        {{if .height}}height="{{.height}}"{{end}}
+        {{if and (not .priority) (ne .lazy false)}}loading="lazy"{{end}}
+        {{if .priority}}fetchpriority="high"{{end}}
+        decoding="async">
+    {{else}}
+    {{/* Placeholder for missing images */}}
+    <div class="{{if .class}}{{.class}}{{end}} placeholder-img">
+        <div class="placeholder-content">
+            <span class="placeholder-icon">📰</span>
+            <span class="placeholder-text">{{if .alt}}{{.alt}}{{else}}Image{{end}}</span>
+        </div>
+    </div>
+    {{end}}
+</picture>
+{{end}}
+
+{{/* Simple responsive image without picture element */}}
+{{define "responsive-image-simple"}}
+{{/*
+    Usage: {{template "responsive-image-simple" (dict "src" .ImageURL "alt" .Title "class" "article-img" "lazy" true)}}
+*/}}
+{{if .src}}
+<img 
+    src="{{.src}}"
+    srcset="{{imageVariant .src "320" ""}} 320w,
+            {{imageVariant .src "640" ""}} 640w,
+            {{imageVariant .src "1024" ""}} 1024w"
+    sizes="{{if .sizes}}{{.sizes}}{{else}}(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw{{end}}"
+    alt="{{.alt}}"
+    {{if .class}}class="{{.class}}"{{end}}
+    {{if .width}}width="{{.width}}"{{end}}
+    {{if .height}}height="{{.height}}"{{end}}
+    {{if and (not .priority) (ne .lazy false)}}loading="lazy"{{end}}
+    {{if .priority}}fetchpriority="high"{{end}}
+    decoding="async">
+{{else}}
+<div class="{{if .class}}{{.class}}{{end}} placeholder-img">
+    <span class="placeholder-icon">📰</span>
+</div>
+{{end}}
+{{end}}
+
+{{/* Hero image with high priority loading */}}
+{{define "hero-image"}}
+{{/*
+    Usage: {{template "hero-image" (dict "src" .FeaturedImage "alt" .Title)}}
+*/}}
+<picture>
+    {{if .src}}
+    <source 
+        type="image/avif"
+        srcset="{{imageVariant .src "640" "avif"}} 640w,
+                {{imageVariant .src "1024" "avif"}} 1024w,
+                {{imageVariant .src "1280" "avif"}} 1280w,
+                {{imageVariant .src "1920" "avif"}} 1920w"
+        sizes="(max-width: 1024px) 100vw, 66vw">
+    <source 
+        type="image/webp"
+        srcset="{{imageVariant .src "640" "webp"}} 640w,
+                {{imageVariant .src "1024" "webp"}} 1024w,
+                {{imageVariant .src "1280" "webp"}} 1280w,
+                {{imageVariant .src "1920" "webp"}} 1920w"
+        sizes="(max-width: 1024px) 100vw, 66vw">
+    <img 
+        src="{{.src}}"
+        srcset="{{imageVariant .src "640" ""}} 640w,
+                {{imageVariant .src "1024" ""}} 1024w,
+                {{imageVariant .src "1280" ""}} 1280w,
+                {{imageVariant .src "1920" ""}} 1920w"
+        sizes="(max-width: 1024px) 100vw, 66vw"
+        alt="{{.alt}}"
+        class="hero-img"
+        width="1280"
+        height="720"
+        fetchpriority="high"
+        decoding="async">
+    {{else}}
+    <div class="hero-img placeholder-img">
+        <div class="placeholder-content">
+            <span class="placeholder-icon">📰</span>
+            <span class="placeholder-text">{{if .alt}}{{.alt}}{{else}}Featured Image{{end}}</span>
+        </div>
+    </div>
+    {{end}}
+</picture>
+{{end}}
+
+{{/* Thumbnail image for cards */}}
+{{define "thumbnail-image"}}
+{{/*
+    Usage: {{template "thumbnail-image" (dict "src" .FeaturedImage "alt" .Title "class" "article-img")}}
+*/}}
+{{if .src}}
+<img 
+    src="{{imageVariant .src "320" ""}}"
+    srcset="{{imageVariant .src "160" ""}} 160w,
+            {{imageVariant .src "320" ""}} 320w,
+            {{imageVariant .src "480" ""}} 480w"
+    sizes="(max-width: 640px) 50vw, 200px"
+    alt="{{.alt}}"
+    class="{{if .class}}{{.class}}{{else}}thumbnail-img{{end}}"
+    loading="lazy"
+    decoding="async">
+{{else}}
+<div class="{{if .class}}{{.class}}{{else}}thumbnail-img{{end}} placeholder-img">
+    <span class="placeholder-icon">📰</span>
+</div>
+{{end}}
+{{end}}

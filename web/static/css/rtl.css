@@ -1,0 +1,464 @@
+/* RTL (Right-to-Left) language support */
+
+/* Base RTL adjustments */
+.rtl-dir {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Typography adjustments */
+.rtl-dir h1,
+.rtl-dir h2,
+.rtl-dir h3,
+.rtl-dir h4,
+.rtl-dir h5,
+.rtl-dir h6 {
+  text-align: right;
+}
+
+.rtl-dir p {
+  text-align: right;
+}
+
+/* List adjustments */
+.rtl-dir ul,
+.rtl-dir ol {
+  padding-left: 0;
+  padding-right: var(--space-6);
+}
+
+.rtl-dir li {
+  text-align: right;
+}
+
+/* Navigation adjustments */
+.rtl-dir .nav-menu {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .nav-item {
+  margin-left: var(--space-4);
+  margin-right: 0;
+}
+
+.rtl-dir .nav-item:first-child {
+  margin-left: 0;
+}
+
+.rtl-dir .nav-item:last-child {
+  margin-right: var(--space-4);
+}
+
+/* Header adjustments */
+.rtl-dir .header-container {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .site-logo {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.rtl-dir .header-actions {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Search adjustments */
+.rtl-dir .search-input-group {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .search-input {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding-right: var(--space-4);
+  padding-left: var(--space-12);
+}
+
+.rtl-dir .search-button {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  right: auto;
+  left: 0;
+}
+
+/* Breadcrumb adjustments */
+.rtl-dir .breadcrumb {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .breadcrumb-separator {
+  transform: scaleX(-1);
+}
+
+/* Article card adjustments */
+.rtl-dir .article-card {
+  text-align: right;
+}
+
+.rtl-dir .article-meta {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .meta-primary {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.rtl-dir .meta-secondary {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+/* Tag adjustments */
+.rtl-dir .article-tags {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .tag-link {
+  margin-left: var(--space-2);
+  margin-right: 0;
+}
+
+.rtl-dir .tag-link:first-child {
+  margin-left: 0;
+}
+
+/* Form adjustments */
+.rtl-dir .form-label {
+  text-align: right;
+}
+
+.rtl-dir .form-input,
+.rtl-dir .form-textarea,
+.rtl-dir .form-select {
+  text-align: right;
+}
+
+.rtl-dir .form-checkbox,
+.rtl-dir .form-radio {
+  margin-left: var(--space-2);
+  margin-right: 0;
+}
+
+/* Button adjustments */
+.rtl-dir .btn {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .btn svg {
+  margin-left: var(--space-2);
+  margin-right: 0;
+}
+
+.rtl-dir .btn svg:first-child {
+  margin-left: 0;
+  margin-right: var(--space-2);
+}
+
+/* Pagination adjustments */
+.rtl-dir .pagination-list {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .pagination-prev svg {
+  transform: scaleX(-1);
+}
+
+.rtl-dir .pagination-next svg {
+  transform: scaleX(-1);
+}
+
+/* Dropdown adjustments */
+.rtl-dir .language-dropdown,
+.rtl-dir .user-dropdown {
+  right: auto;
+  left: 0;
+}
+
+/* Mobile menu adjustments */
+.rtl-dir .mobile-menu-toggle {
+  margin-left: 0;
+  margin-right: var(--space-4);
+}
+
+.rtl-dir .mobile-nav-overlay {
+  right: auto;
+  left: 0;
+}
+
+.rtl-dir .mobile-navigation {
+  text-align: right;
+}
+
+/* Footer adjustments */
+.rtl-dir .footer-content {
+  text-align: right;
+}
+
+.rtl-dir .footer-links {
+  text-align: right;
+}
+
+.rtl-dir .footer-bottom-content {
+  flex-direction: row-reverse;
+}
+
+/* Social links adjustments */
+.rtl-dir .social-links {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .social-link {
+  margin-left: var(--space-3);
+  margin-right: 0;
+}
+
+.rtl-dir .social-link:first-child {
+  margin-left: 0;
+}
+
+/* Article page adjustments */
+.rtl-dir .article-header {
+  text-align: right;
+}
+
+.rtl-dir .article-sharing {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .sharing-buttons {
+  margin-left: 0;
+  margin-right: var(--space-4);
+}
+
+.rtl-dir .share-button {
+  margin-left: var(--space-2);
+  margin-right: 0;
+}
+
+.rtl-dir .share-button:first-child {
+  margin-left: 0;
+}
+
+/* Comment adjustments */
+.rtl-dir .comment {
+  text-align: right;
+}
+
+.rtl-dir .comment-header {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .comment-author {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.rtl-dir .comment-date {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.rtl-dir .comment-replies {
+  margin-right: var(--space-6);
+  margin-left: 0;
+  border-right: 2px solid var(--color-border-primary);
+  border-left: none;
+  padding-right: var(--space-4);
+  padding-left: 0;
+}
+
+/* Category and tag page adjustments */
+.rtl-dir .category-header,
+.rtl-dir .tag-header {
+  text-align: right;
+}
+
+.rtl-dir .category-actions,
+.rtl-dir .tag-actions {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .sort-options {
+  margin-left: 0;
+  margin-right: var(--space-4);
+}
+
+.rtl-dir .view-toggle {
+  margin-right: 0;
+  margin-left: var(--space-4);
+}
+
+/* Grid adjustments for RTL */
+.rtl-dir .grid {
+  direction: ltr; /* Keep grid direction LTR for proper layout */
+}
+
+.rtl-dir .grid > * {
+  direction: rtl; /* But content inside should be RTL */
+}
+
+/* Flexbox adjustments */
+.rtl-dir .flex {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .flex-col {
+  flex-direction: column;
+}
+
+.rtl-dir .justify-start {
+  justify-content: flex-end;
+}
+
+.rtl-dir .justify-end {
+  justify-content: flex-start;
+}
+
+/* Text alignment utilities for RTL */
+.rtl-dir .text-left {
+  text-align: right;
+}
+
+.rtl-dir .text-right {
+  text-align: left;
+}
+
+/* Margin and padding adjustments */
+.rtl-dir .ml-auto {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.rtl-dir .mr-auto {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.rtl-dir .pl-4 {
+  padding-left: 0;
+  padding-right: var(--space-4);
+}
+
+.rtl-dir .pr-4 {
+  padding-right: 0;
+  padding-left: var(--space-4);
+}
+
+/* Icon adjustments for RTL */
+.rtl-dir .icon-arrow-right {
+  transform: scaleX(-1);
+}
+
+.rtl-dir .icon-arrow-left {
+  transform: scaleX(-1);
+}
+
+/* Specific component adjustments */
+
+/* Newsletter form */
+.rtl-dir .newsletter-input-group {
+  flex-direction: row-reverse;
+}
+
+.rtl-dir .newsletter-input {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.rtl-dir .newsletter-submit {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+/* Stats section */
+.rtl-dir .stats-grid {
+  direction: ltr; /* Keep grid LTR */
+}
+
+.rtl-dir .stat-item {
+  direction: rtl; /* Content RTL */
+  text-align: center; /* Center align stats */
+}
+
+/* Hero section */
+.rtl-dir .hero-content {
+  text-align: right;
+}
+
+.rtl-dir .hero-search {
+  direction: ltr; /* Keep search form LTR for better UX */
+}
+
+/* Featured articles */
+.rtl-dir .featured-main {
+  text-align: right;
+}
+
+.rtl-dir .featured-content {
+  text-align: right;
+}
+
+/* Categories showcase */
+.rtl-dir .category-card {
+  text-align: right;
+}
+
+/* Tags cloud */
+.rtl-dir .tags-cloud {
+  flex-direction: row-reverse;
+  flex-wrap: wrap-reverse;
+}
+
+/* Related content */
+.rtl-dir .related-articles,
+.rtl-dir .related-categories,
+.rtl-dir .related-tags {
+  text-align: right;
+}
+
+/* Empty state */
+.rtl-dir .empty-state {
+  text-align: right;
+}
+
+/* Loading states */
+.rtl-dir .loading::after {
+  right: 50%;
+  left: auto;
+  margin-right: -10px;
+  margin-left: 0;
+}
+
+/* Responsive adjustments for RTL */
+@media (max-width: 768px) {
+  .rtl-dir .mobile-nav-overlay {
+    right: auto;
+    left: 0;
+  }
+  
+  .rtl-dir .search-overlay {
+    text-align: right;
+  }
+  
+  .rtl-dir .theme-toggle {
+    right: auto;
+    left: var(--space-4);
+  }
+  
+  .rtl-dir .back-to-top {
+    left: auto;
+    right: var(--space-4);
+  }
+}
+
+/* Print adjustments for RTL */
+@media print {
+  .rtl-dir * {
+    direction: rtl !important;
+    text-align: right !important;
+  }
+  
+  .rtl-dir .grid,
+  .rtl-dir .hero-search {
+    direction: rtl !important;
+  }
+}

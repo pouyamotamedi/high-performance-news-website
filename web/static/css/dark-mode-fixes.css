@@ -1,0 +1,190 @@
+/* Dark Mode Comprehensive Fixes */
+
+/* Issue 1: Fix text contrast - titles with #333 color */
+[data-theme="dark"] .hero-title,
+[data-theme="dark"] .article-title,
+[data-theme="dark"] .category-title,
+[data-theme="dark"] .trending-title,
+[data-theme="dark"] .section-title,
+[data-theme="dark"] .secondary-title,
+[data-theme="dark"] .hero-link,
+[data-theme="dark"] .article-link,
+[data-theme="dark"] .secondary-link,
+[data-theme="dark"] .trending-link {
+    color: var(--color-text-primary) !important;
+}
+
+[data-theme="dark"] .hero-link:hover,
+[data-theme="dark"] .article-link:hover,
+[data-theme="dark"] .secondary-link:hover,
+[data-theme="dark"] .trending-link:hover {
+    color: var(--color-primary) !important;
+}
+
+/* Issue 2: Fix Newsletter and Tags colors for dark mode */
+[data-theme="dark"] .newsletter-section {
+    background: linear-gradient(135deg, #1e40af, #1d4ed8) !important;
+    border: 1px solid var(--color-border-primary);
+}
+
+[data-theme="dark"] .newsletter-button {
+    background: #059669 !important;
+    color: white;
+}
+
+[data-theme="dark"] .newsletter-button:hover {
+    background: #047857 !important;
+}
+
+[data-theme="dark"] .tag-item {
+    background: #1e40af !important;
+    border-color: #1e40af !important;
+}
+
+[data-theme="dark"] .tag-item:hover {
+    background: #1d4ed8 !important;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.4) !important;
+}
+
+/* Issue 3: Fix Follow Us section - black icons in dark mode */
+[data-theme="dark"] .social-icon {
+    filter: brightness(0) saturate(100%) invert(70%) !important;
+}
+
+[data-theme="dark"] .social-link.facebook:hover .social-icon {
+    filter: brightness(0) saturate(100%) invert(27%) sepia(96%) saturate(1028%) hue-rotate(201deg) brightness(97%) contrast(97%) !important;
+}
+
+[data-theme="dark"] .social-link.twitter:hover .social-icon {
+    filter: brightness(0) saturate(100%) invert(58%) sepia(96%) saturate(1247%) hue-rotate(170deg) brightness(101%) contrast(101%) !important;
+}
+
+[data-theme="dark"] .social-link.instagram:hover .social-icon {
+    filter: brightness(0) saturate(100%) invert(32%) sepia(64%) saturate(2498%) hue-rotate(326deg) brightness(101%) contrast(89%) !important;
+}
+
+[data-theme="dark"] .social-link.youtube:hover .social-icon {
+    filter: brightness(0) saturate(100%) invert(11%) sepia(100%) saturate(7426%) hue-rotate(0deg) brightness(108%) contrast(115%) !important;
+}
+
+/* Additional dark mode improvements */
+[data-theme="dark"] .hero-section {
+    background: var(--color-bg-secondary);
+}
+
+[data-theme="dark"] .hero-main,
+[data-theme="dark"] .hero-secondary,
+[data-theme="dark"] .article-card,
+[data-theme="dark"] .trending-item {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-primary);
+}
+
+[data-theme="dark"] .social-link {
+    background: var(--color-bg-primary);
+    border-color: var(--color-border-primary);
+    color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .placeholder-img {
+    background: var(--color-bg-secondary);
+}
+
+[data-theme="dark"] .section-icon,
+[data-theme="dark"] .placeholder-icon {
+    filter: brightness(0) saturate(100%) invert(80%);
+}
+
+/* Auto theme with dark preference */
+@media (prefers-color-scheme: dark) {
+    [data-theme="auto"] .hero-title,
+    [data-theme="auto"] .article-title,
+    [data-theme="auto"] .category-title,
+    [data-theme="auto"] .trending-title,
+    [data-theme="auto"] .section-title,
+    [data-theme="auto"] .secondary-title,
+    [data-theme="auto"] .hero-link,
+    [data-theme="auto"] .article-link,
+    [data-theme="auto"] .secondary-link,
+    [data-theme="auto"] .trending-link {
+        color: var(--color-text-primary) !important;
+    }
+
+    [data-theme="auto"] .hero-link:hover,
+    [data-theme="auto"] .article-link:hover,
+    [data-theme="auto"] .secondary-link:hover,
+    [data-theme="auto"] .trending-link:hover {
+        color: var(--color-primary) !important;
+    }
+
+    [data-theme="auto"] .newsletter-section {
+        background: linear-gradient(135deg, #1e40af, #1d4ed8) !important;
+        border: 1px solid var(--color-border-primary);
+    }
+
+    [data-theme="auto"] .newsletter-button {
+        background: #059669 !important;
+        color: white;
+    }
+
+    [data-theme="auto"] .newsletter-button:hover {
+        background: #047857 !important;
+    }
+
+    [data-theme="auto"] .tag-item {
+        background: #1e40af !important;
+        border-color: #1e40af !important;
+    }
+
+    [data-theme="auto"] .tag-item:hover {
+        background: #1d4ed8 !important;
+        box-shadow: 0 4px 12px rgba(30, 64, 175, 0.4) !important;
+    }
+
+    [data-theme="auto"] .social-icon {
+        filter: brightness(0) saturate(100%) invert(70%) !important;
+    }
+
+    [data-theme="auto"] .social-link.facebook:hover .social-icon {
+        filter: brightness(0) saturate(100%) invert(27%) sepia(96%) saturate(1028%) hue-rotate(201deg) brightness(97%) contrast(97%) !important;
+    }
+
+    [data-theme="auto"] .social-link.twitter:hover .social-icon {
+        filter: brightness(0) saturate(100%) invert(58%) sepia(96%) saturate(1247%) hue-rotate(170deg) brightness(101%) contrast(101%) !important;
+    }
+
+    [data-theme="auto"] .social-link.instagram:hover .social-icon {
+        filter: brightness(0) saturate(100%) invert(32%) sepia(64%) saturate(2498%) hue-rotate(326deg) brightness(101%) contrast(89%) !important;
+    }
+
+    [data-theme="auto"] .social-link.youtube:hover .social-icon {
+        filter: brightness(0) saturate(100%) invert(11%) sepia(100%) saturate(7426%) hue-rotate(0deg) brightness(108%) contrast(115%) !important;
+    }
+
+    [data-theme="auto"] .hero-section {
+        background: var(--color-bg-secondary);
+    }
+
+    [data-theme="auto"] .hero-main,
+    [data-theme="auto"] .hero-secondary,
+    [data-theme="auto"] .article-card,
+    [data-theme="auto"] .trending-item {
+        background: var(--color-bg-primary);
+        border: 1px solid var(--color-border-primary);
+    }
+
+    [data-theme="auto"] .social-link {
+        background: var(--color-bg-primary);
+        border-color: var(--color-border-primary);
+        color: var(--color-text-secondary);
+    }
+
+    [data-theme="auto"] .placeholder-img {
+        background: var(--color-bg-secondary);
+    }
+
+    [data-theme="auto"] .section-icon,
+    [data-theme="auto"] .placeholder-icon {
+        filter: brightness(0) saturate(100%) invert(80%);
+    }
+}

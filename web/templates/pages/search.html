@@ -1,0 +1,414 @@
+{{define "search.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/search.css">
+
+<!-- SEO Meta Tags for Search Page -->
+{{if .SearchQuery}}
+<meta name="robots" content="noindex, follow">
+{{else}}
+<meta name="robots" content="index, follow">
+{{end}}
+
+<!-- Canonical URL -->
+<link rel="canonical" href="{{.CanonicalURL}}">
+
+<!-- Pagination rel links -->
+{{if .PrevPageURL}}
+<link rel="prev" href="{{.PrevPageURL}}">
+{{end}}
+{{if .NextPageURL}}
+<link rel="next" href="{{.NextPageURL}}">
+{{end}}
+{{end}}
+
+{{define "content"}}
+<div class="search-page" id="search-page">
+    <!-- Search Header -->
+    <section class="search-header">
+        <div class="container">
+            <h1 class="search-page-title">
+                {{if eq .LanguageCode "fa"}}جستجو{{else if eq .LanguageCode "ar"}}البحث{{else}}Search{{end}}
+            </h1>
+            
+            <!-- Main Search Input -->
+            <div class="search-input-wrapper">
+                <form id="search-form" class="search-main-form" action="/search" method="GET">
+                    <div class="search-input-container">
+                        <svg class="search-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                            <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <input 
+                            type="search" 
+                            id="search-input"
+                            name="q" 
+                            class="search-main-input" 
+                            value="{{.SearchQuery}}"
+                            placeholder="{{if eq .LanguageCode "fa"}}جستجوی مقالات...{{else if eq .LanguageCode "ar"}}البحث في المقالات...{{else}}Search articles...{{end}}"
+                            autocomplete="off"
+                            aria-label="Search"
+                            aria-describedby="search-suggestions"
+                        >
+                        <button type="button" id="clear-search" class="clear-search-btn" aria-label="Clear search" {{if not .SearchQuery}}hidden{{end}}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                                <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Search Suggestions Dropdown -->
+                    <div id="search-suggestions" class="search-suggestions" role="listbox" aria-label="Search suggestions" hidden>
+                        <div class="suggestions-loading">
+                            <div class="spinner-small"></div>
+                            <span>{{if eq .LanguageCode "fa"}}در حال جستجو...{{else}}Searching...{{end}}</span>
+                        </div>
+                        <ul class="suggestions-list" role="listbox"></ul>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Search Stats -->
+            {{if .SearchQuery}}
+            <div class="search-stats" id="search-stats">
+                <span class="results-count">
+                    {{if eq .LanguageCode "fa"}}
+                        <strong>{{.TotalResults}}</strong> نتیجه برای "<strong>{{.SearchQuery}}</strong>"
+                    {{else if eq .LanguageCode "ar"}}
+                        <strong>{{.TotalResults}}</strong> نتيجة لـ "<strong>{{.SearchQuery}}</strong>"
+                    {{else}}
+                        <strong>{{.TotalResults}}</strong> results for "<strong>{{.SearchQuery}}</strong>"
+                    {{end}}
+                </span>
+                <span class="search-time">
+                    ({{.SearchTime}}ms)
+                </span>
+            </div>
+            {{end}}
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="search-content">
+        <div class="container">
+            <div class="search-layout">
+                <!-- Filters Sidebar -->
+                <aside class="search-filters" id="search-filters">
+                    <div class="filters-header">
+                        <h2 class="filters-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            {{if eq .LanguageCode "fa"}}فیلترها{{else if eq .LanguageCode "ar"}}الفلاتر{{else}}Filters{{end}}
+                        </h2>
+                        <button type="button" id="clear-filters" class="clear-filters-btn">
+                            {{if eq .LanguageCode "fa"}}پاک کردن{{else if eq .LanguageCode "ar"}}مسح{{else}}Clear All{{end}}
+                        </button>
+                    </div>
+                    
+                    <!-- Category Filter -->
+                    <div class="filter-group" data-filter="category">
+                        <button type="button" class="filter-toggle" aria-expanded="true">
+                            <span>{{if eq .LanguageCode "fa"}}دسته‌بندی{{else if eq .LanguageCode "ar"}}الفئة{{else}}Category{{end}}</span>
+                            <svg class="toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="filter-content">
+                            <div class="filter-options" id="category-filters">
+                                {{range .Categories}}
+                                <label class="filter-option">
+                                    <input type="checkbox" name="category_id" value="{{.ID}}" {{if eq $.SelectedCategory .ID}}checked{{end}}>
+                                    <span class="checkbox-custom"></span>
+                                    <span class="option-label">{{.Name}}</span>
+                                    <span class="option-count">({{.Count}})</span>
+                                </label>
+                                {{end}}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Date Range Filter -->
+                    <div class="filter-group" data-filter="date">
+                        <button type="button" class="filter-toggle" aria-expanded="true">
+                            <span>{{if eq .LanguageCode "fa"}}تاریخ{{else if eq .LanguageCode "ar"}}التاريخ{{else}}Date Range{{end}}</span>
+                            <svg class="toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="filter-content">
+                            <div class="date-presets">
+                                <button type="button" class="date-preset" data-range="today">
+                                    {{if eq .LanguageCode "fa"}}امروز{{else}}Today{{end}}
+                                </button>
+                                <button type="button" class="date-preset" data-range="week">
+                                    {{if eq .LanguageCode "fa"}}این هفته{{else}}This Week{{end}}
+                                </button>
+                                <button type="button" class="date-preset" data-range="month">
+                                    {{if eq .LanguageCode "fa"}}این ماه{{else}}This Month{{end}}
+                                </button>
+                                <button type="button" class="date-preset" data-range="year">
+                                    {{if eq .LanguageCode "fa"}}امسال{{else}}This Year{{end}}
+                                </button>
+                            </div>
+                            <div class="date-custom">
+                                <div class="date-input-group">
+                                    <label for="date-from">{{if eq .LanguageCode "fa"}}از{{else}}From{{end}}</label>
+                                    <input type="date" id="date-from" name="date_from" value="{{.DateFrom}}">
+                                </div>
+                                <div class="date-input-group">
+                                    <label for="date-to">{{if eq .LanguageCode "fa"}}تا{{else}}To{{end}}</label>
+                                    <input type="date" id="date-to" name="date_to" value="{{.DateTo}}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tags Filter -->
+                    <div class="filter-group" data-filter="tags">
+                        <button type="button" class="filter-toggle" aria-expanded="false">
+                            <span>{{if eq .LanguageCode "fa"}}برچسب‌ها{{else if eq .LanguageCode "ar"}}الوسوم{{else}}Tags{{end}}</span>
+                            <svg class="toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="filter-content" hidden>
+                            <div class="tags-cloud" id="tags-filters">
+                                {{range .PopularTags}}
+                                <label class="tag-filter {{if containsSlice $.SelectedTags .Slug}}active{{end}}">
+                                    <input type="checkbox" name="tags" value="{{.Slug}}" {{if containsSlice $.SelectedTags .Slug}}checked{{end}}>
+                                    <span class="tag-label">{{.Name}}</span>
+                                </label>
+                                {{end}}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Filter Toggle -->
+                    <button type="button" id="mobile-filter-toggle" class="mobile-filter-toggle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <span>{{if eq .LanguageCode "fa"}}فیلترها{{else}}Filters{{end}}</span>
+                        {{if .ActiveFiltersCount}}
+                        <span class="filter-badge">{{.ActiveFiltersCount}}</span>
+                        {{end}}
+                    </button>
+                </aside>
+
+                <!-- Search Results -->
+                <main class="search-results" id="search-results">
+                    <!-- Sort Controls -->
+                    <div class="results-controls">
+                        <div class="view-options">
+                            <button type="button" class="view-btn active" data-view="list" aria-label="List view">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <line x1="8" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="8" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="8" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="3" y1="6" x2="3.01" y2="6" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="3" y1="12" x2="3.01" y2="12" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="3" y1="18" x2="3.01" y2="18" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="view-btn" data-view="grid" aria-label="Grid view">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="sort-controls">
+                            <label for="sort-select" class="sort-label">
+                                {{if eq .LanguageCode "fa"}}مرتب‌سازی:{{else}}Sort by:{{end}}
+                            </label>
+                            <select id="sort-select" class="sort-select" name="sort_by">
+                                <option value="relevance" {{if eq .SortBy "relevance"}}selected{{end}}>
+                                    {{if eq .LanguageCode "fa"}}مرتبط‌ترین{{else}}Most Relevant{{end}}
+                                </option>
+                                <option value="published_at" {{if eq .SortBy "published_at"}}selected{{end}}>
+                                    {{if eq .LanguageCode "fa"}}جدیدترین{{else}}Newest{{end}}
+                                </option>
+                                <option value="view_count" {{if eq .SortBy "view_count"}}selected{{end}}>
+                                    {{if eq .LanguageCode "fa"}}پربازدیدترین{{else}}Most Viewed{{end}}
+                                </option>
+                                <option value="like_count" {{if eq .SortBy "like_count"}}selected{{end}}>
+                                    {{if eq .LanguageCode "fa"}}محبوب‌ترین{{else}}Most Popular{{end}}
+                                </option>
+                            </select>
+                        </div>
+                        
+                        <div class="pagination-mode">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="infinite-scroll-toggle" {{if .InfiniteScroll}}checked{{end}}>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">{{if eq .LanguageCode "fa"}}اسکرول نامحدود{{else}}Infinite Scroll{{end}}</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Results List -->
+                    <div class="results-list" id="results-list" data-view="list">
+                        {{if .Articles}}
+                        {{range .Articles}}
+                        <article class="search-result-item" itemscope itemtype="https://schema.org/Article">
+                            <div class="result-image">
+                                {{if .FeaturedImage}}
+                                <img src="{{.FeaturedImage}}" alt="{{.Title}}" class="result-img" loading="lazy" itemprop="image">
+                                {{else}}
+                                <div class="result-img placeholder-img">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                                        <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                </div>
+                                {{end}}
+                            </div>
+                            <div class="result-content">
+                                <div class="result-meta-top">
+                                    <a href="/category/{{.CategorySlug}}" class="result-category" itemprop="articleSection">{{.Category}}</a>
+                                    <time class="result-date" datetime="{{.PublishedAt}}" itemprop="datePublished">{{.TimeAgo}}</time>
+                                </div>
+                                <h2 class="result-title" itemprop="headline">
+                                    <a href="/article/{{.Slug}}" class="result-link" itemprop="url">
+                                        {{.Title}}
+                                    </a>
+                                </h2>
+                                <p class="result-excerpt" itemprop="description">{{.Excerpt}}</p>
+                                <div class="result-meta-bottom">
+                                    <span class="result-author" itemprop="author">{{.Author}}</span>
+                                    <span class="result-views">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+                                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                                        </svg>
+                                        {{.ViewCount}}
+                                    </span>
+                                </div>
+                            </div>
+                        </article>
+                        {{end}}
+                        {{else}}
+                        <!-- Empty State -->
+                        <div class="empty-state" id="empty-state">
+                            <div class="empty-icon">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                    <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M8 11h6" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <h3 class="empty-title">
+                                {{if eq .LanguageCode "fa"}}نتیجه‌ای یافت نشد{{else if eq .LanguageCode "ar"}}لم يتم العثور على نتائج{{else}}No results found{{end}}
+                            </h3>
+                            <p class="empty-description">
+                                {{if eq .LanguageCode "fa"}}
+                                    عبارت جستجوی دیگری را امتحان کنید یا فیلترها را تغییر دهید.
+                                {{else}}
+                                    Try a different search term or adjust your filters.
+                                {{end}}
+                            </p>
+                            <div class="empty-suggestions">
+                                <p>{{if eq .LanguageCode "fa"}}پیشنهادات:{{else}}Suggestions:{{end}}</p>
+                                <ul>
+                                    <li>{{if eq .LanguageCode "fa"}}از کلمات کلیدی کمتری استفاده کنید{{else}}Use fewer keywords{{end}}</li>
+                                    <li>{{if eq .LanguageCode "fa"}}املای کلمات را بررسی کنید{{else}}Check your spelling{{end}}</li>
+                                    <li>{{if eq .LanguageCode "fa"}}فیلترها را حذف کنید{{else}}Remove some filters{{end}}</li>
+                                </ul>
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+
+                    <!-- Loading State -->
+                    <div class="loading-state" id="loading-state" hidden>
+                        <div class="skeleton-list">
+                            {{range $i := iterate 5}}
+                            <div class="skeleton-item">
+                                <div class="skeleton-image"></div>
+                                <div class="skeleton-content">
+                                    <div class="skeleton-meta"></div>
+                                    <div class="skeleton-title"></div>
+                                    <div class="skeleton-excerpt"></div>
+                                    <div class="skeleton-footer"></div>
+                                </div>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div class="error-state" id="error-state" hidden>
+                        <div class="error-icon">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <h3 class="error-title">
+                            {{if eq .LanguageCode "fa"}}خطایی رخ داد{{else}}Something went wrong{{end}}
+                        </h3>
+                        <p class="error-description" id="error-message"></p>
+                        <button type="button" class="retry-btn" id="retry-btn">
+                            {{if eq .LanguageCode "fa"}}تلاش مجدد{{else}}Try Again{{end}}
+                        </button>
+                    </div>
+
+                    <!-- Pagination -->
+                    {{if and .Articles .Pagination}}
+                    <nav class="pagination" id="pagination" aria-label="Search results pagination">
+                        {{if .Pagination.HasPrev}}
+                        <a href="{{.PrevPageURL}}" class="pagination-btn prev" rel="prev">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            <span>{{if eq .LanguageCode "fa"}}قبلی{{else}}Previous{{end}}</span>
+                        </a>
+                        {{end}}
+                        
+                        <div class="pagination-pages">
+                            {{range .Pagination.Pages}}
+                            {{if eq . -1}}
+                            <span class="pagination-ellipsis">...</span>
+                            {{else}}
+                            <a href="/search?q={{$.SearchQuery}}&page={{.}}" class="pagination-page {{if eq . $.Pagination.CurrentPage}}active{{end}}" {{if eq . $.Pagination.CurrentPage}}aria-current="page"{{end}}>
+                                {{.}}
+                            </a>
+                            {{end}}
+                            {{end}}
+                        </div>
+                        
+                        {{if .Pagination.HasNext}}
+                        <a href="{{.NextPageURL}}" class="pagination-btn next" rel="next">
+                            <span>{{if eq .LanguageCode "fa"}}بعدی{{else}}Next{{end}}</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </a>
+                        {{end}}
+                    </nav>
+                    {{end}}
+                    
+                    <!-- Infinite Scroll Loader -->
+                    <div class="infinite-loader" id="infinite-loader" hidden>
+                        <div class="spinner"></div>
+                        <span>{{if eq .LanguageCode "fa"}}در حال بارگذاری...{{else}}Loading more...{{end}}</span>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/search.js"></script>
+{{end}}

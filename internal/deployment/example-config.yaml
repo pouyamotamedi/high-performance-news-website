@@ -1,0 +1,50 @@
+# Example deployment configuration for the high-performance news website
+servers:
+  production:
+    host: "your-server.com"
+    port: 22
+    user: "deploy"
+    key_file: "/path/to/your/ssh/key"
+    # password: "your-password"  # Alternative to key_file
+  
+  staging:
+    host: "staging-server.com"
+    port: 22
+    user: "deploy"
+    key_file: "/path/to/your/ssh/key"
+
+app:
+  name: "news-website"
+  binary: "./bin/news-website"
+  config_file: "./config/production.yaml"
+  port: 8080
+  health_path: "/health"
+  environment:
+    ENV: "production"
+    LOG_LEVEL: "info"
+    DATABASE_URL: "postgres://user:pass@localhost/newsdb"
+  dependencies:
+    - "postgresql-client"
+    - "nginx"
+    - "curl"
+
+ssh:
+  timeout: 30s
+  connect_retries: 3
+  command_timeout: 5m
+  keep_alive: 30s
+
+deploy:
+  strategy: "blue-green"  # or "rolling"
+  health_check_url: "http://localhost:8080/health"
+  health_timeout: 2m
+  rollback_timeout: 5m
+  backup_retention: 5
+  pre_deploy_hooks:
+    - "echo 'Starting deployment...'"
+  post_deploy_hooks:
+    - "echo 'Deployment completed!'"
+  validation_checks:
+    - "which curl"
+    - "systemctl --version"
+    - "which nginx"

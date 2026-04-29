@@ -1,0 +1,659 @@
+package api
+
+import (
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"high-performance-news-website/internal/testing"
+)
+
+// TestMonitoringHandlers handles test monitoring HTTP requests
+type TestMonitoringHandlers struct {
+	monitoringIntegration *testing.MonitoringIntegration
+}
+
+// NewTestMonitoringHandlers creates a new test monitoring handlers instance
+func NewTestMonitoringHandlers(monitoringIntegration *testing.MonitoringIntegration) *TestMonitoringHandlers {
+	return &TestMonitoringHandlers{
+		monitoringIntegration: monitoringIntegration,
+	}
+}
+
+// RegisterRoutes registers test monitoring routes
+func (h *TestMonitoringHandlers) RegisterRoutes(router *gin.Engine) {
+	// Test execution monitoring endpoints
+	testMonitoring := router.Group("/api/v1/test-monitoring")
+	{
+		// Execution monitoring
+		testMonitoring.GET("/executions", h.GetExecutions)
+		testMonitoring.GET("/executions/:id", h.GetExecution)
+		testMonitoring.POST("/executions", h.StartExecution)
+		testMonitoring.PUT("/executions/:id", h.UpdateExecution)
+		testMonitoring.POST("/executions/:id/logs", h.AddLogEntry)
+		testMonitoring.DELETE("/executions/:id", h.CancelExecution)
+		
+		// Dashboard data
+		testMonitoring.GET("/dashboard", h.GetDashboardData)
+		testMonitoring.GET("/dashboard/overview", h.GetOverview)
+		testMonitoring.GET("/dashboard/real-time", h.GetRealTimeData)
+		
+		// Metrics
+		testMonitoring.GET("/metrics", h.GetMetrics)
+		testMonitoring.GET("/metrics/:name", h.GetMetricSeries)
+		testMonitoring.POST("/metrics", h.RecordMetric)
+		testMonitoring.GET("/metrics/aggregated", h.GetAggregatedMetrics)
+		
+		// Alerts
+		testMonitoring.GET("/alerts", h.GetAlerts)
+		testMonitoring.GET("/alerts/:id", h.GetAlert)
+		testMonitoring.POST("/alerts", h.CreateAlert)
+		testMonitoring.PUT("/alerts/:id/acknowledge", h.AcknowledgeAlert)
+		testMonitoring.PUT("/alerts/:id/resolve", h.ResolveAlert)
+		testMonitoring.GET("/alerts/summary", h.GetAlertSummary)
+		
+		// Resource monitoring
+		testMonitoring.GET("/resources", h.GetResourceMetrics)
+		testMonitoring.GET("/resources/usage", h.GetResourceUsage)
+		testMonitoring.GET("/resources/history", h.GetResourceHistory)
+		testMonitoring.GET("/resources/alerts", h.GetResourceAlerts)
+		testMonitoring.PUT("/resources/thresholds", h.SetResourceThresholds)
+		
+		// Observability
+		testMonitoring.GET("/traces", h.GetTraces)
+		testMonitoring.GET("/traces/:id", h.GetTrace)
+		testMonitoring.GET("/bottlenecks", h.GetBottlenecks)
+		testMonitoring.GET("/capacity", h.GetCapacityPlan)
+		
+		// Predictive analytics
+		testMonitoring.GET("/predictions", h.GetPredictions)
+		testMonitoring.GET("/trends", h.GetTrends)
+		testMonitoring.GET("/anomalies", h.GetAnomalies)
+		testMonitoring.GET("/forecasts", h.GetForecasts)
+	}
+	
+	// WebSocket endpoint for real-time monitoring
+	router.GET("/ws/test-monitoring", h.HandleWebSocket)
+}
+
+// Execution monitoring endpoints
+
+// GetExecutions returns all test executions
+func (h *TestMonitoringHandlers) GetExecutions(c *gin.Context) {
+	monitor := h.monitoringIntegration.GetExecutionMonitor()
+	
+	// Parse query parameters
+	includeActive := c.DefaultQuery("include_active", "true") == "true"
+	includeHistory := c.DefaultQuery("include_history", "true") == "true"
+	limit := parseIntQuery(c, "limit", 50)
+	
+	response := gin.H{}
+	
+	if includeActive {
+		activeExecutions := monitor.GetActiveExecutions()
+		response["active_executions"] = activeExecutions
+	}
+	
+	if includeHistory {
+		executionHistory := monitor.GetExecutionHistory(limit)
+		response["execution_history"] = executionHistory
+	}
+	
+	c.JSON(http.StatusOK, response)
+}
+
+// GetExecution returns a specific test execution
+func (h *TestMonitoringHandlers) GetExecution(c *gin.Context) {
+	executionID := c.Param("id")
+	if executionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Execution ID is required"})
+		return
+	}
+	
+	monitor := h.monitoringIntegration.GetExecutionMonitor()
+	execution, err := monitor.GetExecutionById(executionID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, execution)
+}
+
+// StartExecution starts a new test execution
+func (h *TestMonitoringHandlers) StartExecution(c *gin.Context) {
+	var request struct {
+		TestSuite    string   `json:"test_suite" binding:"required"`
+		TestName     string   `json:"test_name" binding:"required"`
+		Environment  string   `json:"environment"`
+		Tags         []string `json:"tags"`
+		Dependencies []string `json:"dependencies"`
+	}
+	
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	monitor := h.monitoringIntegration.GetExecutionMonitor()
+	executionID := monitor.StartTestExecution(
+		request.TestSuite,
+		request.TestName,
+		request.Environment,
+		request.Tags,
+		request.Dependencies,
+	)
+	
+	c.JSON(http.StatusCreated, gin.H{
+		"execution_id": executionID,
+		"message":      "Test execution started",
+	})
+}
+
+// UpdateExecution updates a test execution
+func (h *TestMonitoringHandlers) UpdateExecution(c *gin.Context) {
+	executionID := c.Param("id")
+	if executionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Execution ID is required"})
+		return
+	}
+	
+	var request struct {
+		Status   string                 `json:"status"`
+		Progress float64                `json:"progress"`
+		Metrics  map[string]interface{} `json:"metrics"`
+	}
+	
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	monitor := h.monitoringIntegration.GetExecutionMonitor()
+	err := monitor.UpdateTestExecution(
+		executionID,
+		testing.ExecutionStatus(request.Status),
+		request.Progress,
+		request.Metrics,
+	)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Test execution updated"})
+}
+
+// AddLogEntry adds a log entry to a test execution
+func (h *TestMonitoringHandlers) AddLogEntry(c *gin.Context) {
+	executionID := c.Param("id")
+	if executionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Execution ID is required"})
+		return
+	}
+	
+	var request struct {
+		Level   string                 `json:"level" binding:"required"`
+		Message string                 `json:"message" binding:"required"`
+		Source  string                 `json:"source"`
+		Context map[string]interface{} `json:"context"`
+	}
+	
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	monitor := h.monitoringIntegration.GetExecutionMonitor()
+	err := monitor.AddLogEntry(
+		executionID,
+		request.Level,
+		request.Message,
+		request.Source,
+		request.Context,
+	)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Log entry added"})
+}
+
+// CancelExecution cancels a test execution
+func (h *TestMonitoringHandlers) CancelExecution(c *gin.Context) {
+	executionID := c.Param("id")
+	if executionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Execution ID is required"})
+		return
+	}
+	
+	monitor := h.monitoringIntegration.GetExecutionMonitor()
+	err := monitor.UpdateTestExecution(
+		executionID,
+		testing.StatusCancelled,
+		0,
+		map[string]interface{}{
+			"cancelled_by": "api_request",
+			"cancelled_at": time.Now(),
+		},
+	)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Test execution cancelled"})
+}
+
+// Dashboard endpoints
+
+// GetDashboardData returns complete dashboard data
+func (h *TestMonitoringHandlers) GetDashboardData(c *gin.Context) {
+	dashboard := h.monitoringIntegration.GetDashboard()
+	data := dashboard.GetDashboardData()
+	
+	c.JSON(http.StatusOK, data)
+}
+
+// GetOverview returns dashboard overview data
+func (h *TestMonitoringHandlers) GetOverview(c *gin.Context) {
+	monitor := h.monitoringIntegration.GetExecutionMonitor()
+	dashboardData := monitor.GetDashboardData()
+	
+	c.JSON(http.StatusOK, gin.H{
+		"active_tests":    dashboardData.ActiveTests,
+		"completed_tests": dashboardData.CompletedTests,
+		"failed_tests":    dashboardData.FailedTests,
+		"total_executions": dashboardData.TotalExecutions,
+		"average_execution_time": dashboardData.AverageExecution,
+		"last_updated":    dashboardData.LastUpdated,
+	})
+}
+
+// GetRealTimeData returns real-time monitoring data
+func (h *TestMonitoringHandlers) GetRealTimeData(c *gin.Context) {
+	monitor := h.monitoringIntegration.GetExecutionMonitor()
+	activeExecutions := monitor.GetActiveExecutions()
+	
+	resourceTracker := h.monitoringIntegration.resourceTracker
+	currentUsage := resourceTracker.GetCurrentUsage()
+	
+	alertManager := h.monitoringIntegration.alertManager
+	activeAlerts := alertManager.GetActiveAlerts()
+	
+	c.JSON(http.StatusOK, gin.H{
+		"active_executions": activeExecutions,
+		"resource_usage":    currentUsage,
+		"active_alerts":     activeAlerts,
+		"timestamp":         time.Now(),
+	})
+}
+
+// Metrics endpoints
+
+// GetMetrics returns all metrics
+func (h *TestMonitoringHandlers) GetMetrics(c *gin.Context) {
+	metricsCollector := h.monitoringIntegration.metricsCollector
+	allMetrics := metricsCollector.GetAllMetrics()
+	
+	c.JSON(http.StatusOK, gin.H{
+		"metrics": allMetrics,
+		"count":   len(allMetrics),
+	})
+}
+
+// GetMetricSeries returns a specific metric series
+func (h *TestMonitoringHandlers) GetMetricSeries(c *gin.Context) {
+	metricName := c.Param("name")
+	if metricName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Metric name is required"})
+		return
+	}
+	
+	metricsCollector := h.monitoringIntegration.metricsCollector
+	series, err := metricsCollector.GetMetricSeries(metricName)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, series)
+}
+
+// RecordMetric records a new metric value
+func (h *TestMonitoringHandlers) RecordMetric(c *gin.Context) {
+	var request struct {
+		Name  string                `json:"name" binding:"required"`
+		Value float64               `json:"value" binding:"required"`
+		Type  string                `json:"type"`
+		Unit  string                `json:"unit"`
+		Tags  map[string]string     `json:"tags"`
+	}
+	
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	metricType := testing.MetricTypeGauge
+	if request.Type != "" {
+		metricType = testing.MetricType(request.Type)
+	}
+	
+	metricsCollector := h.monitoringIntegration.metricsCollector
+	metricsCollector.RecordMetric(
+		request.Name,
+		request.Value,
+		metricType,
+		request.Unit,
+		request.Tags,
+	)
+	
+	c.JSON(http.StatusCreated, gin.H{"message": "Metric recorded"})
+}
+
+// GetAggregatedMetrics returns aggregated metrics
+func (h *TestMonitoringHandlers) GetAggregatedMetrics(c *gin.Context) {
+	metricsCollector := h.monitoringIntegration.metricsCollector
+	aggregated := metricsCollector.GetAggregatedMetrics()
+	
+	c.JSON(http.StatusOK, aggregated)
+}
+
+// Alert endpoints
+
+// GetAlerts returns all alerts
+func (h *TestMonitoringHandlers) GetAlerts(c *gin.Context) {
+	alertManager := h.monitoringIntegration.alertManager
+	
+	includeActive := c.DefaultQuery("include_active", "true") == "true"
+	includeHistory := c.DefaultQuery("include_history", "false") == "true"
+	limit := parseIntQuery(c, "limit", 50)
+	
+	response := gin.H{}
+	
+	if includeActive {
+		activeAlerts := alertManager.GetActiveAlerts()
+		response["active_alerts"] = activeAlerts
+	}
+	
+	if includeHistory {
+		alertHistory := alertManager.GetAlertHistory(limit)
+		response["alert_history"] = alertHistory
+	}
+	
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAlert returns a specific alert
+func (h *TestMonitoringHandlers) GetAlert(c *gin.Context) {
+	alertID := c.Param("id")
+	if alertID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Alert ID is required"})
+		return
+	}
+	
+	alertManager := h.monitoringIntegration.alertManager
+	activeAlerts := alertManager.GetActiveAlerts()
+	
+	if alert, exists := activeAlerts[alertID]; exists {
+		c.JSON(http.StatusOK, alert)
+		return
+	}
+	
+	// Check history
+	alertHistory := alertManager.GetAlertHistory(1000)
+	for _, alert := range alertHistory {
+		if alert.ID == alertID {
+			c.JSON(http.StatusOK, alert)
+			return
+		}
+	}
+	
+	c.JSON(http.StatusNotFound, gin.H{"error": "Alert not found"})
+}
+
+// CreateAlert creates a new alert
+func (h *TestMonitoringHandlers) CreateAlert(c *gin.Context) {
+	var request struct {
+		Type     string                 `json:"type" binding:"required"`
+		Severity string                 `json:"severity" binding:"required"`
+		Title    string                 `json:"title" binding:"required"`
+		Message  string                 `json:"message" binding:"required"`
+		Source   string                 `json:"source"`
+		Tags     map[string]string      `json:"tags"`
+		Metadata map[string]interface{} `json:"metadata"`
+	}
+	
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	alertManager := h.monitoringIntegration.alertManager
+	alertID := alertManager.CreateAlert(
+		testing.AlertType(request.Type),
+		testing.AlertSeverity(request.Severity),
+		request.Title,
+		request.Message,
+		request.Source,
+		request.Tags,
+		request.Metadata,
+	)
+	
+	c.JSON(http.StatusCreated, gin.H{
+		"alert_id": alertID,
+		"message":  "Alert created",
+	})
+}
+
+// AcknowledgeAlert acknowledges an alert
+func (h *TestMonitoringHandlers) AcknowledgeAlert(c *gin.Context) {
+	alertID := c.Param("id")
+	if alertID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Alert ID is required"})
+		return
+	}
+	
+	acknowledgedBy := c.DefaultQuery("acknowledged_by", "api_user")
+	
+	alertManager := h.monitoringIntegration.alertManager
+	err := alertManager.AcknowledgeAlert(alertID, acknowledgedBy)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Alert acknowledged"})
+}
+
+// ResolveAlert resolves an alert
+func (h *TestMonitoringHandlers) ResolveAlert(c *gin.Context) {
+	alertID := c.Param("id")
+	if alertID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Alert ID is required"})
+		return
+	}
+	
+	alertManager := h.monitoringIntegration.alertManager
+	err := alertManager.ResolveAlert(alertID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Alert resolved"})
+}
+
+// GetAlertSummary returns alert summary
+func (h *TestMonitoringHandlers) GetAlertSummary(c *gin.Context) {
+	alertManager := h.monitoringIntegration.alertManager
+	summary := alertManager.GetAlertSummary()
+	
+	c.JSON(http.StatusOK, summary)
+}
+
+// Resource monitoring endpoints
+
+// GetResourceMetrics returns detailed resource metrics
+func (h *TestMonitoringHandlers) GetResourceMetrics(c *gin.Context) {
+	resourceTracker := h.monitoringIntegration.resourceTracker
+	
+	detailedMetrics, err := resourceTracker.GetDetailedMetrics()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, detailedMetrics)
+}
+
+// GetResourceUsage returns current resource usage
+func (h *TestMonitoringHandlers) GetResourceUsage(c *gin.Context) {
+	resourceTracker := h.monitoringIntegration.resourceTracker
+	currentUsage := resourceTracker.GetCurrentUsage()
+	
+	c.JSON(http.StatusOK, currentUsage)
+}
+
+// GetResourceHistory returns resource usage history
+func (h *TestMonitoringHandlers) GetResourceHistory(c *gin.Context) {
+	limit := parseIntQuery(c, "limit", 100)
+	
+	resourceTracker := h.monitoringIntegration.resourceTracker
+	history := resourceTracker.GetUsageHistory(limit)
+	
+	c.JSON(http.StatusOK, gin.H{
+		"history": history,
+		"count":   len(history),
+	})
+}
+
+// GetResourceAlerts returns active resource alerts
+func (h *TestMonitoringHandlers) GetResourceAlerts(c *gin.Context) {
+	resourceTracker := h.monitoringIntegration.resourceTracker
+	alerts := resourceTracker.GetActiveAlerts()
+	
+	c.JSON(http.StatusOK, gin.H{
+		"alerts": alerts,
+		"count":  len(alerts),
+	})
+}
+
+// SetResourceThresholds sets resource alert thresholds
+func (h *TestMonitoringHandlers) SetResourceThresholds(c *gin.Context) {
+	var request struct {
+		CPUPercent        float64 `json:"cpu_percent"`
+		MemoryMB          float64 `json:"memory_mb"`
+		DiskIOKBPerSec    float64 `json:"disk_io_kb_per_sec"`
+		NetworkIOKBPerSec float64 `json:"network_io_kb_per_sec"`
+		DatabaseConns     int     `json:"database_connections"`
+	}
+	
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	thresholds := testing.ResourceThresholds{
+		CPUPercent:        request.CPUPercent,
+		MemoryMB:          request.MemoryMB,
+		DiskIOKBPerSec:    request.DiskIOKBPerSec,
+		NetworkIOKBPerSec: request.NetworkIOKBPerSec,
+		DatabaseConns:     request.DatabaseConns,
+	}
+	
+	resourceTracker := h.monitoringIntegration.resourceTracker
+	resourceTracker.SetThresholds(thresholds)
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Resource thresholds updated"})
+}
+
+// Observability endpoints (placeholder implementations)
+
+// GetTraces returns execution traces
+func (h *TestMonitoringHandlers) GetTraces(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"traces": []interface{}{},
+		"message": "Trace collection not yet implemented",
+	})
+}
+
+// GetTrace returns a specific execution trace
+func (h *TestMonitoringHandlers) GetTrace(c *gin.Context) {
+	traceID := c.Param("id")
+	c.JSON(http.StatusNotFound, gin.H{
+		"error": "Trace not found",
+		"trace_id": traceID,
+	})
+}
+
+// GetBottlenecks returns detected bottlenecks
+func (h *TestMonitoringHandlers) GetBottlenecks(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"bottlenecks": []interface{}{},
+		"message": "Bottleneck detection not yet implemented",
+	})
+}
+
+// GetCapacityPlan returns capacity planning information
+func (h *TestMonitoringHandlers) GetCapacityPlan(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"capacity_plan": map[string]interface{}{},
+		"message": "Capacity planning not yet implemented",
+	})
+}
+
+// Predictive analytics endpoints (placeholder implementations)
+
+// GetPredictions returns predictive analytics
+func (h *TestMonitoringHandlers) GetPredictions(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"predictions": []interface{}{},
+		"message": "Predictive analytics not yet implemented",
+	})
+}
+
+// GetTrends returns trend analysis
+func (h *TestMonitoringHandlers) GetTrends(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"trends": map[string]interface{}{},
+		"message": "Trend analysis not yet implemented",
+	})
+}
+
+// GetAnomalies returns detected anomalies
+func (h *TestMonitoringHandlers) GetAnomalies(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"anomalies": []interface{}{},
+		"message": "Anomaly detection not yet implemented",
+	})
+}
+
+// GetForecasts returns capacity forecasts
+func (h *TestMonitoringHandlers) GetForecasts(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"forecasts": map[string]interface{}{},
+		"message": "Capacity forecasting not yet implemented",
+	})
+}
+
+// HandleWebSocket handles WebSocket connections for real-time monitoring
+func (h *TestMonitoringHandlers) HandleWebSocket(c *gin.Context) {
+	dashboard := h.monitoringIntegration.GetDashboard()
+	dashboard.RegisterRoutes(c.Engine)
+}
+
+// Helper functions
+
+func parseIntQuery(c *gin.Context, key string, defaultValue int) int {
+	if value := c.Query(key); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			return parsed
+		}
+	}
+	return defaultValue
+}

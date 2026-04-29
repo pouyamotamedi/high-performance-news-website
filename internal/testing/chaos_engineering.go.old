@@ -1,0 +1,533 @@
+package testing
+
+import (
+	"context"
+	"fmt"
+	"math/rand"
+	"sync"
+	"time"
+)
+
+// FaultInjector provides chaos engineering capabilities for testing system resilience
+type FaultInjector struct {
+	config           *ChaosConfig
+	activeFaults     map[string]*ActiveFault
+	faultMutex       sync.RWMutex
+	networkInjector  *EnhancedNetworkInjector
+	databaseInjector *EnhancedDatabaseInjector
+	cacheInjector    *EnhancedCacheInjector
+	resourceInjector *EnhancedResourceInjector
+	idCounter        int64
+	idMutex          sync.Mutex
+}
+
+// ChaosConfig configures chaos engineering parameters
+type ChaosConfig struct {
+	MaxConcurrentFaults int           `json:"max_concurrent_faults"`
+	DefaultDuration     time.Duration `json:"default_duration"`
+	SafetyLimits        SafetyLimits  `json:"safety_limits"`
+	EnabledFaultTypes   []string      `json:"enabled_fault_types"`
+}
+
+// SafetyLimits defines safety boundaries for chaos testing
+type SafetyLimits struct {
+	MaxMemoryPressure    float64 `json:"max_memory_pressure"`     // 0.8 = 80% max memory usage
+	MaxDiskPressure      float64 `json:"max_disk_pressure"`       // 0.9 = 90% max disk usage
+	MaxNetworkLatency    int     `json:"max_network_latency_ms"`  // Maximum network latency in ms
+	MaxFailureRate       float64 `json:"max_failure_rate"`        // 0.5 = 50% max failure rate
+	MinRecoveryTime      int     `json:"min_recovery_time_ms"`    // Minimum time between faults
+}
+
+// FaultType represents different types of faults that can be injected
+type FaultType string
+
+const (
+	FaultTypeDatabase      FaultType = "database"
+	FaultTypeCache         FaultType = "cache"
+	FaultTypeNetwork       FaultType = "network"
+	FaultTypeMemory        FaultType = "memory"
+	FaultTypeDisk          FaultType = "disk"
+	FaultTypeLatency       FaultType = "latency"
+	FaultTypePartition     FaultType = "partition"
+)
+
+// ActiveFault represents an active fault injection
+type ActiveFault struct {
+	ID          string        `json:"id"`
+	Type        FaultType     `json:"type"`
+	Description string        `json:"description"`
+	StartTime   time.Time     `json:"start_time"`
+	Duration    time.Duration `json:"duration"`
+	Parameters  map[string]interface{} `json:"parameters"`
+	StopFunc    func() error  `json:"-"`
+}
+
+// FaultResult represents the result of a fault injection test
+type FaultResult struct {
+	FaultID           string        `json:"fault_id"`
+	Type              FaultType     `json:"type"`
+	Duration          time.Duration `json:"duration"`
+	SystemRecovered   bool          `json:"system_recovered"`
+	RecoveryTime      time.Duration `json:"recovery_time"`
+	ErrorsObserved    []string      `json:"errors_observed"`
+	MetricsCollected  map[string]float64 `json:"metrics_collected"`
+	GracefulDegradation bool        `json:"graceful_degradation"`
+	Parameters        map[string]interface{} `json:"parameters"`
+}
+
+// NewFaultInjector creates a new fault injector with default configuration
+func NewFaultInjector() *FaultInjector {
+	config := &ChaosConfig{
+		MaxConcurrentFaults: 3,
+		DefaultDuration:     30 * time.Second,
+		SafetyLimits: SafetyLimits{
+			MaxMemoryPressure: 0.8,
+			MaxDiskPressure:   0.9,
+			MaxNetworkLatency: 5000,
+			MaxFailureRate:    0.5,
+			MinRecoveryTime:   1000,
+		},
+		EnabledFaultTypes: []string{
+			string(FaultTypeDatabase),
+			string(FaultTypeCache),
+			string(FaultTypeNetwork),
+			string(FaultTypeMemory),
+			string(FaultTypeDisk),
+		},
+	}
+
+	return &FaultInjector{
+		config:           config,
+		activeFaults:     make(map[string]*ActiveFault),
+		networkInjector:  NewEnhancedNetworkInjector(),
+		databaseInjector: NewEnhancedDatabaseInjector(),
+		cacheInjector:    NewEnhancedCacheInjector(),
+		resourceInjector: NewEnhancedResourceInjector(),
+		idCounter:        0,
+	}
+}
+
+// generateUniqueID generates a unique ID for faults
+func (fi *FaultInjector) generateUniqueID(prefix string) string {
+	fi.idMutex.Lock()
+	defer fi.idMutex.Unlock()
+	fi.idCounter++
+	return fmt.Sprintf("%s_%d_%d", prefix, time.Now().UnixNano(), fi.idCounter)
+}
+
+// InjectDatabaseFailure simulates database connection failures
+func (fi *FaultInjector) InjectDatabaseFailure(ctx context.Context, failureRate float64, duration time.Duration) (*FaultResult, error) {
+	if failureRate > fi.config.SafetyLimits.MaxFailureRate {
+		return nil, fmt.Errorf("failure rate %.2f exceeds safety limit %.2f", failureRate, fi.config.SafetyLimits.MaxFailureRate)
+	}
+
+	faultID := fi.generateUniqueID("db_failure")
+	
+	fault := &ActiveFault{
+		ID:          faultID,
+		Type:        FaultTypeDatabase,
+		Description: fmt.Sprintf("Database failure injection with %.2f failure rate", failureRate),
+		StartTime:   time.Now(),
+		Duration:    duration,
+		Parameters: map[string]interface{}{
+			"failure_rate": failureRate,
+		},
+	}
+
+	// Start database fault injection
+	stopFunc, err := fi.databaseInjector.InjectConnectionFailures(failureRate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject database failures: %w", err)
+	}
+	fault.StopFunc = stopFunc
+
+	fi.registerActiveFault(fault)
+
+	// Monitor system behavior during fault
+	result := fi.monitorFaultImpact(ctx, fault)
+
+	// Stop fault injection
+	if err := fi.stopFault(faultID); err != nil {
+		result.ErrorsObserved = append(result.ErrorsObserved, fmt.Sprintf("Failed to stop fault: %v", err))
+	}
+
+	return result, nil
+}
+
+// InjectCacheFailure simulates cache service failures
+func (fi *FaultInjector) InjectCacheFailure(ctx context.Context, failureType string, duration time.Duration) (*FaultResult, error) {
+	faultID := fi.generateUniqueID("cache_failure")
+	
+	fault := &ActiveFault{
+		ID:          faultID,
+		Type:        FaultTypeCache,
+		Description: fmt.Sprintf("Cache failure injection: %s", failureType),
+		StartTime:   time.Now(),
+		Duration:    duration,
+		Parameters: map[string]interface{}{
+			"failure_type": failureType,
+		},
+	}
+
+	// Start cache fault injection
+	stopFunc, err := fi.cacheInjector.InjectFailure(failureType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject cache failures: %w", err)
+	}
+	fault.StopFunc = stopFunc
+
+	fi.registerActiveFault(fault)
+
+	// Monitor system behavior during fault
+	result := fi.monitorFaultImpact(ctx, fault)
+
+	// Stop fault injection
+	if err := fi.stopFault(faultID); err != nil {
+		result.ErrorsObserved = append(result.ErrorsObserved, fmt.Sprintf("Failed to stop fault: %v", err))
+	}
+
+	return result, nil
+}
+
+// InjectNetworkPartition simulates network partitions and latency
+func (fi *FaultInjector) InjectNetworkPartition(ctx context.Context, latencyMs int, packetLoss float64, duration time.Duration) (*FaultResult, error) {
+	if latencyMs > fi.config.SafetyLimits.MaxNetworkLatency {
+		return nil, fmt.Errorf("latency %dms exceeds safety limit %dms", latencyMs, fi.config.SafetyLimits.MaxNetworkLatency)
+	}
+
+	faultID := fmt.Sprintf("network_partition_%d", time.Now().UnixNano())
+	
+	fault := &ActiveFault{
+		ID:          faultID,
+		Type:        FaultTypeNetwork,
+		Description: fmt.Sprintf("Network partition with %dms latency and %.2f packet loss", latencyMs, packetLoss),
+		StartTime:   time.Now(),
+		Duration:    duration,
+		Parameters: map[string]interface{}{
+			"latency_ms":   latencyMs,
+			"packet_loss": packetLoss,
+		},
+	}
+
+	// Start network fault injection
+	stopFunc, err := fi.networkInjector.InjectLatencyAndLoss(latencyMs, packetLoss)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject network faults: %w", err)
+	}
+	fault.StopFunc = stopFunc
+
+	fi.registerActiveFault(fault)
+
+	// Monitor system behavior during fault
+	result := fi.monitorFaultImpact(ctx, fault)
+
+	// Stop fault injection
+	if err := fi.stopFault(faultID); err != nil {
+		result.ErrorsObserved = append(result.ErrorsObserved, fmt.Sprintf("Failed to stop fault: %v", err))
+	}
+
+	return result, nil
+}
+
+// InjectMemoryPressure simulates memory pressure conditions
+func (fi *FaultInjector) InjectMemoryPressure(ctx context.Context, pressureLevel float64, duration time.Duration) (*FaultResult, error) {
+	if pressureLevel > fi.config.SafetyLimits.MaxMemoryPressure {
+		return nil, fmt.Errorf("memory pressure %.2f exceeds safety limit %.2f", pressureLevel, fi.config.SafetyLimits.MaxMemoryPressure)
+	}
+
+	faultID := fmt.Sprintf("memory_pressure_%d", time.Now().UnixNano())
+	
+	fault := &ActiveFault{
+		ID:          faultID,
+		Type:        FaultTypeMemory,
+		Description: fmt.Sprintf("Memory pressure injection at %.2f level", pressureLevel),
+		StartTime:   time.Now(),
+		Duration:    duration,
+		Parameters: map[string]interface{}{
+			"pressure_level": pressureLevel,
+		},
+	}
+
+	// Start memory pressure injection
+	stopFunc, err := fi.resourceInjector.InjectMemoryPressure(pressureLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject memory pressure: %w", err)
+	}
+	fault.StopFunc = stopFunc
+
+	fi.registerActiveFault(fault)
+
+	// Monitor system behavior during fault
+	result := fi.monitorFaultImpact(ctx, fault)
+
+	// Stop fault injection
+	if err := fi.stopFault(faultID); err != nil {
+		result.ErrorsObserved = append(result.ErrorsObserved, fmt.Sprintf("Failed to stop fault: %v", err))
+	}
+
+	return result, nil
+}
+
+// InjectDiskPressure simulates disk space limitations
+func (fi *FaultInjector) InjectDiskPressure(ctx context.Context, pressureLevel float64, duration time.Duration) (*FaultResult, error) {
+	if pressureLevel > fi.config.SafetyLimits.MaxDiskPressure {
+		return nil, fmt.Errorf("disk pressure %.2f exceeds safety limit %.2f", pressureLevel, fi.config.SafetyLimits.MaxDiskPressure)
+	}
+
+	faultID := fmt.Sprintf("disk_pressure_%d", time.Now().UnixNano())
+	
+	fault := &ActiveFault{
+		ID:          faultID,
+		Type:        FaultTypeDisk,
+		Description: fmt.Sprintf("Disk pressure injection at %.2f level", pressureLevel),
+		StartTime:   time.Now(),
+		Duration:    duration,
+		Parameters: map[string]interface{}{
+			"pressure_level": pressureLevel,
+		},
+	}
+
+	// Start disk pressure injection
+	stopFunc, err := fi.resourceInjector.InjectDiskPressure(pressureLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject disk pressure: %w", err)
+	}
+	fault.StopFunc = stopFunc
+
+	fi.registerActiveFault(fault)
+
+	// Monitor system behavior during fault
+	result := fi.monitorFaultImpact(ctx, fault)
+
+	// Stop fault injection
+	if err := fi.stopFault(faultID); err != nil {
+		result.ErrorsObserved = append(result.ErrorsObserved, fmt.Sprintf("Failed to stop fault: %v", err))
+	}
+
+	return result, nil
+}
+
+// registerActiveFault registers an active fault
+func (fi *FaultInjector) registerActiveFault(fault *ActiveFault) {
+	fi.faultMutex.Lock()
+	defer fi.faultMutex.Unlock()
+	fi.activeFaults[fault.ID] = fault
+}
+
+// stopFault stops an active fault
+func (fi *FaultInjector) stopFault(faultID string) error {
+	fi.faultMutex.Lock()
+	defer fi.faultMutex.Unlock()
+
+	fault, exists := fi.activeFaults[faultID]
+	if !exists {
+		return fmt.Errorf("fault %s not found", faultID)
+	}
+
+	if fault.StopFunc != nil {
+		if err := fault.StopFunc(); err != nil {
+			return fmt.Errorf("failed to stop fault %s: %w", faultID, err)
+		}
+	}
+
+	delete(fi.activeFaults, faultID)
+	return nil
+}
+
+// monitorFaultImpact monitors system behavior during fault injection
+func (fi *FaultInjector) monitorFaultImpact(ctx context.Context, fault *ActiveFault) *FaultResult {
+	result := &FaultResult{
+		FaultID:          fault.ID,
+		Type:             fault.Type,
+		Duration:         fault.Duration,
+		ErrorsObserved:   make([]string, 0),
+		MetricsCollected: make(map[string]float64),
+		Parameters:       fault.Parameters,
+	}
+
+	startTime := time.Now()
+	timeout := time.After(fault.Duration)
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	var recoveryStartTime time.Time
+	systemHealthy := true
+
+	for {
+		select {
+		case <-ctx.Done():
+			result.ErrorsObserved = append(result.ErrorsObserved, "Context cancelled during monitoring")
+			return result
+		case <-timeout:
+			result.Duration = time.Since(startTime)
+			if !systemHealthy && !recoveryStartTime.IsZero() {
+				result.RecoveryTime = time.Since(recoveryStartTime)
+				result.SystemRecovered = true
+			}
+			return result
+		case <-ticker.C:
+			// Check system health
+			healthy := fi.checkSystemHealth(ctx)
+			
+			if systemHealthy && !healthy {
+				// System just became unhealthy
+				systemHealthy = false
+				result.ErrorsObserved = append(result.ErrorsObserved, "System became unhealthy")
+			} else if !systemHealthy && healthy {
+				// System recovered
+				if recoveryStartTime.IsZero() {
+					recoveryStartTime = time.Now()
+				}
+				systemHealthy = true
+				result.SystemRecovered = true
+				result.GracefulDegradation = true
+			}
+
+			// Collect metrics
+			fi.collectMetrics(result)
+		}
+	}
+}
+
+// checkSystemHealth performs basic system health checks
+func (fi *FaultInjector) checkSystemHealth(ctx context.Context) bool {
+	// This is a simplified health check - in a real implementation,
+	// you would check actual system endpoints and services
+	
+	// Check if we can make basic operations
+	healthChecks := []func() bool{
+		fi.checkDatabaseHealth,
+		fi.checkCacheHealth,
+		fi.checkMemoryHealth,
+		fi.checkDiskHealth,
+	}
+
+	healthyCount := 0
+	for _, check := range healthChecks {
+		if check() {
+			healthyCount++
+		}
+	}
+
+	// System is healthy if at least 75% of checks pass
+	return float64(healthyCount)/float64(len(healthChecks)) >= 0.75
+}
+
+// checkDatabaseHealth checks database connectivity
+func (fi *FaultInjector) checkDatabaseHealth() bool {
+	// Simplified database health check
+	return !fi.databaseInjector.IsFailureActive()
+}
+
+// checkCacheHealth checks cache service health
+func (fi *FaultInjector) checkCacheHealth() bool {
+	// Simplified cache health check
+	return !fi.cacheInjector.IsFailureActive()
+}
+
+// checkMemoryHealth checks memory usage
+func (fi *FaultInjector) checkMemoryHealth() bool {
+	// Simplified memory health check
+	return !fi.resourceInjector.IsMemoryPressureActive()
+}
+
+// checkDiskHealth checks disk usage
+func (fi *FaultInjector) checkDiskHealth() bool {
+	// Simplified disk health check
+	return !fi.resourceInjector.IsDiskPressureActive()
+}
+
+// collectMetrics collects system metrics during fault injection
+func (fi *FaultInjector) collectMetrics(result *FaultResult) {
+	// Collect basic system metrics
+	result.MetricsCollected["timestamp"] = float64(time.Now().Unix())
+	
+	// In a real implementation, you would collect actual metrics
+	// For now, we'll simulate some basic metrics
+	result.MetricsCollected["cpu_usage"] = rand.Float64() * 100
+	result.MetricsCollected["memory_usage"] = rand.Float64() * 100
+	result.MetricsCollected["disk_usage"] = rand.Float64() * 100
+	result.MetricsCollected["network_latency"] = rand.Float64() * 1000
+}
+
+// GetActiveFaults returns currently active faults
+func (fi *FaultInjector) GetActiveFaults() map[string]*ActiveFault {
+	fi.faultMutex.RLock()
+	defer fi.faultMutex.RUnlock()
+	
+	faults := make(map[string]*ActiveFault)
+	for id, fault := range fi.activeFaults {
+		faults[id] = fault
+	}
+	return faults
+}
+
+// StopAllFaults stops all active fault injections
+func (fi *FaultInjector) StopAllFaults() error {
+	fi.faultMutex.Lock()
+	defer fi.faultMutex.Unlock()
+
+	var errors []string
+	for faultID := range fi.activeFaults {
+		if err := fi.stopFault(faultID); err != nil {
+			errors = append(errors, err.Error())
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to stop some faults: %s", fmt.Sprintf("%v", errors))
+	}
+
+	return nil
+}
+
+// DatabaseFaultInjector handles database-specific fault injection
+type DatabaseFaultInjector struct {
+	failureActive bool
+	failureRate   float64
+	mutex         sync.RWMutex
+}
+
+// NewDatabaseFaultInjector creates a new database fault injector
+func NewDatabaseFaultInjector() *DatabaseFaultInjector {
+	return &DatabaseFaultInjector{}
+}
+
+// InjectConnectionFailures injects database connection failures
+func (dfi *DatabaseFaultInjector) InjectConnectionFailures(failureRate float64) (func() error, error) {
+	dfi.mutex.Lock()
+	defer dfi.mutex.Unlock()
+
+	dfi.failureActive = true
+	dfi.failureRate = failureRate
+
+	// Return stop function
+	stopFunc := func() error {
+		dfi.mutex.Lock()
+		defer dfi.mutex.Unlock()
+		dfi.failureActive = false
+		dfi.failureRate = 0
+		return nil
+	}
+
+	return stopFunc, nil
+}
+
+// IsFailureActive returns true if database failures are being injected
+func (dfi *DatabaseFaultInjector) IsFailureActive() bool {
+	dfi.mutex.RLock()
+	defer dfi.mutex.RUnlock()
+	return dfi.failureActive
+}
+
+// ShouldFail returns true if a database operation should fail
+func (dfi *DatabaseFaultInjector) ShouldFail() bool {
+	dfi.mutex.RLock()
+	defer dfi.mutex.RUnlock()
+	
+	if !dfi.failureActive {
+		return false
+	}
+	
+	return rand.Float64() < dfi.failureRate
+}

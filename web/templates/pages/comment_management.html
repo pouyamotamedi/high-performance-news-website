@@ -1,0 +1,655 @@
+{{define "comment_management.html"}}
+{{template "admin_base.html" .}}
+{{end}}
+
+{{define "head"}}
+<title>Comment Management - Admin Panel</title>
+<style>
+    body {
+        visibility: hidden; /* Hidden until auth check passes */
+        background-color: #f8fafc;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .comment-management {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .header h1 {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .header p {
+        color: #6b7280;
+        margin: 0.5rem 0 0 0;
+    }
+    
+    .filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        align-items: center;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+    
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+    
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .filter-select, .filter-input {
+        padding: 0.75rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        transition: border-color 0.2s ease;
+    }
+    
+    .filter-select:focus, .filter-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2563eb;
+        transform: translateY(-1px);
+    }
+    
+    .btn-success {
+        background-color: #10b981;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background-color: #059669;
+    }
+    
+    .btn-danger {
+        background-color: #ef4444;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background-color: #dc2626;
+    }
+    
+    .btn-warning {
+        background-color: #f59e0b;
+        color: white;
+    }
+    
+    .btn-warning:hover {
+        background-color: #d97706;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .comments-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .table-header {
+        background-color: #d2dbe1;
+        color: #374151;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .bulk-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    
+    .bulk-actions .btn {
+        white-space: nowrap;
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .comment-item {
+        padding: 1.5rem;
+        border-bottom: 1px solid #f3f4f6;
+        display: grid;
+        grid-template-columns: auto 1fr auto auto auto;
+        gap: 1rem;
+        align-items: start;
+        transition: background-color 0.2s ease;
+    }
+    
+    .comment-item:hover {
+        background-color: #f9fafb;
+    }
+    
+    .comment-item:last-child {
+        border-bottom: none;
+    }
+    
+    .comment-checkbox {
+        margin-top: 0.25rem;
+        width: 18px;
+        height: 18px;
+    }
+    
+    .comment-content {
+        flex: 1;
+    }
+    
+    .comment-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+        flex-wrap: wrap;
+    }
+    
+    .comment-text {
+        color: #1f2937;
+        line-height: 1.6;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+    
+    .comment-article {
+        font-size: 0.875rem;
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .comment-article:hover {
+        text-decoration: underline;
+    }
+    
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .status-pending {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    
+    .status-approved {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-rejected {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .status-spam {
+        background-color: #fde2e8;
+        color: #be185d;
+    }
+    
+    .comment-status-column {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 100px;
+    }
+    
+    .comment-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        min-width: 200px;
+    }
+    
+    .comment-extra-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        min-width: 150px;
+    }
+    
+    .action-btn {
+        padding: 0.375rem 0.75rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .spam-score {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        background-color: #f3f4f6;
+        color: #374151;
+        font-weight: 500;
+    }
+    
+    .spam-high {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .spam-medium {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    
+    .spam-low {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+    }
+    
+    .pagination button {
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        background: white;
+        cursor: pointer;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .pagination button:hover {
+        background-color: #f9fafb;
+        border-color: #d1d5db;
+    }
+    
+    .pagination button.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 3rem;
+        color: #6b7280;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem;
+        color: #6b7280;
+    }
+    
+    .empty-state h3 {
+        margin-bottom: 0.5rem;
+        color: #374151;
+        font-size: 1.25rem;
+    }
+    
+    /* Modal Styles */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: #1f2937;
+    }
+    
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .close-btn:hover {
+        color: #374151;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .setting-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .setting-group label {
+        display: block;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+    
+    .setting-group textarea,
+    .setting-group input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        transition: border-color 0.2s ease;
+        box-sizing: border-box;
+    }
+    
+    .setting-group textarea:focus,
+    .setting-group input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .setting-group small {
+        display: block;
+        color: #6b7280;
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .comment-management {
+            padding: 1rem;
+        }
+        
+        .header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .filters {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .comment-item {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .comment-actions, .comment-extra-actions {
+            justify-content: flex-start;
+        }
+        
+        .comment-status-column {
+            justify-content: flex-start;
+        }
+        
+        .modal-content {
+            width: 95%;
+            margin: 1rem;
+        }
+    }
+</style>
+{{end}}
+
+{{define "content"}}
+<div class="comment-management">
+    <div class="header">
+        <div>
+            <h1>Comment Management</h1>
+            <p>Moderate and manage user comments across your website</p>
+        </div>
+        <div>
+            <a href="/admin/dashboard" class="btn btn-primary">← Back to Dashboard</a>
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+            <div class="stat-number" id="totalComments">-</div>
+            <div class="stat-label">Total Comments</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="pendingComments">-</div>
+            <div class="stat-label">Pending Review</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="approvedComments">-</div>
+            <div class="stat-label">Approved</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="spamComments">-</div>
+            <div class="stat-label">Spam Detected</div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-group">
+            <label for="statusFilter">Status:</label>
+            <select id="statusFilter" class="filter-select">
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="spam">Spam</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="searchFilter">Search:</label>
+            <input type="text" id="searchFilter" class="filter-input" placeholder="Search comments...">
+        </div>
+        
+        <div class="filter-buttons">
+            <button onclick="loadComments()" class="btn btn-primary btn-sm">Apply Filters</button>
+            <button onclick="resetFilters()" class="btn btn-sm">Reset</button>
+            <button onclick="forceRefresh()" class="btn btn-sm" style="background-color: #10b981; color: white;">Refresh</button>
+            <button onclick="showSpamSettings()" class="btn btn-warning btn-sm">Spam Settings</button>
+        </div>
+    </div>
+    
+    <!-- Spam Settings Modal -->
+    <div id="spamSettingsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Spam Detection Settings</h3>
+                <button onclick="hideSpamSettings()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="spamKeywords">Spam Keywords (one per line):</label>
+                    <textarea id="spamKeywords" rows="8" placeholder="viagra&#10;casino&#10;lottery&#10;winner&#10;congratulations&#10;click here&#10;free money">viagra
+casino
+lottery
+winner
+congratulations
+click here
+free money</textarea>
+                    <small>Comments containing these words will be flagged as spam</small>
+                </div>
+                <div class="setting-group">
+                    <label for="spamThreshold">Spam Score Threshold (0.0 - 1.0):</label>
+                    <input type="number" id="spamThreshold" min="0" max="1" step="0.1" value="0.5">
+                    <small>Comments with scores above this threshold are marked as spam</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="saveSpamSettings()" class="btn btn-primary">Save Settings</button>
+                <button onclick="recalculateSpamScores()" class="btn btn-warning">Recalculate All Scores</button>
+                <button onclick="hideSpamSettings()" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Comments Table -->
+    <div class="comments-table">
+        <div class="table-header">
+            <div>
+                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                <label for="selectAll" style="margin-left: 0.5rem; font-weight: 500;">Select All</label>
+            </div>
+            <div class="bulk-actions">
+                <button onclick="bulkModerate('approve')" class="btn btn-success">Approve</button>
+                <button onclick="bulkModerate('reject')" class="btn btn-danger">Reject</button>
+                <button onclick="bulkModerate('spam')" class="btn btn-warning">Spam</button>
+            </div>
+        </div>
+        
+        <!-- Column Headers -->
+        <div class="comment-headers" style="display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 1rem; padding: 1rem 1.5rem; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 0.875rem;">
+            <div></div>
+            <div>Comment Details</div>
+            <div style="text-align: center;">Status</div>
+            <div style="text-align: center;">Moderation</div>
+            <div style="text-align: center;">Actions</div>
+        </div>
+        
+        <div id="commentsContainer">
+            <div class="loading">Loading comments...</div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<script src="/static/js/admin/comment-management.js"></script>
+{{end}}

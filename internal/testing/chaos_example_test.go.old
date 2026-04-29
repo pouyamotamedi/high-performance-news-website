@@ -1,0 +1,409 @@
+package testing
+
+import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+)
+
+// ExampleFaultInjector_InjectDatabaseFailure demonstrates how to inject database failures
+func ExampleFaultInjector_InjectDatabaseFailure() {
+	injector := NewFaultInjector()
+	ctx := context.Background()
+
+	// Inject database failures with 30% failure rate for 10 seconds
+	result, err := injector.InjectDatabaseFailure(ctx, 0.3, 10*time.Second)
+	if err != nil {
+		fmt.Printf("Failed to inject database failure: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Database fault injected: %s\n", result.FaultID)
+	fmt.Printf("Fault type: %s\n", result.Type)
+	fmt.Printf("System recovered: %t\n", result.SystemRecovered)
+	fmt.Printf("Recovery time: %v\n", result.RecoveryTime)
+	
+	// Output:
+	// Database fault injected: db_failure_1234567890
+	// Fault type: database
+	// System recovered: true
+	// Recovery time: 5s
+}
+
+// ExampleChaosTestRunner demonstrates how to run chaos engineering scenarios
+func ExampleChaosTestRunner() {
+	runner := NewChaosTestRunner()
+	ctx := context.Background()
+
+	// Define a chaos scenario
+	scenario := ChaosTestScenario{
+		Name:        "Database and Cache Failure Scenario",
+		Description: "Tests system resilience when both database and cache fail",
+		Duration:    30 * time.Second,
+		Faults: []FaultConfig{
+			{
+				Type: FaultTypeDatabase,
+				Parameters: map[string]interface{}{
+					"failure_rate": 0.5,
+				},
+				StartDelay: 0,
+				Duration:   20 * time.Second,
+			},
+			{
+				Type: FaultTypeCache,
+				Parameters: map[string]interface{}{
+					"failure_type": "timeout",
+				},
+				StartDelay: 5 * time.Second,
+				Duration:   15 * time.Second,
+			},
+		},
+		Validation: func(result *FaultResult) bool {
+			return result.SystemRecovered && result.RecoveryTime < 10*time.Second
+		},
+	}
+
+	runner.AddScenario(scenario)
+
+	// Run the scenario
+	result, err := runner.RunScenario(ctx, scenario.Name)
+	if err != nil {
+		fmt.Printf("Scenario failed: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Scenario: %s\n", result.ScenarioName)
+	fmt.Printf("Success: %t\n", result.Success)
+	fmt.Printf("Duration: %v\n", result.Duration)
+	fmt.Printf("Faults executed: %d\n", len(result.FaultResults))
+	
+	// Output:
+	// Scenario: Database and Cache Failure Scenario
+	// Success: true
+	// Duration: 30s
+	// Faults executed: 2
+}
+
+// ExampleResilienceValidator demonstrates comprehensive resilience validation
+func ExampleResilienceValidator() {
+	validator := NewResilienceValidator()
+	ctx := context.Background()
+
+	// Validate system recovery time
+	recoveryResult, err := validator.ValidateSystemRecoveryTime(ctx, 30*time.Second)
+	if err != nil {
+		fmt.Printf("Recovery validation failed: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Recovery Test: %s\n", recoveryResult.TestName)
+	fmt.Printf("Success: %t\n", recoveryResult.Success)
+	fmt.Printf("Recovery Time: %v\n", recoveryResult.RecoveryTime)
+
+	// Validate graceful degradation
+	degradationResult, err := validator.ValidateGracefulDegradation(ctx)
+	if err != nil {
+		fmt.Printf("Degradation validation failed: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Degradation Test: %s\n", degradationResult.TestName)
+	fmt.Printf("Graceful Degradation: %t\n", degradationResult.GracefulDegradation)
+
+	// Output:
+	// Recovery Test: System Recovery Time Validation
+	// Success: true
+	// Recovery Time: 15s
+	// Degradation Test: Graceful Degradation Validation
+	// Graceful Degradation: true
+}
+
+// TestChaosEngineering_RealWorldScenario demonstrates a comprehensive real-world chaos test
+func TestChaosEngineering_RealWorldScenario(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping real-world chaos test in short mode")
+	}
+
+	// This test demonstrates how to use chaos engineering for the news website
+	// Requirements: 6 - Chaos Engineering & Fault Injection
+
+	t.Run("news website resilience under breaking news load", func(t *testing.T) {
+		runner := NewChaosTestRunner()
+		ctx := context.Background()
+
+		// Scenario: Breaking news causes high load while infrastructure fails
+		breakingNewsScenario := ChaosTestScenario{
+			Name:        "Breaking News Infrastructure Failure",
+			Description: "Simulates infrastructure failures during breaking news traffic spike",
+			Duration:    60 * time.Second,
+			Faults: []FaultConfig{
+				// Database connection issues (common during high load)
+				{
+					Type: FaultTypeDatabase,
+					Parameters: map[string]interface{}{
+						"failure_rate": 0.2, // 20% of connections fail
+					},
+					StartDelay: 0,
+					Duration:   60 * time.Second,
+				},
+				// Cache becomes overloaded and starts timing out
+				{
+					Type: FaultTypeCache,
+					Parameters: map[string]interface{}{
+						"failure_type": "timeout",
+					},
+					StartDelay: 10 * time.Second,
+					Duration:   40 * time.Second,
+				},
+				// Network latency increases due to traffic
+				{
+					Type: FaultTypeNetwork,
+					Parameters: map[string]interface{}{
+						"latency_ms":   300, // 300ms additional latency
+						"packet_loss": 0.05, // 5% packet loss
+					},
+					StartDelay: 15 * time.Second,
+					Duration:   30 * time.Second,
+				},
+				// Memory pressure from increased article processing
+				{
+					Type: FaultTypeMemory,
+					Parameters: map[string]interface{}{
+						"pressure_level": 0.75, // 75% memory usage
+					},
+					StartDelay: 20 * time.Second,
+					Duration:   25 * time.Second,
+				},
+			},
+			Validation: func(result *FaultResult) bool {
+				// System should recover within 30 seconds and maintain graceful degradation
+				return result.SystemRecovered && 
+					   result.RecoveryTime < 30*time.Second && 
+					   result.GracefulDegradation
+			},
+		}
+
+		runner.AddScenario(breakingNewsScenario)
+
+		// Execute the scenario
+		result, err := runner.RunScenario(ctx, breakingNewsScenario.Name)
+		if err != nil {
+			t.Fatalf("Breaking news scenario failed: %v", err)
+		}
+
+		// Validate results
+		if !result.Success {
+			t.Errorf("Breaking news resilience test failed")
+			for _, error := range result.Errors {
+				t.Logf("Error: %s", error)
+			}
+		}
+
+		// Log results for analysis
+		t.Logf("Breaking News Scenario Results:")
+		t.Logf("  Duration: %v", result.Duration)
+		t.Logf("  Faults Executed: %d", len(result.FaultResults))
+		
+		for i, faultResult := range result.FaultResults {
+			t.Logf("  Fault %d (%s):", i+1, faultResult.Type)
+			t.Logf("    Recovery Time: %v", faultResult.RecoveryTime)
+			t.Logf("    System Recovered: %t", faultResult.SystemRecovered)
+			t.Logf("    Graceful Degradation: %t", faultResult.GracefulDegradation)
+		}
+	})
+
+	t.Run("partition management resilience", func(t *testing.T) {
+		validator := NewResilienceValidator()
+		ctx := context.Background()
+
+		// Test partition management under database failures
+		// This validates Requirement 6.1: database failures should maintain partition management
+		
+		result, err := validator.ValidateSystemRecoveryTime(ctx, 20*time.Second)
+		if err != nil {
+			t.Fatalf("Partition resilience test failed: %v", err)
+		}
+
+		if !result.Success {
+			t.Errorf("Partition management failed to maintain functionality during database failures")
+			for _, recommendation := range result.Recommendations {
+				t.Logf("Recommendation: %s", recommendation)
+			}
+		}
+
+		t.Logf("Partition Management Resilience:")
+		t.Logf("  Recovery Time: %v", result.RecoveryTime)
+		t.Logf("  Success: %t", result.Success)
+	})
+
+	t.Run("cache degradation to database queries", func(t *testing.T) {
+		validator := NewResilienceValidator()
+		ctx := context.Background()
+
+		// Test graceful degradation from cache to database
+		// This validates Requirement 6.2: cache failures should gracefully degrade to database queries
+		
+		result, err := validator.ValidateGracefulDegradation(ctx)
+		if err != nil {
+			t.Fatalf("Cache degradation test failed: %v", err)
+		}
+
+		if !result.GracefulDegradation {
+			t.Errorf("System failed to gracefully degrade from cache to database")
+			for _, recommendation := range result.Recommendations {
+				t.Logf("Recommendation: %s", recommendation)
+			}
+		}
+
+		t.Logf("Cache Degradation Test:")
+		t.Logf("  Graceful Degradation: %t", result.GracefulDegradation)
+		t.Logf("  Success: %t", result.Success)
+	})
+
+	t.Run("job queue memory pressure handling", func(t *testing.T) {
+		injector := NewFaultInjector()
+		ctx := context.Background()
+
+		// Test job queue behavior under memory pressure
+		// This validates Requirement 6.4: memory pressure should properly throttle job queue processing
+		
+		result, err := injector.InjectMemoryPressure(ctx, 0.8, 30*time.Second)
+		if err != nil {
+			t.Fatalf("Memory pressure test failed: %v", err)
+		}
+
+		if !result.SystemRecovered {
+			t.Errorf("Job queue failed to handle memory pressure gracefully")
+		}
+
+		if !result.GracefulDegradation {
+			t.Errorf("Job queue did not demonstrate graceful degradation under memory pressure")
+		}
+
+		t.Logf("Job Queue Memory Pressure Test:")
+		t.Logf("  Recovery Time: %v", result.RecoveryTime)
+		t.Logf("  System Recovered: %t", result.SystemRecovered)
+		t.Logf("  Graceful Degradation: %t", result.GracefulDegradation)
+	})
+
+	t.Run("static file generation disk pressure", func(t *testing.T) {
+		injector := NewFaultInjector()
+		ctx := context.Background()
+
+		// Test static file generation under disk pressure
+		// This validates Requirement 6.5: disk space limitations should be handled gracefully
+		
+		result, err := injector.InjectDiskPressure(ctx, 0.85, 25*time.Second)
+		if err != nil {
+			t.Fatalf("Disk pressure test failed: %v", err)
+		}
+
+		if !result.SystemRecovered {
+			t.Errorf("Static file generation failed to handle disk pressure")
+		}
+
+		t.Logf("Static File Generation Disk Pressure Test:")
+		t.Logf("  Recovery Time: %v", result.RecoveryTime)
+		t.Logf("  System Recovered: %t", result.SystemRecovered)
+	})
+
+	t.Run("cascade failure prevention", func(t *testing.T) {
+		validator := NewResilienceValidator()
+		ctx := context.Background()
+
+		// Test cascade failure prevention
+		// This validates that critical failures don't cause system-wide cascades
+		
+		result, err := validator.ValidateCascadeFailurePrevention(ctx)
+		if err != nil {
+			t.Fatalf("Cascade failure prevention test failed: %v", err)
+		}
+
+		if len(result.CascadeFailures) > 2 {
+			t.Errorf("Too many cascade failures detected: %d", len(result.CascadeFailures))
+			for _, failure := range result.CascadeFailures {
+				t.Logf("Cascade Failure: %s in %s - %s", failure.Cause, failure.Component, failure.Impact)
+			}
+		}
+
+		t.Logf("Cascade Failure Prevention Test:")
+		t.Logf("  Cascade Failures Detected: %d", len(result.CascadeFailures))
+		t.Logf("  Success: %t", result.Success)
+	})
+
+	t.Run("system stability under chaos", func(t *testing.T) {
+		validator := NewResilienceValidator()
+		ctx := context.Background()
+
+		// Test overall system stability under chaotic conditions
+		// This validates Requirement 6.7: automatic recovery within defined RTO/RPO limits
+		
+		result, err := validator.ValidateSystemStabilityUnderChaos(ctx, 45*time.Second)
+		if err != nil {
+			t.Fatalf("System stability test failed: %v", err)
+		}
+
+		// Validate stability metrics meet requirements
+		metrics := result.SystemStability
+		
+		if metrics.AvailabilityPercent < 95.0 {
+			t.Errorf("Availability %.2f%% below required 95%%", metrics.AvailabilityPercent)
+		}
+		
+		if metrics.ErrorRate > 0.05 {
+			t.Errorf("Error rate %.2f%% above acceptable 5%%", metrics.ErrorRate*100)
+		}
+		
+		if metrics.ResponseTimeP95 > 2*time.Second {
+			t.Errorf("P95 response time %v above acceptable 2s", metrics.ResponseTimeP95)
+		}
+
+		t.Logf("System Stability Under Chaos:")
+		t.Logf("  Availability: %.2f%%", metrics.AvailabilityPercent)
+		t.Logf("  Error Rate: %.2f%%", metrics.ErrorRate*100)
+		t.Logf("  P95 Response Time: %v", metrics.ResponseTimeP95)
+		t.Logf("  Throughput Degradation: %.2f%%", metrics.ThroughputDegradation*100)
+		t.Logf("  Success: %t", result.Success)
+	})
+}
+
+// TestChaosEngineering_PerformanceImpact measures the performance impact of chaos testing
+func TestChaosEngineering_PerformanceImpact(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping performance impact test in short mode")
+	}
+
+	t.Run("chaos testing overhead measurement", func(t *testing.T) {
+		injector := NewFaultInjector()
+		ctx := context.Background()
+
+		// Measure baseline performance
+		baselineStart := time.Now()
+		time.Sleep(5 * time.Second) // Simulate normal operation
+		baselineDuration := time.Since(baselineStart)
+
+		// Measure performance with fault injection
+		faultStart := time.Now()
+		result, err := injector.InjectDatabaseFailure(ctx, 0.1, 5*time.Second)
+		if err != nil {
+			t.Fatalf("Fault injection failed: %v", err)
+		}
+		faultDuration := time.Since(faultStart)
+
+		// Calculate overhead
+		overhead := faultDuration - baselineDuration
+		overheadPercent := float64(overhead) / float64(baselineDuration) * 100
+
+		t.Logf("Chaos Testing Performance Impact:")
+		t.Logf("  Baseline Duration: %v", baselineDuration)
+		t.Logf("  With Fault Injection: %v", faultDuration)
+		t.Logf("  Overhead: %v (%.2f%%)", overhead, overheadPercent)
+		t.Logf("  System Recovered: %t", result.SystemRecovered)
+
+		// Overhead should be minimal (less than 20% in most cases)
+		if overheadPercent > 20.0 {
+			t.Logf("Warning: Chaos testing overhead is high: %.2f%%", overheadPercent)
+		}
+	})
+}

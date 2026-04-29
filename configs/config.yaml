@@ -1,0 +1,31 @@
+database:
+  host: "/var/run/postgresql"
+  port: 5432
+  user: "newsapp"
+  password: "fz54$6!(S|I0LzH_C"
+  dbname: "newsdb"
+  sslmode: "disable"
+  max_conns: 150
+  min_conns: 40
+
+cache:
+  host: "127.0.0.1"
+  port: 6380
+  password: ""
+  db: 0
+
+app:
+  environment: "production"
+  dev_mode: false
+  base_url: "https://a.10top.shop"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  mode: "release"
+
+search:
+  enabled: true
+  meilisearch_url: "http://localhost:7700"
+  meilisearch_api_key: "YOUR_MEILISEARCH_API_KEY"
+  index_name: "articles"

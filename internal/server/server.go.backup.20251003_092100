@@ -1,0 +1,1508 @@
+package server
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"high-performance-news-website/internal/api"
+	"high-performance-news-website/internal/auth"
+	"high-performance-news-website/internal/config"
+	"high-performance-news-website/internal/models"
+	"high-performance-news-website/internal/repositories"
+	"high-performance-news-website/internal/services"
+	"high-performance-news-website/internal/templates"
+	"high-performance-news-website/pkg/cache"
+	"high-performance-news-website/pkg/database"
+)
+
+// CacheServiceAdapter adapts cache.CacheService to services.CacheService
+type CacheServiceAdapter struct {
+	cache cache.CacheService
+}
+
+func (c *CacheServiceAdapter) Set(key string, value []byte, ttl time.Duration) error {
+	return c.cache.Set(context.Background(), key, value, ttl)
+}
+
+func (c *CacheServiceAdapter) Get(key string) ([]byte, error) {
+	return c.cache.Get(context.Background(), key)
+}
+
+func (c *CacheServiceAdapter) Delete(key string) error {
+	return c.cache.Delete(context.Background(), key)
+}
+
+func (c *CacheServiceAdapter) DeletePattern(pattern string) error {
+	// This would need to be implemented based on the cache implementation
+	// For now, return nil
+	return nil
+}
+
+type Server struct {
+	config                   *config.Config
+	router                   *gin.Engine
+	cache                    cache.CacheService
+	db                       *database.DB
+	apiRouter                *api.Router
+	templateEngine           *templates.TemplateEngine
+	rssHandlers              *api.RSSHandlers
+	googleNewsHandlers       *api.GoogleNewsHandlers
+	metricsService           *services.MetricsService
+	healthService            *services.HealthService
+	alertingService          *services.AlertingService
+	monitoringConfig         *config.MonitoringConfig
+	analyticsService         *services.AnalyticsService
+	advertisementService     *services.AdvertisementService
+	pushNotificationService  *services.PushNotificationService
+	widgetService            *services.WidgetService
+	themeService             *services.ThemeService
+	cdnService               services.CDNServiceInterface
+}
+
+func New(cfg *config.Config) (*Server, error) {
+	gin.SetMode(cfg.Server.Mode)
+	router := gin.New()
+
+	// Check if we're in development mode
+	if cfg.App.DevMode {
+		log.Println("Starting in development mode with mock services...")
+		return newDevelopmentServer(cfg, router)
+	}
+
+	// Try to initialize cache and database
+	var cacheClient cache.CacheService
+	var db *database.DB
+	var useMockServices bool
+
+	dragonflyCache, err := cache.NewDragonflyClient(&cfg.Cache)
+	if err != nil {
+		log.Printf("Failed to initialize cache: %v", err)
+		log.Println("RSS feeds will use mock data")
+		useMockServices = true
+	} else {
+		cacheClient = cache.CacheService(dragonflyCache)
+	}
+
+	if !useMockServices {
+		db, err = database.NewConnection(&cfg.Database)
+		if err != nil {
+			log.Printf("Failed to initialize database: %v", err)
+			log.Println("RSS feeds will use mock data")
+			useMockServices = true
+		}
+	}
+
+	// Initialize common variables
+	baseURL := fmt.Sprintf("http://localhost:%d", cfg.Server.Port) // In production, this would come from config
+	var seoService *services.SEOService
+	var breadcrumbService *services.BreadcrumbService
+	var rssHandlers *api.RSSHandlers
+	var googleNewsHandlers *api.GoogleNewsHandlers
+	var apiRouter *api.Router
+
+	// Initialize RSS service - use mock if database not available
+	if useMockServices {
+		log.Println("Using mock RSS and Google News services")
+		mockRSSService := services.NewMockRSSService()
+		rssHandlers = api.NewRSSHandlers(mockRSSService)
+		
+		mockGoogleNewsSitemapService := services.NewMockGoogleNewsSitemapService()
+		googleNewsHandlers = api.NewGoogleNewsHandlers(mockGoogleNewsSitemapService)
+	}
+
+	// Declare services outside the block
+	var authService *auth.AuthService
+	var userService *services.UserService
+	var configService *services.ConfigService
+	var metricsService *services.MetricsService
+	var healthService *services.HealthService
+	var alertingService *services.AlertingService
+	var monitoringConfig *config.MonitoringConfig
+	var categoryService *services.CategoryService
+	var tagService *services.TagService
+	var widgetService *services.WidgetService
+	var themeService *services.ThemeService
+	var articleService *services.ArticleService
+	var contentIngestionService *services.ContentIngestionService
+	var searchService *services.SearchService
+	var commentHandlers *api.CommentHandlers
+	var imageHandlers *api.ImageHandlers
+	var analyticsService *services.AnalyticsService
+	var advertisementService *services.AdvertisementService
+	var pushNotificationService *services.PushNotificationService
+	var cdnService services.CDNServiceInterface
+
+	// Initialize services - skip database-dependent services if using mock
+	if !useMockServices {
+		seoService = services.NewSEOService(baseURL, cfg.App.Name, "en")
+		breadcrumbService = services.NewBreadcrumbService(baseURL, cfg.App.Name)
+		// Initialize full services when database is available
+		authService = auth.NewAuthService(cfg.JWT.Secret, cfg.JWT.Secret)
+		userService = services.NewUserService(db.DB, authService)
+		
+		if err := createDemoUser(userService); err != nil {
+			log.Printf("Warning: Failed to create demo user: %v", err)
+		}
+		
+		configService = services.NewConfigService(db.DB, cacheClient)
+		configService.LoadDefaults()
+		
+		// Initialize monitoring configuration
+		monitoringConfig = config.LoadMonitoringConfig()
+		if err := monitoringConfig.Validate(); err != nil {
+			log.Printf("Warning: Invalid monitoring config: %v", err)
+		}
+		
+		// Initialize metrics service with proper parameters
+		metricsService = services.NewMetricsService(db.DB, cacheClient, monitoringConfig)
+		
+		// Initialize health service
+		healthService = services.NewHealthService(db.DB, cacheClient, monitoringConfig, metricsService)
+		
+		// Initialize alerting service
+		var emailService services.EmailService // This would be initialized based on config
+		alertingService = services.NewAlertingService(monitoringConfig, emailService)
+		
+		categoryService = services.NewCategoryService(db.DB)
+		tagService = services.NewTagService(db.DB)
+		
+		articleRepo := repositories.NewArticleRepository(db, cacheClient, cfg.Server.StaticPath)
+		
+		// Initialize widget and theme services
+		widgetRepo := repositories.NewWidgetRepository(db.DB)
+		themeRepo := repositories.NewThemeRepository(db.DB)
+		categoryRepo := repositories.NewCategoryRepository(db.DB)
+		tagRepo := repositories.NewTagRepository(db.DB)
+		
+		// Create cache adapter for services that expect the old interface
+		cacheAdapter := &CacheServiceAdapter{cache: cacheClient}
+		widgetService = services.NewWidgetService(widgetRepo, articleRepo, categoryRepo, tagRepo, cacheAdapter)
+		themeService = services.NewThemeService(themeRepo, cacheAdapter, "web/templates")
+		
+		// Initialize additional admin services
+		analyticsRepo := repositories.NewAnalyticsRepository(db.DB)
+		analyticsService = services.NewAnalyticsService(analyticsRepo)
+		
+		advertisementRepo := repositories.NewAdvertisementRepository(db.DB)
+		advertisementService = services.NewAdvertisementService(advertisementRepo, cacheAdapter, baseURL)
+		
+		pushNotificationRepo := repositories.NewPushNotificationRepository(db.DB)
+		pushNotificationService = services.NewPushNotificationService(pushNotificationRepo, "", "", "")
+		
+		// Initialize CDN service
+		cdnConfig := config.LoadCDNConfig()
+		if cdnConfig.Enabled {
+			cdnService = services.NewCloudflareCDNService(cdnConfig.ToModel())
+		}
+		searchRepo := &services.ArticleRepositoryAdapter{Repository: articleRepo}
+
+		redisClient := dragonflyCache.GetRedisClient()
+		
+		if cfg.Search.Enabled {
+			searchIndexer := services.NewSearchIndexer(
+				cfg.Search.MeiliSearchURL,
+				cfg.Search.MeiliSearchAPIKey,
+				cfg.Search.IndexName,
+				searchRepo,
+			)
+			searchService = services.NewSearchService(searchIndexer, redisClient, searchRepo)
+		} else {
+			searchService = services.NewSearchService(nil, redisClient, searchRepo)
+		}
+
+		articleService = services.NewArticleService(db, articleRepo, nil)
+		contentIngestionService = &services.ContentIngestionService{}
+		commentHandlers = &api.CommentHandlers{}
+		imageHandlers = &api.ImageHandlers{}
+
+		// Initialize real RSS services now that articleRepo is available
+		if rssHandlers == nil {
+			categoryRepo := repositories.NewCategoryRepository(db.DB)
+			tagRepo := repositories.NewTagRepository(db.DB)
+			rssService := services.NewRSSService(
+				articleRepo,
+				categoryRepo,
+				tagRepo,
+				cacheClient,
+				baseURL,
+				cfg.App.Name,
+				"High-performance multilingual news website",
+			)
+			rssHandlers = api.NewRSSHandlers(rssService)
+
+			googleNewsSitemapService := services.NewGoogleNewsSitemapService(
+				articleRepo,
+				cacheClient,
+				baseURL,
+				cfg.App.Name,
+			)
+			googleNewsHandlers = api.NewGoogleNewsHandlers(googleNewsSitemapService)
+		}
+
+		apiRouter = api.NewRouter(
+			userService,
+			articleService,
+			searchService,
+			contentIngestionService,
+			authService,
+			cacheClient,
+			commentHandlers,
+			imageHandlers,
+			configService,
+			metricsService,
+			healthService,
+			alertingService,
+			categoryService,
+			tagService,
+			widgetService,
+			themeService,
+			cdnService,
+		)
+	} else {
+		// Skip API router when using mock services
+		log.Println("Skipping API router initialization - using mock services only")
+		apiRouter = nil
+	}
+	
+	if !useMockServices {
+		seoService = services.NewSEOService(baseURL, cfg.App.Name, "en")
+		breadcrumbService = services.NewBreadcrumbService(baseURL, cfg.App.Name)
+	}
+
+	// Initialize RSS service - use mock if database not available
+	if useMockServices {
+		log.Println("Using mock RSS and Google News services")
+		mockRSSService := services.NewMockRSSService()
+		rssHandlers = api.NewRSSHandlers(mockRSSService)
+		
+		mockGoogleNewsSitemapService := services.NewMockGoogleNewsSitemapService()
+		googleNewsHandlers = api.NewGoogleNewsHandlers(mockGoogleNewsSitemapService)
+	}
+
+	templateEngine := templates.NewTemplateEngine(cfg.Server.Mode == "debug")
+	if !useMockServices {
+		templateEngine.SetSEOServices(seoService, breadcrumbService)
+	}
+	// Always try to load templates, even with mock services
+	if err := templateEngine.LoadTemplates("web/templates"); err != nil {
+		log.Printf("Warning: Failed to load templates, using fallback rendering: %v", err)
+	}
+
+	// Initialize monitoring services variables for all cases
+	var finalMetricsService *services.MetricsService
+	var finalHealthService *services.HealthService
+	var finalAlertingService *services.AlertingService
+	var finalMonitoringConfig *config.MonitoringConfig
+	
+	if !useMockServices {
+		finalMetricsService = metricsService
+		finalHealthService = healthService
+		finalAlertingService = alertingService
+		finalMonitoringConfig = monitoringConfig
+	}
+
+	// Initialize final service variables for all cases
+	var finalAnalyticsService *services.AnalyticsService
+	var finalAdvertisementService *services.AdvertisementService
+	var finalPushNotificationService *services.PushNotificationService
+	var finalWidgetService *services.WidgetService
+	var finalThemeService *services.ThemeService
+	var finalCDNService services.CDNServiceInterface
+	
+	if !useMockServices {
+		finalAnalyticsService = analyticsService
+		finalAdvertisementService = advertisementService
+		finalPushNotificationService = pushNotificationService
+		finalWidgetService = widgetService
+		finalThemeService = themeService
+		finalCDNService = cdnService
+	}
+
+	return &Server{
+		config:                   cfg,
+		router:                   router,
+		cache:                    cacheClient,
+		db:                       db,
+		apiRouter:                apiRouter,
+		templateEngine:           templateEngine,
+		rssHandlers:              rssHandlers,
+		googleNewsHandlers:       googleNewsHandlers,
+		metricsService:           finalMetricsService,
+		healthService:            finalHealthService,
+		alertingService:          finalAlertingService,
+		monitoringConfig:         finalMonitoringConfig,
+		analyticsService:         finalAnalyticsService,
+		advertisementService:     finalAdvertisementService,
+		pushNotificationService:  finalPushNotificationService,
+		widgetService:            finalWidgetService,
+		themeService:             finalThemeService,
+		cdnService:               finalCDNService,
+	}, nil
+}
+
+func (s *Server) setupRoutes() {
+	// Only setup API routes if not in development mode
+	if s.apiRouter != nil {
+		s.apiRouter.SetupRoutes(s.router)
+	}
+	
+	s.setupRSSRoutes()
+	s.setupGoogleNewsRoutes()
+
+	// Health route is handled by the monitoring handler
+
+	s.router.Static("/static", "./web/static")
+	s.router.GET("/", s.handleHomepage)
+	
+	// Setup admin frontend routes
+	s.setupAdminFrontendRoutes()
+	
+	// Frontend website routes (missing from Task 22 implementation)
+	if !s.config.App.DevMode {
+		s.setupProductionFrontendRoutes()
+	}
+}
+
+// setupAdminFrontendRoutes sets up all admin panel routes
+func (s *Server) setupAdminFrontendRoutes() {
+	// Admin dashboard routes
+	s.router.GET("/admin", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/admin/dashboard")
+	})
+	s.router.GET("/admin/dashboard", s.renderAdminDashboard)
+	s.router.GET("/admin/analytics", s.renderAdminAnalytics)
+	s.router.GET("/admin/users", s.renderAdminUsers)
+	s.router.GET("/admin/content", s.renderAdminContent)
+	s.router.GET("/admin/settings", s.renderAdminSettings)
+	s.router.GET("/admin/system", s.renderAdminSystem)
+	
+	// Content management routes
+	s.router.GET("/admin/content/create", s.renderCreateArticle)
+	s.router.GET("/admin/content/categories", s.renderManageCategories)
+	s.router.GET("/admin/content/tags", s.renderManageTags)
+	s.router.GET("/admin/content/media", s.renderMediaLibrary)
+	
+	// User management routes
+	s.router.GET("/admin/users/create", s.renderCreateUser)
+	s.router.GET("/admin/users/roles", s.renderManageRoles)
+	s.router.GET("/admin/users/permissions", s.renderManagePermissions)
+	s.router.GET("/admin/users/export", s.renderExportUsers)
+	
+	// Settings routes
+	s.router.GET("/admin/settings/general", s.renderGeneralSettings)
+	s.router.GET("/admin/settings/performance", s.renderPerformanceSettings)
+	s.router.GET("/admin/settings/security", s.renderSecuritySettings)
+	s.router.GET("/admin/settings/backup", s.renderBackupSettings)
+}
+
+func (s *Server) Start() error {
+	s.setupRoutes()
+	
+	// Start monitoring system if available
+	if s.metricsService != nil && s.monitoringConfig != nil {
+		log.Println("Starting monitoring system...")
+		ctx := context.Background()
+		go s.metricsService.StartMonitoring(ctx)
+		log.Println("Monitoring system started successfully")
+	} else {
+		log.Println("Monitoring system not available (development mode)")
+	}
+	
+	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
+	
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: s.router,
+	}
+
+	go func() {
+		log.Printf("Server starting on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	// Stop monitoring system
+	if s.metricsService != nil {
+		log.Println("Stopping monitoring system...")
+		s.metricsService.StopMonitoring()
+	}
+
+	if s.cache != nil {
+		if err := s.cache.Close(); err != nil {
+			log.Printf("Error closing cache connection: %v", err)
+		}
+	}
+
+	if s.db != nil {
+		if err := s.db.Close(); err != nil {
+			log.Printf("Error closing database connection: %v", err)
+		}
+	}
+
+	log.Println("Server exited")
+	return nil
+}
+
+func createDemoUser(userService *services.UserService) error {
+	_, err := userService.GetByEmail("admin@example.com")
+	if err == nil {
+		return nil
+	}
+	
+	createReq := &services.CreateUserRequest{
+		Username:  "admin",
+		Email:     "admin@example.com",
+		Password:  "Admin123!",
+		Role:      models.RoleAdmin,
+		FirstName: "Demo",
+		LastName:  "Admin",
+		Bio:       "Demo administrator account",
+	}
+	
+	_, err = userService.Create(createReq, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create demo user: %w", err)
+	}
+	
+	log.Println("Demo admin user created successfully (admin@example.com / Admin123!)")
+	return nil
+}
+
+func (s *Server) handleHomepage(c *gin.Context) {
+	// Use development homepage if in dev mode
+	if s.config.App.DevMode {
+		s.handleDevHomepage(c)
+		return
+	}
+	
+	// Create proper template data for homepage
+	data := s.createBaseTemplateData(c)
+	data["Title"] = s.config.App.Name
+	data["PageType"] = "homepage"
+	data["Articles"] = []gin.H{
+		{
+			"Title":    "Welcome to our High Performance News Website",
+			"Slug":     "welcome-news-website",
+			"Excerpt":  "This is a high-performance news website with RSS feeds and Google News integration.",
+			"Author":   "News Team",
+			"TimeAgo":  "1 hour ago",
+			"Views":    2345,
+			"Category": "Announcement",
+		},
+		{
+			"Title":    "Breaking: Latest Technology Innovation",
+			"Slug":     "latest-tech-innovation",
+			"Excerpt":  "A groundbreaking technology innovation has been announced today.",
+			"Author":   "Tech Reporter",
+			"TimeAgo":  "2 hours ago",
+			"Views":    1876,
+			"Category": "Technology",
+		},
+		{
+			"Title":    "Sports Championship Finals Begin",
+			"Slug":     "sports-championship-finals",
+			"Excerpt":  "The highly anticipated championship finals are starting this weekend.",
+			"Author":   "Sports Writer",
+			"TimeAgo":  "3 hours ago",
+			"Views":    1543,
+			"Category": "Sports",
+		},
+	}
+	data["Categories"] = []gin.H{
+		{"Name": "Technology", "Slug": "technology", "Description": "Latest tech news", "Count": 25},
+		{"Name": "Sports", "Slug": "sports", "Description": "Sports updates", "Count": 18},
+		{"Name": "Politics", "Slug": "politics", "Description": "Political news", "Count": 32},
+		{"Name": "Business", "Slug": "business", "Description": "Business news", "Count": 22},
+	}
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("homepage", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	// Fallback to simple response
+	c.String(http.StatusOK, "Homepage (Template not available)")
+}
+
+// setupRSSRoutes sets up RSS feed routes
+func (s *Server) setupRSSRoutes() {
+	// Main RSS feed
+	s.router.GET("/rss", s.rssHandlers.HandleMainRSSFeed)
+	s.router.GET("/rss.xml", s.rssHandlers.HandleMainRSSFeed)
+	s.router.GET("/feed", s.rssHandlers.HandleMainRSSFeed)
+	s.router.GET("/feed.xml", s.rssHandlers.HandleMainRSSFeed)
+	
+	// Category RSS feeds
+	s.router.GET("/rss/category/:slug", s.rssHandlers.HandleCategoryRSSFeed)
+	
+	// Tag RSS feeds
+	s.router.GET("/rss/tag/:slug", s.rssHandlers.HandleTagRSSFeed)
+	
+	// Google News RSS feed
+	s.router.GET("/rss/googlenews", s.rssHandlers.HandleGoogleNewsRSSFeed)
+	s.router.GET("/rss/googlenews.xml", s.rssHandlers.HandleGoogleNewsRSSFeed)
+}
+
+// setupGoogleNewsRoutes sets up Google News sitemap routes
+func (s *Server) setupGoogleNewsRoutes() {
+	// Google News sitemap
+	s.router.GET("/sitemap-news.xml", s.googleNewsHandlers.HandleGoogleNewsSitemap)
+	s.router.GET("/sitemap-news-:page.xml", s.googleNewsHandlers.HandleGoogleNewsSitemap)
+	
+	// Google News sitemap index
+	s.router.GET("/sitemap-news-index.xml", s.googleNewsHandlers.HandleGoogleNewsSitemapIndex)
+}
+
+// newDevelopmentServer creates a server with mock services for development mode
+func newDevelopmentServer(cfg *config.Config, router *gin.Engine) (*Server, error) {
+	log.Println("Initializing mock services for development mode...")
+	
+	// Create mock RSS service
+	mockRSSService := services.NewMockRSSService()
+	rssHandlers := api.NewRSSHandlers(mockRSSService)
+	
+	// Create mock Google News sitemap service
+	mockGoogleNewsSitemapService := services.NewMockGoogleNewsSitemapService()
+	googleNewsHandlers := api.NewGoogleNewsHandlers(mockGoogleNewsSitemapService)
+	
+	// Create a minimal template engine for development
+	templateEngine := templates.NewTemplateEngine(true)
+	
+	server := &Server{
+		config:                   cfg,
+		router:                   router,
+		cache:                    nil, // No cache in dev mode
+		db:                       nil, // No database in dev mode
+		apiRouter:                nil, // No API router in dev mode
+		templateEngine:           templateEngine,
+		rssHandlers:              rssHandlers,
+		googleNewsHandlers:       googleNewsHandlers,
+	}
+	
+	// Setup development routes
+	server.setupDevRoutes()
+	
+	// Setup admin routes for development mode too
+	server.setupAdminFrontendRoutes()
+	
+	log.Println("Development server initialized with mock services")
+	return server, nil
+}
+
+// setupDevRoutes sets up additional routes for development mode
+func (s *Server) setupDevRoutes() {
+	// Website pages with mock content
+	s.router.GET("/category/:slug", s.handleDevCategory)
+	s.router.GET("/tag/:slug", s.handleDevTag)
+	s.router.GET("/latest", s.handleDevLatest)
+	s.router.GET("/trending", s.handleDevTrending)
+	s.router.GET("/article/:slug", s.handleDevArticle)
+}
+
+// setupProductionFrontendRoutes sets up frontend routes for production mode
+// This was missing from Task 22 implementation
+func (s *Server) setupProductionFrontendRoutes() {
+	// Article pages
+	s.router.GET("/article/:slug", s.handleProductionArticle)
+	
+	// Category pages  
+	s.router.GET("/category/:slug", s.handleProductionCategory)
+	s.router.GET("/categories", s.handleProductionCategories)
+	
+	// Tag pages
+	s.router.GET("/tag/:slug", s.handleProductionTag)
+	s.router.GET("/tags", s.handleProductionTags)
+	
+	// Content listing pages
+	s.router.GET("/latest", s.handleProductionLatest)
+	s.router.GET("/trending", s.handleProductionTrending)
+	
+	// Static pages
+	s.router.GET("/about", s.handleProductionAbout)
+	s.router.GET("/contact", s.handleProductionContact)
+}
+
+// Production frontend handlers (missing from Task 22)
+func (s *Server) handleProductionArticle(c *gin.Context) {
+	slug := c.Param("slug")
+	
+	// Create proper template data structure
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Article: " + slug
+	data["Article"] = gin.H{
+		"Title":   "Sample Article: " + slug,
+		"Slug":    slug,
+		"Content": "<p>This is sample article content for: " + slug + "</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>",
+		"Excerpt": "This is a sample article excerpt for " + slug,
+		"Author": gin.H{
+			"FirstName": "Demo",
+			"LastName":  "Author",
+			"Bio":       "Sample author bio",
+		},
+		"Category": gin.H{
+			"Name": "Sample Category",
+			"Slug": "sample-category",
+		},
+		"Tags": []gin.H{
+			{"Name": "sample", "Slug": "sample"},
+			{"Name": "demo", "Slug": "demo"},
+		},
+		"Views":    1234,
+		"ReadTime": 5,
+	}
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("article", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	// Fallback to simple response
+	c.String(http.StatusOK, "Article: "+slug+" (Template not available)")
+}
+
+func (s *Server) handleProductionCategory(c *gin.Context) {
+	slug := c.Param("slug")
+	
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Category: " + slug
+	data["Category"] = gin.H{
+		"Name":        slug,
+		"Slug":        slug,
+		"Description": "Articles in the " + slug + " category",
+	}
+	data["Articles"] = []gin.H{
+		{
+			"Title":   "Sample Article 1 in " + slug,
+			"Slug":    "sample-article-1",
+			"Excerpt": "This is a sample article excerpt",
+			"Author":  "Demo Author",
+			"TimeAgo": "2 hours ago",
+		},
+		{
+			"Title":   "Sample Article 2 in " + slug,
+			"Slug":    "sample-article-2", 
+			"Excerpt": "Another sample article excerpt",
+			"Author":  "Demo Author",
+			"TimeAgo": "4 hours ago",
+		},
+	}
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("category", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	c.String(http.StatusOK, "Category: "+slug+" (Template not available)")
+}
+
+func (s *Server) handleProductionCategories(c *gin.Context) {
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "All Categories"
+	data["Categories"] = []gin.H{
+		{"Name": "Technology", "Slug": "technology", "Description": "Latest tech news", "Count": 25},
+		{"Name": "Sports", "Slug": "sports", "Description": "Sports updates", "Count": 18},
+		{"Name": "Politics", "Slug": "politics", "Description": "Political news", "Count": 32},
+		{"Name": "Business", "Slug": "business", "Description": "Business news", "Count": 22},
+	}
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("categories", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	c.String(http.StatusOK, "All Categories (Template not available)")
+}
+
+func (s *Server) handleProductionTag(c *gin.Context) {
+	slug := c.Param("slug")
+	
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Tag: " + slug
+	data["Tag"] = gin.H{
+		"Name":        slug,
+		"Slug":        slug,
+		"Description": "Articles tagged with " + slug,
+	}
+	data["Articles"] = []gin.H{
+		{
+			"Title":   "Sample Article tagged with " + slug,
+			"Slug":    "sample-tagged-article-1",
+			"Excerpt": "This article is tagged with " + slug,
+			"Author":  "Demo Author",
+			"TimeAgo": "1 hour ago",
+		},
+		{
+			"Title":   "Another " + slug + " tagged article",
+			"Slug":    "sample-tagged-article-2",
+			"Excerpt": "Another article with the " + slug + " tag",
+			"Author":  "Demo Author",
+			"TimeAgo": "3 hours ago",
+		},
+	}
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("tag", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	c.String(http.StatusOK, "Tag: "+slug+" (Template not available)")
+}
+
+func (s *Server) handleProductionTags(c *gin.Context) {
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "All Tags"
+	data["Tags"] = []gin.H{
+		{"Name": "breaking", "Slug": "breaking", "Count": 15},
+		{"Name": "news", "Slug": "news", "Count": 42},
+		{"Name": "technology", "Slug": "technology", "Count": 28},
+		{"Name": "sports", "Slug": "sports", "Count": 18},
+		{"Name": "politics", "Slug": "politics", "Count": 22},
+		{"Name": "business", "Slug": "business", "Count": 19},
+	}
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("tags", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	c.String(http.StatusOK, "All Tags (Template not available)")
+}
+
+func (s *Server) handleProductionLatest(c *gin.Context) {
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Latest Articles"
+	data["Articles"] = []gin.H{
+		{
+			"Title":   "Latest Breaking News Story",
+			"Slug":    "latest-breaking-news",
+			"Excerpt": "This is the most recent breaking news story",
+			"Author":  "News Reporter",
+			"TimeAgo": "2 minutes ago",
+			"Views":   1234,
+			"Category": "Breaking News",
+		},
+		{
+			"Title":   "New Technology Innovation Announced",
+			"Slug":    "tech-innovation",
+			"Excerpt": "A groundbreaking technology innovation",
+			"Author":  "Tech Writer",
+			"TimeAgo": "15 minutes ago",
+			"Views":   856,
+			"Category": "Technology",
+		},
+		{
+			"Title":   "Major Sports Championship Update",
+			"Slug":    "sports-update",
+			"Excerpt": "Latest updates from the championship",
+			"Author":  "Sports Reporter",
+			"TimeAgo": "30 minutes ago",
+			"Views":   642,
+			"Category": "Sports",
+		},
+	}
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("latest", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	c.String(http.StatusOK, "Latest Articles (Template not available)")
+}
+
+func (s *Server) handleProductionTrending(c *gin.Context) {
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Trending Articles"
+	data["Articles"] = []gin.H{
+		{
+			"Title":   "🔥 Most Viral Story of the Week",
+			"Slug":    "viral-story",
+			"Excerpt": "This story has gone viral across social media",
+			"Author":  "Viral Reporter",
+			"TimeAgo": "2 hours ago",
+			"Views":   15420,
+			"Category": "Viral",
+		},
+		{
+			"Title":   "📈 Trending Technology News",
+			"Slug":    "trending-tech",
+			"Excerpt": "This tech story is gaining massive attention",
+			"Author":  "Tech Analyst",
+			"TimeAgo": "4 hours ago",
+			"Views":   12350,
+			"Category": "Technology",
+		},
+		{
+			"Title":   "⚡ Breaking Sports Sensation",
+			"Slug":    "trending-sports",
+			"Excerpt": "A sports story capturing everyone's attention",
+			"Author":  "Sports Writer",
+			"TimeAgo": "6 hours ago",
+			"Views":   9870,
+			"Category": "Sports",
+		},
+	}
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("trending", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	c.String(http.StatusOK, "Trending Articles (Template not available)")
+}
+
+func (s *Server) handleProductionAbout(c *gin.Context) {
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "About Us"
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("about", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	c.String(http.StatusOK, "About Us (Template not available)")
+}
+
+func (s *Server) handleProductionContact(c *gin.Context) {
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Contact Us"
+	
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("contact", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+	
+	c.String(http.StatusOK, "Contact Us (Template not available)")
+}
+
+                    >
+                </div>
+
+                <button type="submit" id="loginButton" class="btn">
+                    <span id="loadingSpan" class="loading hidden"></span>
+                    <span id="buttonText">Sign in</span>
+                </button>
+            </form>
+
+            <div class="demo-credentials">
+                <p>Demo credentials:</p>
+                <p><strong>Email:</strong> admin@example.com</p>
+                <p><strong>Password:</strong> Admin123!</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/admin-login.js"></script>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminDashboard(c *gin.Context) {
+	s.renderAdminDashboard(c)
+}
+
+func (s *Server) handleAdminAnalytics(c *gin.Context) {
+	s.renderAdminAnalytics(c)
+}
+
+func (s *Server) handleAdminUsers(c *gin.Context) {
+	s.renderAdminUsers(c)
+}
+
+func (s *Server) handleAdminContent(c *gin.Context) {
+	s.renderAdminContent(c)
+}
+
+func (s *Server) handleAdminSettings(c *gin.Context) {
+	s.renderAdminSettings(c)
+}
+
+func (s *Server) handleAdminSystem(c *gin.Context) {
+	s.renderAdminSystem(c)
+}
+
+func (s *Server) handleAdminContentCreate(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Article - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+        .form-input, .form-textarea { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
+        .form-textarea { min-height: 200px; resize: vertical; }
+        .form-select { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; }
+        .btn-primary { background-color: #3b82f6; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: #6b7280; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; text-decoration: none; display: inline-block; }
+        .form-row { display: flex; gap: 1rem; }
+        .form-col { flex: 1; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Create New Article</h1>
+        
+        <form id="articleForm" onsubmit="createArticle(event)">
+            <div class="form-group">
+                <label class="form-label" for="title">Article Title *</label>
+                <input type="text" id="title" name="title" class="form-input" required placeholder="Enter article title">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <label class="form-label" for="category">Category</label>
+                    <select id="category" name="category" class="form-select">
+                        <option value="">Select Category</option>
+                        <option value="technology">Technology</option>
+                        <option value="sports">Sports</option>
+                        <option value="politics">Politics</option>
+                        <option value="business">Business</option>
+                    </select>
+                </div>
+                <div class="form-col">
+                    <label class="form-label" for="status">Status</label>
+                    <select id="status" name="status" class="form-select">
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                        <option value="pending">Pending Review</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="excerpt">Excerpt</label>
+                <textarea id="excerpt" name="excerpt" class="form-textarea" rows="3" placeholder="Brief description of the article"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="content">Article Content *</label>
+                <textarea id="content" name="content" class="form-textarea" rows="10" required placeholder="Write your article content here..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="tags">Tags (comma-separated)</label>
+                <input type="text" id="tags" name="tags" class="form-input" placeholder="news, breaking, technology">
+            </div>
+            
+            <div style="margin-top: 2rem;">
+                <button type="submit" class="btn-primary">Create Article</button>
+                <a href="/admin/content" class="btn-secondary" style="margin-left: 1rem;">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        async function createArticle(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const articleData = {
+                title: formData.get('title'),
+                content: formData.get('content'),
+                excerpt: formData.get('excerpt'),
+                category: formData.get('category'),
+                status: formData.get('status'),
+                tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag)
+            };
+            
+            try {
+                // Get JWT token from localStorage (you'd need to implement login first)
+                const token = localStorage.getItem('admin_token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiaXNzIjoibmV3cy13ZWJzaXRlIiwic3ViIjoidXNlcjoxIiwiZXhwIjoxNzU5NDc2MjIyLCJuYmYiOjE3NTkzODk4MjIsImlhdCI6MTc1OTM4OTgyMn0.5Z9BkiUcLJ2CBFbKNBJDZ0EiEZsIWVHp-tBsuwDZIyg';
+                
+                const response = await fetch('/api/v1/articles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(articleData)
+                });
+                
+                if (response.ok) {
+                    alert('Article created successfully!');
+                    window.location.href = '/admin/content';
+                } else {
+                    const error = await response.json();
+                    alert('Error creating article: ' + (error.message || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error creating article: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminContentCategories(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Categories - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        .category-list { margin-top: 2rem; }
+        .category-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 0.5rem; }
+        .category-info h3 { margin: 0; color: #1f2937; }
+        .category-info p { margin: 0.25rem 0 0 0; color: #6b7280; font-size: 0.875rem; }
+        .category-actions { display: flex; gap: 0.5rem; }
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-edit { background-color: #f59e0b; color: white; }
+        .btn-delete { background-color: #ef4444; color: white; }
+        .add-category { background-color: #10b981; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-input { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; margin: 10% auto; padding: 2rem; border-radius: 8px; max-width: 500px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Manage Categories</h1>
+        
+        <button class="add-category" onclick="showAddModal()">+ Add New Category</button>
+        
+        <div class="category-list" id="categoryList">
+            <div class="category-item">
+                <div class="category-info">
+                    <h3>Technology</h3>
+                    <p>Latest technology news and updates</p>
+                </div>
+                <div class="category-actions">
+                    <button class="btn-sm btn-edit" onclick="editCategory('technology')">Edit</button>
+                    <button class="btn-sm btn-delete" onclick="deleteCategory('technology')">Delete</button>
+                </div>
+            </div>
+            
+            <div class="category-item">
+                <div class="category-info">
+                    <h3>Sports</h3>
+                    <p>Sports news and championship updates</p>
+                </div>
+                <div class="category-actions">
+                    <button class="btn-sm btn-edit" onclick="editCategory('sports')">Edit</button>
+                    <button class="btn-sm btn-delete" onclick="deleteCategory('sports')">Delete</button>
+                </div>
+            </div>
+            
+            <div class="category-item">
+                <div class="category-info">
+                    <h3>Politics</h3>
+                    <p>Political news and government updates</p>
+                </div>
+                <div class="category-actions">
+                    <button class="btn-sm btn-edit" onclick="editCategory('politics')">Edit</button>
+                    <button class="btn-sm btn-delete" onclick="deleteCategory('politics')">Delete</button>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 2rem;">
+            <a href="/admin/content" class="action-button">← Back to Content</a>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <h2>Add New Category</h2>
+            <form onsubmit="addCategory(event)">
+                <div class="form-group">
+                    <label>Category Name</label>
+                    <input type="text" id="categoryName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="categoryDesc" class="form-input" required>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn-primary">Add Category</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showAddModal() {
+            document.getElementById('addModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+        
+        function addCategory(event) {
+            event.preventDefault();
+            const name = document.getElementById('categoryName').value;
+            const desc = document.getElementById('categoryDesc').value;
+            
+            // Here you would make an API call to create the category
+            alert('Category "' + name + '" would be created via API');
+            closeModal();
+        }
+        
+        function editCategory(slug) {
+            alert('Edit category: ' + slug + ' (API integration needed)');
+        }
+        
+        function deleteCategory(slug) {
+            if (confirm('Are you sure you want to delete this category?')) {
+                alert('Delete category: ' + slug + ' (API integration needed)');
+            }
+        }
+    </script>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminContentTags(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Tags - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Manage Tags</h1>
+        <p>Tag management functionality coming soon...</p>
+        <a href="/admin/content" class="action-button">← Back to Content</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminContentMedia(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Library - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Media Library</h1>
+        <p>Media management functionality coming soon...</p>
+        <a href="/admin/content" class="action-button">← Back to Content</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+// Users management handlers
+func (s *Server) handleAdminUsersCreate(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New User - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Add New User</h1>
+        <p>User creation functionality coming soon...</p>
+        <a href="/admin/users" class="action-button">← Back to Users</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminUsersRoles(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Roles - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Manage User Roles</h1>
+        <p>Role management functionality coming soon...</p>
+        <a href="/admin/users" class="action-button">← Back to Users</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminUsersPermissions(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Permissions - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>User Permissions</h1>
+        <p>Permission management functionality coming soon...</p>
+        <a href="/admin/users" class="action-button">← Back to Users</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminUsersExport(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Users - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Export Users</h1>
+        <p>User export functionality coming soon...</p>
+        <a href="/admin/users" class="action-button">← Back to Users</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+// Settings management handlers
+func (s *Server) handleAdminSettingsGeneral(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Settings - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>General Settings</h1>
+        <p>General settings functionality coming soon...</p>
+        <a href="/admin/settings" class="action-button">← Back to Settings</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminSettingsPerformance(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Settings - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Performance Settings</h1>
+        <p>Performance configuration functionality coming soon...</p>
+        <a href="/admin/settings" class="action-button">← Back to Settings</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminSettingsSecurity(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Settings - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Security Settings</h1>
+        <p>Security configuration functionality coming soon...</p>
+        <a href="/admin/settings" class="action-button">← Back to Settings</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) handleAdminSettingsBackup(c *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backup Settings - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Backup Settings</h1>
+        <p>Backup configuration functionality coming soon...</p>
+        <a href="/admin/settings" class="action-button">← Back to Settings</a>
+    </div>
+</body>
+</html>`
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
+}
+
+func (s *Server) renderAdminDashboard(c *gin.Context, title, page string) {
+	activeClass := func(currentPage, targetPage string) string {
+		if currentPage == targetPage || (currentPage == "" && targetPage == "") {
+			return "active"
+		}
+		return ""
+	}
+	
+	pageContent := ""
+	if page != "" {
+		pageContent = fmt.Sprintf(`
+            <div class="dashboard-card">
+                <div class="card-title">%s Management</div>
+                <div>
+                    <p>This is the %s management page.</p>
+                    <p>Features for %s management will be implemented here.</p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-title">%s Statistics</div>
+                <div>
+                    <p>Statistics and metrics for %s will be displayed here.</p>
+                </div>
+            </div>`, page, page, page, page, page)
+	} else {
+		pageContent = `
+            <div class="dashboard-card">
+                <div class="card-title">System Status</div>
+                <div>
+                    <p>Database: <span class="status-badge status-healthy">Healthy</span></p>
+                    <p>Cache: <span class="status-badge status-healthy">Operational</span></p>
+                    <p>Search: <span class="status-badge status-healthy">Available</span></p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-title">Quick Stats</div>
+                <div>
+                    <p>Total Articles: <span class="metric">0</span></p>
+                    <p>Active Users: <span class="metric">1</span></p>
+                    <p>Today's Views: <span class="metric">0</span></p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-title">Recent Activity</div>
+                <div>
+                    <p>• Admin user logged in</p>
+                    <p>• System started successfully</p>
+                    <p>• Database connection established</p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-title">Quick Actions</div>
+                <div class="actions-container">
+                    <a href="/admin/content" class="action-button">📝 Manage Content</a>
+                    <a href="/admin/users" class="action-button">👥 Manage Users</a>
+                    <a href="/admin/system" class="action-button">⚙️ System Monitor</a>
+                </div>
+            </div>`
+	}
+	
+	welcomeMessage := ""
+	if page == "" {
+		welcomeMessage = `
+        <div class="welcome-message">
+
+// createBaseTemplateData creates base template data for all pages
+func (s *Server) createBaseTemplateData() gin.H {
+return gin.H{
+ame":    "High Performance News Website",
+tYear": 2025,
+":     "1.0.0",
+}
+}

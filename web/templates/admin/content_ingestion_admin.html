@@ -1,0 +1,307 @@
+{{define "head"}}
+<title>{{.Title}} - Admin Panel</title>
+<link rel="stylesheet" href="/static/css/admin/content-ingestion.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{{end}}
+
+{{define "content"}}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div>
+            <h1>{{.PageTitle}}</h1>
+            <p style="margin: 0; color: #6b7280;">{{.Description}}</p>
+        </div>
+        <div>
+            <a href="/admin/dashboard" class="logout-btn">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="dashboard-nav">
+        <a href="/admin/dashboard" class="nav-item {{if not .page}}active{{end}}">Dashboard</a>
+        <a href="/admin/analytics" class="nav-item {{if eq .page "analytics"}}active{{end}}">Analytics</a>
+        <a href="/admin/users" class="nav-item {{if eq .page "users"}}active{{end}}">Users</a>
+        <a href="/admin/content" class="nav-item {{if eq .page "content"}}active{{end}}">Content</a>
+        <a href="/admin/content-ingestion" class="nav-item {{if eq .page "content-ingestion"}}active{{end}}">Content Ingestion</a>
+        <a href="/admin/comments" class="nav-item {{if eq .page "comments"}}active{{end}}">Comments</a>
+        <a href="/admin/settings" class="nav-item {{if eq .page "settings"}}active{{end}}">Settings</a>
+        <a href="/admin/system" class="nav-item {{if eq .page "system"}}active{{end}}">System</a>
+    </div>
+
+    <!-- Content Ingestion Management Interface -->
+    <div class="content-ingestion-management">
+        <!-- Header Section -->
+        <div class="page-header">
+            <div class="header-content">
+                <h1><i class="fas fa-download"></i> Content Ingestion Management</h1>
+                <p class="subtitle">Manage external content sources, monitor ingestion, and process pending content</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="showCreateSourceModal()">
+                    <i class="fas fa-plus"></i> Add Content Source
+                </button>
+                <button class="btn btn-secondary" onclick="refreshStats()">
+                    <i class="fas fa-sync"></i> Refresh Stats
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="stats-dashboard">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-rss text-blue"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="total-sources">0</h3>
+                    <p>Active Sources</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock text-orange"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="pending-content">0</h3>
+                    <p>Pending Content</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check text-green"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="processed-today">0</h3>
+                    <p>Processed Today</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-times text-red"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="rejected-today">0</h3>
+                    <p>Rejected Today</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="showTab('sources')">
+                <i class="fas fa-database"></i> Content Sources
+            </button>
+            <button class="tab-btn" onclick="showTab('pending')">
+                <i class="fas fa-hourglass-half"></i> Pending Content
+            </button>
+            <button class="tab-btn" onclick="showTab('processed')">
+                <i class="fas fa-check-circle"></i> Processed Content
+            </button>
+            <button class="tab-btn" onclick="showTab('analytics')">
+                <i class="fas fa-chart-bar"></i> Analytics
+            </button>
+        </div>
+
+        <!-- Content Sources Tab -->
+        <div id="sources-tab" class="tab-content active">
+            <div class="section-header">
+                <h2>Content Sources</h2>
+                <div class="section-actions">
+                    <input type="text" id="sources-search" placeholder="Search sources..." class="search-input">
+                    <select id="sources-filter" class="filter-select">
+                        <option value="">All Types</option>
+                        <option value="api">API</option>
+                        <option value="webhook">Webhook</option>
+                        <option value="manual">Manual</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table" id="sources-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Auto Publish</th>
+                            <th>Rate Limit</th>
+                            <th>Priority</th>
+                            <th>Last Activity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sources-tbody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: #6c757d;">
+                                <i class="fas fa-spinner fa-spin"></i> Loading content sources...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pending Content Tab -->
+        <div id="pending-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Pending Content</h2>
+                <div class="section-actions">
+                    <button class="btn btn-success" onclick="processBatch()">
+                        <i class="fas fa-play"></i> Process Batch
+                    </button>
+                    <select id="pending-source-filter" class="filter-select">
+                        <option value="">All Sources</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table" id="pending-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all-pending"></th>
+                            <th>Title</th>
+                            <th>Source</th>
+                            <th>Author</th>
+                            <th>Category</th>
+                            <th>Received</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pending-tbody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: #6c757d;">
+                                <i class="fas fa-spinner fa-spin"></i> Loading pending content...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Processed Content Tab -->
+        <div id="processed-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Processed Content</h2>
+                <div class="section-actions">
+                    <input type="text" id="processed-search" placeholder="Search processed content..." class="search-input">
+                    <select id="processed-status-filter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="processed">Processed</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="duplicate">Duplicate</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table" id="processed-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Source</th>
+                            <th>Status</th>
+                            <th>Processed</th>
+                            <th>Article</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="processed-tbody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #6c757d;">
+                                <i class="fas fa-spinner fa-spin"></i> Loading processed content...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics-tab" class="tab-content">
+            <div class="analytics-header">
+                <h2>Content Ingestion Analytics</h2>
+                <div class="time-range-selector">
+                    <select id="analytics-timerange" onchange="contentManager.updateAnalyticsTimeRange(this.value)">
+                        <option value="24">Last 24 Hours</option>
+                        <option value="168">Last 7 Days</option>
+                        <option value="720">Last 30 Days</option>
+                        <option value="2160">Last 90 Days</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="analytics-grid">
+                <!-- Ingestion Volume Chart -->
+                <div class="chart-container">
+                    <h3>Ingestion Volume</h3>
+                    <div class="chart-controls">
+                        <select id="volume-granularity" onchange="contentManager.updateVolumeChart(this.value)">
+                            <option value="hour">Hourly</option>
+                            <option value="day">Daily</option>
+                            <option value="week">Weekly</option>
+                        </select>
+                    </div>
+                    <canvas id="ingestion-volume-chart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Source Performance Chart -->
+                <div class="chart-container">
+                    <h3>Source Performance</h3>
+                    <div class="performance-metrics">
+                        <div class="metric-card">
+                            <h4>Success Rate</h4>
+                            <div class="metric-value" id="success-rate">-</div>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Avg Processing Time</h4>
+                            <div class="metric-value" id="avg-processing-time">-</div>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Error Rate</h4>
+                            <div class="metric-value" id="error-rate">-</div>
+                        </div>
+                    </div>
+                    <canvas id="source-performance-chart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Content Status Flow -->
+                <div class="chart-container">
+                    <h3>Content Status Distribution</h3>
+                    <canvas id="status-distribution-chart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Processing Timeline -->
+                <div class="chart-container">
+                    <h3>Processing Timeline</h3>
+                    <div class="timeline-stats">
+                        <div class="timeline-item">
+                            <span class="timeline-label">Pending Queue</span>
+                            <span class="timeline-value" id="pending-queue">-</span>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="timeline-label">Avg Processing Time</span>
+                            <span class="timeline-value" id="processing-time">-</span>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="timeline-label">Peak Hour</span>
+                            <span class="timeline-value" id="peak-hour">-</span>
+                        </div>
+                    </div>
+                    <canvas id="processing-timeline-chart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals will be inserted here by JavaScript -->
+    <div id="modal-container"></div>
+</div>
+
+<script src="/static/js/admin/content-ingestion.js"></script>
+{{end}}
+
+{{template "admin_base.html" .}}

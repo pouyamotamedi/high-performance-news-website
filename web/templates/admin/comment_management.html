@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comment Management - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        .comment-management {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-select, .filter-input {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #059669;
+        }
+        
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        
+        .btn-warning {
+            background-color: #f59e0b;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background-color: #d97706;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        
+        .comments-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .bulk-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .comment-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            gap: 1rem;
+            align-items: start;
+        }
+        
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+        
+        .comment-checkbox {
+            margin-top: 0.25rem;
+        }
+        
+        .comment-content {
+            flex: 1;
+        }
+        
+        .comment-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .comment-text {
+            color: #1f2937;
+            line-height: 1.5;
+            margin-bottom: 0.5rem;
+        }
+        
+        .comment-article {
+            font-size: 0.875rem;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        
+        .comment-article:hover {
+            text-decoration: underline;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-approved {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-rejected {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status-spam {
+            background-color: #fde2e8;
+            color: #be185d;
+        }
+        
+        .comment-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .action-btn {
+            padding: 0.25rem 0.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: background-color 0.2s;
+        }
+        
+        .spam-score {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        
+        .spam-high {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .spam-medium {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .spam-low {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+        
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .pagination button:hover {
+            background-color: #f9fafb;
+        }
+        
+        .pagination button.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    <div class="comment-management">
+        <div class="header">
+            <div>
+                <h1>Comment Management</h1>
+                <p>Moderate and manage user comments</p>
+            </div>
+            <div>
+                <a href="/admin/dashboard" class="btn btn-primary">← Back to Dashboard</a>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalComments">-</div>
+                <div class="stat-label">Total Comments</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pendingComments">-</div>
+                <div class="stat-label">Pending Review</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="approvedComments">-</div>
+                <div class="stat-label">Approved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="spamComments">-</div>
+                <div class="stat-label">Spam Detected</div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter" class="filter-select">
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="spam">Spam</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="searchFilter">Search:</label>
+                <input type="text" id="searchFilter" class="filter-input" placeholder="Search comments...">
+            </div>
+            
+            <button onclick="loadComments()" class="btn btn-primary">Apply Filters</button>
+            <button onclick="resetFilters()" class="btn">Reset</button>
+        </div>
+        
+        <!-- Comments Table -->
+        <div class="comments-table">
+            <div class="table-header">
+                <div>
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                    <label for="selectAll">Select All</label>
+                </div>
+                <div class="bulk-actions">
+                    <button onclick="bulkModerate('approve')" class="btn btn-success">Approve Selected</button>
+                    <button onclick="bulkModerate('reject')" class="btn btn-danger">Reject Selected</button>
+                    <button onclick="bulkModerate('spam')" class="btn btn-warning">Mark as Spam</button>
+                </div>
+            </div>
+            
+            <div id="commentsContainer">
+                <div class="loading">Loading comments...</div>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        const pageSize = 20;
+        
+        // Load comments on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            
+            if (!token || (role !== 'admin' && role !== 'editor')) {
+                window.location.href = '/admin/login';
+                return;
+            }
+            
+            loadStats();
+            loadComments();
+        });
+        
+        async function loadStats() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/v1/admin/comments/stats', {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.stats) {
+                    document.getElementById('totalComments').textContent = data.stats.total || 0;
+                    document.getElementById('pendingComments').textContent = data.stats.pending || 0;
+                    document.getElementById('approvedComments').textContent = data.stats.approved || 0;
+                    document.getElementById('spamComments').textContent = data.stats.spam || 0;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        async function loadComments() {
+            const container = document.getElementById('commentsContainer');
+            container.innerHTML = '<div class="loading">Loading comments...</div>';
+            
+            try {
+                const status = document.getElementById('statusFilter').value;
+                const search = document.getElementById('searchFilter').value;
+                const offset = (currentPage - 1) * pageSize;
+                
+                let url = `/api/v1/admin/comments/pending?limit=${pageSize}&offset=${offset}`;
+                
+                if (status) {
+                    url = `/api/v1/admin/comments/search?q=${encodeURIComponent(search || '')}&status=${status}&limit=${pageSize}&offset=${offset}`;
+                } else if (search) {
+                    url = `/api/v1/admin/comments/search?q=${encodeURIComponent(search)}&limit=${pageSize}&offset=${offset}`;
+                }
+                
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(url, {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.comments && data.comments.length > 0) {
+                    displayComments(data.comments);
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <h3>No comments found</h3>
+                            <p>No comments match your current filters.</p>
+                        </div>
+                    `;
+                }
+                
+                updatePagination(data.total || 0);
+                
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Error loading comments</h3>
+                        <p>Please try refreshing the page.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function displayComments(comments) {
+            const container = document.getElementById('commentsContainer');
+            
+            const html = comments.map(comment => `
+                <div class="comment-item">
+                    <input type="checkbox" class="comment-checkbox" value="${comment.id}">
+                    <div class="comment-content">
+                        <div class="comment-meta">
+                            <strong>${escapeHtml(comment.author_name)}</strong>
+                            <span>${escapeHtml(comment.author_email)}</span>
+                            <span>${formatDate(comment.created_at)}</span>
+                            <span class="spam-score ${getSpamScoreClass(comment.spam_score)}">
+                                Spam: ${(comment.spam_score * 100).toFixed(1)}%
+                            </span>
+                        </div>
+                        <div class="comment-text">${escapeHtml(comment.content)}</div>
+                        <a href="/article/${comment.article_slug || comment.article_id}" class="comment-article" target="_blank">
+                            View Article →
+                        </a>
+                    </div>
+                    <div class="status-badge status-${comment.status}">${comment.status}</div>
+                    <div class="comment-actions">
+                        ${comment.status === 'pending' ? `
+                            <button onclick="moderateComment(${comment.id}, 'approve')" class="action-btn btn-success">Approve</button>
+                            <button onclick="moderateComment(${comment.id}, 'reject')" class="action-btn btn-danger">Reject</button>
+                            <button onclick="moderateComment(${comment.id}, 'spam')" class="action-btn btn-warning">Spam</button>
+                        ` : `
+                            <button onclick="moderateComment(${comment.id}, 'pending')" class="action-btn btn-primary">Review</button>
+                        `}
+                        <button onclick="editComment(${comment.id})" class="action-btn" style="background-color: #6b7280;">Edit</button>
+                        <button onclick="deleteComment(${comment.id})" class="action-btn btn-danger">Delete</button>
+                        <button onclick="viewReplies(${comment.id})" class="action-btn" style="background-color: #8b5cf6;">Replies</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        async function moderateComment(commentId, action) {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/api/v1/admin/comments/${commentId}/moderate`, {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ action: action })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification(`Comment ${action}ed successfully`, 'success');
+                    loadComments();
+                    loadStats();
+                } else {
+                    showNotification(data.message || `Failed to ${action} comment`, 'error');
+                }
+            } catch (error) {
+                console.error('Error moderating comment:', error);
+                showNotification(`Failed to ${action} comment`, 'error');
+            }
+        }
+        
+        async function bulkModerate(action) {
+            const checkboxes = document.querySelectorAll('.comment-checkbox:checked');
+            const commentIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            if (commentIds.length === 0) {
+                showNotification('Please select comments to moderate', 'warning');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/v1/admin/comments/bulk-moderate', {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ 
+                        comment_ids: commentIds, 
+                        action: action 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification(`${commentIds.length} comments ${action}ed successfully`, 'success');
+                    loadComments();
+                    loadStats();
+                    document.getElementById('selectAll').checked = false;
+                } else {
+                    showNotification(data.message || `Failed to ${action} comments`, 'error');
+                }
+            } catch (error) {
+                console.error('Error bulk moderating comments:', error);
+                showNotification(`Failed to ${action} comments`, 'error');
+            }
+        }
+        
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.comment-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+        
+        function resetFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('searchFilter').value = '';
+            currentPage = 1;
+            loadComments();
+        }
+        
+        function updatePagination(total) {
+            totalPages = Math.ceil(total / pageSize);
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            // Previous button
+            if (currentPage > 1) {
+                html += `<button onclick="changePage(${currentPage - 1})">← Previous</button>`;
+            }
+            
+            // Page numbers
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                html += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+            }
+            
+            // Next button
+            if (currentPage < totalPages) {
+                html += `<button onclick="changePage(${currentPage + 1})">Next →</button>`;
+            }
+            
+            pagination.innerHTML = html;
+        }
+        
+        function changePage(page) {
+            currentPage = page;
+            loadComments();
+        }
+        
+        function getSpamScoreClass(score) {
+            if (score > 0.7) return 'spam-high';
+            if (score > 0.3) return 'spam-medium';
+            return 'spam-low';
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+                background-color: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        // Enhanced comment management functions
+        async function editComment(commentId) {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/api/v1/comments/${commentId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const newContent = prompt('Edit comment content:', data.comment.content);
+                    if (newContent && newContent !== data.comment.content) {
+                        await updateComment(commentId, newContent);
+                    }
+                } else {
+                    showNotification('Failed to load comment for editing', 'error');
+                }
+            } catch (error) {
+                console.error('Error editing comment:', error);
+                showNotification('Failed to edit comment', 'error');
+            }
+        }
+        
+        async function updateComment(commentId, content) {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/api/v1/admin/comments/${commentId}/edit`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ content: content })
+                });
+                
+                if (response.ok) {
+                    showNotification('Comment updated successfully', 'success');
+                    loadComments();
+                } else {
+                    showNotification('Failed to update comment', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating comment:', error);
+                showNotification('Failed to update comment', 'error');
+            }
+        }
+        
+        async function deleteComment(commentId) {
+            if (!confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/api/v1/admin/comments/${commentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    showNotification('Comment deleted successfully', 'success');
+                    loadComments();
+                    loadStats();
+                } else {
+                    showNotification('Failed to delete comment', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting comment:', error);
+                showNotification('Failed to delete comment', 'error');
+            }
+        }
+        
+        async function viewReplies(commentId) {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/api/v1/admin/comments/${commentId}/replies`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.replies && data.replies.length > 0) {
+                    showRepliesModal(data.replies);
+                } else {
+                    showNotification('No replies found for this comment', 'info');
+                }
+            } catch (error) {
+                console.error('Error loading replies:', error);
+                showNotification('Failed to load replies', 'error');
+            }
+        }
+        
+        function showRepliesModal(replies) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                padding: 2rem;
+                border-radius: 8px;
+                max-width: 800px;
+                max-height: 80vh;
+                overflow-y: auto;
+                width: 90%;
+            `;
+            
+            content.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>Comment Replies</h3>
+                    <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                </div>
+                <div>
+                    ${replies.map(reply => `
+                        <div style="border: 1px solid #e5e7eb; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <div style="font-weight: bold; margin-bottom: 0.5rem;">${escapeHtml(reply.author_name)}</div>
+                            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.5rem;">${formatDate(reply.created_at)}</div>
+                            <div>${escapeHtml(reply.content)}</div>
+                            <div style="margin-top: 0.5rem;">
+                                <span class="status-badge status-${reply.status}">${reply.status}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+
+        // Add CSS for animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

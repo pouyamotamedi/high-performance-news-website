@@ -1,0 +1,636 @@
+package testing
+
+import (
+	"context"
+	"fmt"
+	"math/rand"
+	"sync"
+	"time"
+)
+
+// ResilienceValidator provides comprehensive resilience validation capabilities
+type ResilienceValidator struct {
+	faultInjector    *EnhancedFaultInjector
+	systemMonitor    *SystemMonitor
+	recoveryTracker  *RecoveryTracker
+	degradationChecker *DegradationChecker
+	stabilityAnalyzer *StabilityAnalyzer
+}
+
+// NewResilienceValidator creates a new resilience validator
+func NewResilienceValidator() *ResilienceValidator {
+	return &ResilienceValidator{
+		faultInjector:      NewEnhancedFaultInjector(),
+		systemMonitor:      NewSystemMonitor(),
+		recoveryTracker:    NewRecoveryTracker(),
+		degradationChecker: NewDegradationChecker(),
+		stabilityAnalyzer:  NewStabilityAnalyzer(),
+	}
+}
+
+// ResilienceTestResult represents the result of a resilience validation test
+type ResilienceTestResult struct {
+	TestName            string                 `json:"test_name"`
+	StartTime           time.Time              `json:"start_time"`
+	EndTime             time.Time              `json:"end_time"`
+	Duration            time.Duration          `json:"duration"`
+	Success             bool                   `json:"success"`
+	RecoveryTime        time.Duration          `json:"recovery_time"`
+	GracefulDegradation bool                   `json:"graceful_degradation"`
+	CascadeFailures     []CascadeFailure       `json:"cascade_failures"`
+	SystemStability     SystemStabilityMetrics `json:"system_stability"`
+	Errors              []string               `json:"errors"`
+	Recommendations     []string               `json:"recommendations"`
+}
+
+
+
+// SystemStabilityMetrics tracks system stability during chaos testing
+type SystemStabilityMetrics struct {
+	AvailabilityPercent    float64           `json:"availability_percent"`
+	ResponseTimeP95        time.Duration     `json:"response_time_p95"`
+	ErrorRate              float64           `json:"error_rate"`
+	ThroughputDegradation  float64           `json:"throughput_degradation"`
+	ResourceUtilization    map[string]float64 `json:"resource_utilization"`
+}
+
+// ValidateSystemRecoveryTime tests system recovery time under various failure conditions
+func (rv *ResilienceValidator) ValidateSystemRecoveryTime(ctx context.Context, maxRecoveryTime time.Duration) (*ResilienceTestResult, error) {
+	result := &ResilienceTestResult{
+		TestName:  "System Recovery Time Validation",
+		StartTime: time.Now(),
+		Errors:    make([]string, 0),
+		Recommendations: make([]string, 0),
+	}
+
+	// Test database failure recovery
+	dbRecoveryResult, err := rv.testDatabaseRecovery(ctx, maxRecoveryTime)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("Database recovery test failed: %v", err))
+	} else {
+		if dbRecoveryResult.RecoveryTime > maxRecoveryTime {
+			result.Errors = append(result.Errors, fmt.Sprintf("Database recovery time %v exceeds maximum %v", dbRecoveryResult.RecoveryTime, maxRecoveryTime))
+			result.Recommendations = append(result.Recommendations, "Consider implementing database connection pooling with faster failover")
+		}
+	}
+
+	// Test cache failure recovery
+	cacheRecoveryResult, err := rv.testCacheRecovery(ctx, maxRecoveryTime)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("Cache recovery test failed: %v", err))
+	} else {
+		if cacheRecoveryResult.RecoveryTime > maxRecoveryTime {
+			result.Errors = append(result.Errors, fmt.Sprintf("Cache recovery time %v exceeds maximum %v", cacheRecoveryResult.RecoveryTime, maxRecoveryTime))
+			result.Recommendations = append(result.Recommendations, "Implement cache circuit breaker with faster fallback to database")
+		}
+	}
+
+	// Test network partition recovery
+	networkRecoveryResult, err := rv.testNetworkRecovery(ctx, maxRecoveryTime)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("Network recovery test failed: %v", err))
+	} else {
+		if networkRecoveryResult.RecoveryTime > maxRecoveryTime {
+			result.Errors = append(result.Errors, fmt.Sprintf("Network recovery time %v exceeds maximum %v", networkRecoveryResult.RecoveryTime, maxRecoveryTime))
+			result.Recommendations = append(result.Recommendations, "Implement retry mechanisms with exponential backoff for external services")
+		}
+	}
+
+	// Calculate overall recovery time
+	maxObservedRecovery := time.Duration(0)
+	if dbRecoveryResult != nil && dbRecoveryResult.RecoveryTime > maxObservedRecovery {
+		maxObservedRecovery = dbRecoveryResult.RecoveryTime
+	}
+	if cacheRecoveryResult != nil && cacheRecoveryResult.RecoveryTime > maxObservedRecovery {
+		maxObservedRecovery = cacheRecoveryResult.RecoveryTime
+	}
+	if networkRecoveryResult != nil && networkRecoveryResult.RecoveryTime > maxObservedRecovery {
+		maxObservedRecovery = networkRecoveryResult.RecoveryTime
+	}
+
+	result.RecoveryTime = maxObservedRecovery
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime)
+	result.Success = len(result.Errors) == 0
+
+	return result, nil
+}
+
+// ValidateGracefulDegradation tests system's ability to degrade gracefully under failure
+func (rv *ResilienceValidator) ValidateGracefulDegradation(ctx context.Context) (*ResilienceTestResult, error) {
+	result := &ResilienceTestResult{
+		TestName:  "Graceful Degradation Validation",
+		StartTime: time.Now(),
+		Errors:    make([]string, 0),
+		Recommendations: make([]string, 0),
+	}
+
+	// Test cache failure degradation
+	cacheResult, err := rv.testCacheDegradation(ctx)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("Cache degradation test failed: %v", err))
+	} else {
+		result.GracefulDegradation = cacheResult.GracefulDegradation
+		if !cacheResult.GracefulDegradation {
+			result.Recommendations = append(result.Recommendations, "Implement graceful cache fallback to database queries")
+		}
+	}
+
+	// Test search service degradation
+	searchResult, err := rv.testSearchDegradation(ctx)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("Search degradation test failed: %v", err))
+	} else {
+		if !searchResult.GracefulDegradation {
+			result.GracefulDegradation = false
+			result.Recommendations = append(result.Recommendations, "Implement search fallback to database queries when MeiliSearch is unavailable")
+		}
+	}
+
+	// Test external API degradation
+	apiResult, err := rv.testExternalAPIDegradation(ctx)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("External API degradation test failed: %v", err))
+	} else {
+		if !apiResult.GracefulDegradation {
+			result.GracefulDegradation = false
+			result.Recommendations = append(result.Recommendations, "Implement circuit breakers for external API calls")
+		}
+	}
+
+	// Test memory pressure degradation
+	memoryResult, err := rv.testMemoryPressureDegradation(ctx)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("Memory pressure degradation test failed: %v", err))
+	} else {
+		if !memoryResult.GracefulDegradation {
+			result.GracefulDegradation = false
+			result.Recommendations = append(result.Recommendations, "Implement memory-aware job queue throttling")
+		}
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime)
+	result.Success = len(result.Errors) == 0 && result.GracefulDegradation
+
+	return result, nil
+}
+
+// ValidateCascadeFailurePrevention tests system's ability to prevent cascade failures
+func (rv *ResilienceValidator) ValidateCascadeFailurePrevention(ctx context.Context) (*ResilienceTestResult, error) {
+	result := &ResilienceTestResult{
+		TestName:        "Cascade Failure Prevention Validation",
+		StartTime:       time.Now(),
+		CascadeFailures: make([]CascadeFailure, 0),
+		Errors:          make([]string, 0),
+		Recommendations: make([]string, 0),
+	}
+
+	// Start monitoring for cascade failures
+	cascadeMonitor := rv.startCascadeFailureMonitoring(ctx)
+	defer cascadeMonitor.Stop()
+
+	// Inject primary failure (database)
+	_, err := rv.faultInjector.InjectDatabaseFailure(ctx, 0.8, 30*time.Second)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("Failed to inject database failure: %v", err))
+		return result, err
+	}
+
+	// Monitor for 60 seconds to detect cascade failures
+	monitoringDuration := 60 * time.Second
+	monitoringEnd := time.After(monitoringDuration)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			result.Errors = append(result.Errors, "Context cancelled during cascade monitoring")
+			return result, ctx.Err()
+		case <-monitoringEnd:
+			goto MonitoringComplete
+		case <-ticker.C:
+			// Check for new cascade failures
+			newFailures := cascadeMonitor.GetNewFailures()
+			for _, failure := range newFailures {
+				result.CascadeFailures = append(result.CascadeFailures, failure)
+			}
+		}
+	}
+
+MonitoringComplete:
+	// Analyze cascade failures
+	if len(result.CascadeFailures) > 0 {
+		result.Success = false
+		result.Recommendations = append(result.Recommendations, "Implement circuit breakers to prevent cascade failures")
+		result.Recommendations = append(result.Recommendations, "Add bulkhead isolation between system components")
+		
+		for _, failure := range result.CascadeFailures {
+			result.Errors = append(result.Errors, fmt.Sprintf("Cascade failure detected in %s: %s", failure.Component, failure.Impact))
+		}
+	} else {
+		result.Success = true
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime)
+
+	return result, nil
+}
+
+// ValidateSystemStabilityUnderChaos tests overall system stability under chaotic conditions
+func (rv *ResilienceValidator) ValidateSystemStabilityUnderChaos(ctx context.Context, duration time.Duration) (*ResilienceTestResult, error) {
+	result := &ResilienceTestResult{
+		TestName:  "System Stability Under Chaos Validation",
+		StartTime: time.Now(),
+		Errors:    make([]string, 0),
+		Recommendations: make([]string, 0),
+	}
+
+	// Start system monitoring
+	stabilityMonitor := rv.systemMonitor.StartStabilityMonitoring(ctx)
+	defer stabilityMonitor.Stop()
+
+	// Create chaos scenario with multiple concurrent faults
+	chaosRunner := NewChaosTestRunner()
+	
+	// Define chaos scenario
+	scenario := ChaosTestScenario{
+		Name:        "Multi-Fault Chaos Test",
+		Description: "Tests system stability under multiple concurrent faults",
+		Duration:    duration,
+		Faults: []FaultConfig{
+			{
+				Type: FaultTypeDatabase,
+				Parameters: map[string]interface{}{
+					"failure_rate": 0.3,
+				},
+				StartDelay: 0,
+				Duration:   duration,
+			},
+			{
+				Type: FaultTypeCache,
+				Parameters: map[string]interface{}{
+					"failure_type": "timeout",
+				},
+				StartDelay: 10 * time.Second,
+				Duration:   duration - 10*time.Second,
+			},
+			{
+				Type: FaultTypeNetwork,
+				Parameters: map[string]interface{}{
+					"latency_ms":   200,
+					"packet_loss": 0.1,
+				},
+				StartDelay: 20 * time.Second,
+				Duration:   duration - 20*time.Second,
+			},
+			{
+				Type: FaultTypeMemory,
+				Parameters: map[string]interface{}{
+					"pressure_level": 0.7,
+				},
+				StartDelay: 30 * time.Second,
+				Duration:   duration - 30*time.Second,
+			},
+		},
+		Validation: func(faultResult *FaultResult) bool {
+			return faultResult.SystemRecovered && faultResult.GracefulDegradation
+		},
+	}
+
+	chaosRunner.AddScenario(scenario)
+
+	// Execute chaos scenario
+	_, err := chaosRunner.RunScenario(ctx, scenario.Name)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("Chaos scenario execution failed: %v", err))
+		return result, err
+	}
+
+	// Collect stability metrics
+	stabilityMetrics := stabilityMonitor.GetMetrics()
+	result.SystemStability = SystemStabilityMetrics{
+		AvailabilityPercent:   stabilityMetrics.AvailabilityPercent,
+		ResponseTimeP95:       stabilityMetrics.ResponseTimeP95,
+		ErrorRate:             stabilityMetrics.ErrorRate,
+		ThroughputDegradation: stabilityMetrics.ThroughputDegradation,
+		ResourceUtilization:   stabilityMetrics.ResourceUtilization,
+	}
+
+	// Validate stability thresholds
+	if stabilityMetrics.AvailabilityPercent < 95.0 {
+		result.Errors = append(result.Errors, fmt.Sprintf("Availability %.2f%% below threshold 95%%", stabilityMetrics.AvailabilityPercent))
+		result.Recommendations = append(result.Recommendations, "Improve system resilience to maintain higher availability under chaos")
+	}
+
+	if stabilityMetrics.ErrorRate > 0.05 {
+		result.Errors = append(result.Errors, fmt.Sprintf("Error rate %.2f%% above threshold 5%%", stabilityMetrics.ErrorRate*100))
+		result.Recommendations = append(result.Recommendations, "Implement better error handling and retry mechanisms")
+	}
+
+	if stabilityMetrics.ResponseTimeP95 > 2*time.Second {
+		result.Errors = append(result.Errors, fmt.Sprintf("P95 response time %v above threshold 2s", stabilityMetrics.ResponseTimeP95))
+		result.Recommendations = append(result.Recommendations, "Optimize performance under failure conditions")
+	}
+
+	if stabilityMetrics.ThroughputDegradation > 0.5 {
+		result.Errors = append(result.Errors, fmt.Sprintf("Throughput degradation %.2f%% above threshold 50%%", stabilityMetrics.ThroughputDegradation*100))
+		result.Recommendations = append(result.Recommendations, "Implement load shedding to maintain throughput under stress")
+	}
+
+	result.Success = len(result.Errors) == 0
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime)
+
+	return result, nil
+}
+
+// testDatabaseRecovery tests database failure recovery
+func (rv *ResilienceValidator) testDatabaseRecovery(ctx context.Context, maxRecoveryTime time.Duration) (*FaultResult, error) {
+	return rv.faultInjector.InjectDatabaseFailure(ctx, 1.0, 10*time.Second)
+}
+
+// testCacheRecovery tests cache failure recovery
+func (rv *ResilienceValidator) testCacheRecovery(ctx context.Context, maxRecoveryTime time.Duration) (*FaultResult, error) {
+	return rv.faultInjector.InjectCacheFailure(ctx, "connection_error", 10*time.Second)
+}
+
+// testNetworkRecovery tests network partition recovery
+func (rv *ResilienceValidator) testNetworkRecovery(ctx context.Context, maxRecoveryTime time.Duration) (*FaultResult, error) {
+	return rv.faultInjector.InjectNetworkPartition(ctx, 1000, 0.5, 10*time.Second)
+}
+
+// testCacheDegradation tests cache failure graceful degradation
+func (rv *ResilienceValidator) testCacheDegradation(ctx context.Context) (*FaultResult, error) {
+	return rv.faultInjector.InjectCacheFailure(ctx, "timeout", 15*time.Second)
+}
+
+// testSearchDegradation tests search service graceful degradation
+func (rv *ResilienceValidator) testSearchDegradation(ctx context.Context) (*FaultResult, error) {
+	// Simulate search service failure by injecting network issues to search endpoints
+	return rv.faultInjector.InjectNetworkPartition(ctx, 5000, 1.0, 15*time.Second)
+}
+
+// testExternalAPIDegradation tests external API graceful degradation
+func (rv *ResilienceValidator) testExternalAPIDegradation(ctx context.Context) (*FaultResult, error) {
+	return rv.faultInjector.InjectNetworkPartition(ctx, 3000, 0.8, 15*time.Second)
+}
+
+// testMemoryPressureDegradation tests memory pressure graceful degradation
+func (rv *ResilienceValidator) testMemoryPressureDegradation(ctx context.Context) (*FaultResult, error) {
+	return rv.faultInjector.InjectMemoryPressure(ctx, 0.8, 20*time.Second)
+}
+
+// startCascadeFailureMonitoring starts monitoring for cascade failures
+func (rv *ResilienceValidator) startCascadeFailureMonitoring(ctx context.Context) *CascadeFailureMonitor {
+	return NewCascadeFailureMonitor(ctx)
+}
+
+// SystemMonitor monitors system health and performance metrics
+type SystemMonitor struct {
+	metrics map[string]interface{}
+	mutex   sync.RWMutex
+}
+
+// NewSystemMonitor creates a new system monitor
+func NewSystemMonitor() *SystemMonitor {
+	return &SystemMonitor{
+		metrics: make(map[string]interface{}),
+	}
+}
+
+// StabilityMonitor tracks system stability metrics
+type StabilityMonitor struct {
+	startTime           time.Time
+	availabilityChecks  []bool
+	responseTimes       []time.Duration
+	errorCount          int
+	requestCount        int
+	throughputBaseline  float64
+	currentThroughput   float64
+	resourceUtilization map[string]float64
+	stopChan            chan struct{}
+	mutex               sync.RWMutex
+}
+
+// StartStabilityMonitoring starts monitoring system stability
+func (sm *SystemMonitor) StartStabilityMonitoring(ctx context.Context) *StabilityMonitor {
+	monitor := &StabilityMonitor{
+		startTime:           time.Now(),
+		availabilityChecks:  make([]bool, 0),
+		responseTimes:       make([]time.Duration, 0),
+		resourceUtilization: make(map[string]float64),
+		stopChan:            make(chan struct{}),
+	}
+
+	// Start monitoring goroutine
+	go monitor.monitorLoop(ctx)
+
+	return monitor
+}
+
+// monitorLoop runs the monitoring loop
+func (sm *StabilityMonitor) monitorLoop(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-sm.stopChan:
+			return
+		case <-ticker.C:
+			sm.collectMetrics()
+		}
+	}
+}
+
+// collectMetrics collects system metrics
+func (sm *StabilityMonitor) collectMetrics() {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+
+	// Simulate metric collection
+	// In a real implementation, these would be actual system metrics
+	sm.availabilityChecks = append(sm.availabilityChecks, true) // Simplified
+	sm.responseTimes = append(sm.responseTimes, time.Duration(100+rand.Intn(900))*time.Millisecond)
+	sm.requestCount++
+	
+	// Simulate resource utilization
+	sm.resourceUtilization["cpu"] = rand.Float64() * 100
+	sm.resourceUtilization["memory"] = rand.Float64() * 100
+	sm.resourceUtilization["disk"] = rand.Float64() * 100
+}
+
+// GetMetrics returns collected stability metrics
+func (sm *StabilityMonitor) GetMetrics() SystemStabilityMetrics {
+	sm.mutex.RLock()
+	defer sm.mutex.RUnlock()
+
+	// Calculate availability
+	availableCount := 0
+	for _, available := range sm.availabilityChecks {
+		if available {
+			availableCount++
+		}
+	}
+	availabilityPercent := float64(availableCount) / float64(len(sm.availabilityChecks)) * 100
+
+	// Calculate P95 response time
+	responseTimeP95 := sm.calculateP95ResponseTime()
+
+	// Calculate error rate
+	errorRate := float64(sm.errorCount) / float64(sm.requestCount)
+
+	// Calculate throughput degradation
+	throughputDegradation := (sm.throughputBaseline - sm.currentThroughput) / sm.throughputBaseline
+
+	return SystemStabilityMetrics{
+		AvailabilityPercent:   availabilityPercent,
+		ResponseTimeP95:       responseTimeP95,
+		ErrorRate:             errorRate,
+		ThroughputDegradation: throughputDegradation,
+		ResourceUtilization:   sm.resourceUtilization,
+	}
+}
+
+// calculateP95ResponseTime calculates the 95th percentile response time
+func (sm *StabilityMonitor) calculateP95ResponseTime() time.Duration {
+	if len(sm.responseTimes) == 0 {
+		return 0
+	}
+
+	// Simple P95 calculation (in a real implementation, use proper percentile calculation)
+	index := int(float64(len(sm.responseTimes)) * 0.95)
+	if index >= len(sm.responseTimes) {
+		index = len(sm.responseTimes) - 1
+	}
+	
+	return sm.responseTimes[index]
+}
+
+// Stop stops the stability monitor
+func (sm *StabilityMonitor) Stop() {
+	close(sm.stopChan)
+}
+
+// CascadeFailureMonitor monitors for cascade failures
+type CascadeFailureMonitor struct {
+	failures   []CascadeFailure
+	components map[string]bool
+	mutex      sync.RWMutex
+	stopChan   chan struct{}
+}
+
+// NewCascadeFailureMonitor creates a new cascade failure monitor
+func NewCascadeFailureMonitor(ctx context.Context) *CascadeFailureMonitor {
+	monitor := &CascadeFailureMonitor{
+		failures:   make([]CascadeFailure, 0),
+		components: make(map[string]bool),
+		stopChan:   make(chan struct{}),
+	}
+
+	// Start monitoring
+	go monitor.monitorLoop(ctx)
+
+	return monitor
+}
+
+// monitorLoop monitors for cascade failures
+func (cfm *CascadeFailureMonitor) monitorLoop(ctx context.Context) {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-cfm.stopChan:
+			return
+		case <-ticker.C:
+			cfm.checkForCascadeFailures()
+		}
+	}
+}
+
+// checkForCascadeFailures checks for new cascade failures
+func (cfm *CascadeFailureMonitor) checkForCascadeFailures() {
+	cfm.mutex.Lock()
+	defer cfm.mutex.Unlock()
+
+	// Simulate cascade failure detection
+	// In a real implementation, this would check actual system components
+	components := []string{"cache", "search", "static_generator", "job_queue", "cdn"}
+	
+	for _, component := range components {
+		if !cfm.components[component] && rand.Float64() < 0.1 { // 10% chance of failure
+			failure := CascadeFailure{
+				Component:   component,
+				FailureTime: time.Now(),
+				Cause:       "Database failure cascade",
+				Impact:      fmt.Sprintf("%s service became unavailable", component),
+			}
+			cfm.failures = append(cfm.failures, failure)
+			cfm.components[component] = true
+		}
+	}
+}
+
+// GetNewFailures returns new cascade failures since last call
+func (cfm *CascadeFailureMonitor) GetNewFailures() []CascadeFailure {
+	cfm.mutex.Lock()
+	defer cfm.mutex.Unlock()
+
+	failures := make([]CascadeFailure, len(cfm.failures))
+	copy(failures, cfm.failures)
+	cfm.failures = cfm.failures[:0] // Clear the slice
+
+	return failures
+}
+
+// Stop stops the cascade failure monitor
+func (cfm *CascadeFailureMonitor) Stop() {
+	close(cfm.stopChan)
+}
+
+// RecoveryTracker tracks system recovery metrics
+type RecoveryTracker struct {
+	recoveryEvents map[string]time.Time
+	mutex          sync.RWMutex
+}
+
+// NewRecoveryTracker creates a new recovery tracker
+func NewRecoveryTracker() *RecoveryTracker {
+	return &RecoveryTracker{
+		recoveryEvents: make(map[string]time.Time),
+	}
+}
+
+// DegradationChecker checks for graceful degradation
+type DegradationChecker struct {
+	baselineMetrics map[string]float64
+	mutex           sync.RWMutex
+}
+
+// NewDegradationChecker creates a new degradation checker
+func NewDegradationChecker() *DegradationChecker {
+	return &DegradationChecker{
+		baselineMetrics: make(map[string]float64),
+	}
+}
+
+// StabilityAnalyzer analyzes system stability patterns
+type StabilityAnalyzer struct {
+	stabilityHistory []SystemStabilityMetrics
+	mutex            sync.RWMutex
+}
+
+// NewStabilityAnalyzer creates a new stability analyzer
+func NewStabilityAnalyzer() *StabilityAnalyzer {
+	return &StabilityAnalyzer{
+		stabilityHistory: make([]SystemStabilityMetrics, 0),
+	}
+}

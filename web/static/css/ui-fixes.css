@@ -1,0 +1,1510 @@
+/* UI/UX Fixes - Task 22 Audit Improvements */
+/* MAXIMUM SPECIFICITY OVERRIDES */
+
+/* ===========================================
+   1. HEADER RESPONSIVE DESIGN - CRITICAL
+   =========================================== */
+
+/* Header container - ensure proper layout */
+html body .site-header .header-container,
+.site-header .header-container,
+.header-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0.75rem 1rem !important;
+    max-width: 1280px !important;
+    margin: 0 auto !important;
+    gap: 1rem !important;
+    flex-wrap: nowrap !important;
+    position: relative !important;
+}
+
+/* ===========================================
+   2. DESKTOP VIEW (1024px+) - Hide burger, show nav
+   =========================================== */
+
+@media screen and (min-width: 1024px) {
+    /* HIDE burger menu on desktop */
+    html body .site-header .mobile-menu-toggle,
+    html body .header-container .mobile-menu-toggle,
+    html body button.mobile-menu-toggle,
+    .site-header .mobile-menu-toggle,
+    .header-container .mobile-menu-toggle,
+    .mobile-menu-toggle {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        position: absolute !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+    }
+    
+    /* SHOW main navigation on desktop */
+    html body .site-header .main-navigation,
+    html body .header-container .main-navigation,
+    .site-header .main-navigation,
+    .main-navigation {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: static !important;
+        transform: none !important;
+        width: auto !important;
+        height: auto !important;
+        background: transparent !important;
+        overflow: visible !important;
+    }
+    
+    /* Nav menu horizontal layout */
+    html body .main-navigation .nav-menu,
+    .main-navigation .nav-menu,
+    .nav-menu {
+        display: flex !important;
+        flex-direction: row !important;
+        list-style: none !important;
+        gap: 1.5rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Hide mobile overlay on desktop */
+    html body .mobile-nav-overlay,
+    .mobile-nav-overlay {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Show desktop-only elements */
+    .desktop-only,
+    .logo-text.desktop-only,
+    .login-link.desktop-only,
+    .language-switcher.desktop-only,
+    .user-menu.desktop-only {
+        display: flex !important;
+        visibility: visible !important;
+    }
+    
+    .logo-text.desktop-only {
+        display: inline !important;
+    }
+    
+    .login-link.desktop-only {
+        display: inline-flex !important;
+    }
+}
+
+/* ===========================================
+   3. MOBILE VIEW (<1024px) - Show burger, hide nav
+   =========================================== */
+
+@media screen and (max-width: 1023px) {
+    /* SHOW burger menu on mobile - VISIBLE */
+    html body .site-header .mobile-menu-toggle,
+    html body .header-container .mobile-menu-toggle,
+    html body button.mobile-menu-toggle,
+    .site-header .mobile-menu-toggle,
+    .header-container .mobile-menu-toggle,
+    .mobile-menu-toggle {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        background: transparent !important;
+        border: none !important;
+        cursor: pointer !important;
+        padding: 8px !important;
+        position: relative !important;
+        z-index: 1001 !important;
+        pointer-events: auto !important;
+        overflow: visible !important;
+        order: -1 !important; /* Put burger first */
+    }
+    
+    /* Hamburger lines - MUST BE VISIBLE */
+    html body .mobile-menu-toggle .hamburger-line,
+    .mobile-menu-toggle .hamburger-line,
+    .hamburger-line {
+        display: block !important;
+        width: 22px !important;
+        height: 2px !important;
+        background-color: #1e293b !important;
+        background: #1e293b !important;
+        margin: 3px 0 !important;
+        transition: all 0.3s ease !important;
+        border-radius: 2px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: relative !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Dark mode hamburger lines */
+    [data-theme="dark"] .mobile-menu-toggle .hamburger-line,
+    [data-theme="dark"] .hamburger-line,
+    html[data-theme="dark"] .hamburger-line {
+        background-color: #f1f5f9 !important;
+        background: #f1f5f9 !important;
+    }
+    
+    /* HIDE main navigation on mobile */
+    html body .site-header .main-navigation,
+    html body .header-container .main-navigation,
+    .site-header .main-navigation,
+    .main-navigation {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+    }
+    
+    /* Hide mega menus and submenus on mobile */
+    .mega-menu,
+    .nav-submenu {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Header actions - keep visible but compact */
+    .header-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Logo in center on mobile */
+    .site-logo {
+        flex: 1 !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+    
+    /* Hide site name text on mobile - show only logo */
+    .logo-text,
+    .site-logo .logo-text,
+    .desktop-only {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Hide login link on mobile (moved to menu) */
+    .login-link.desktop-only,
+    .language-switcher.desktop-only,
+    .user-menu.desktop-only {
+        display: none !important;
+    }
+}
+
+/* ===========================================
+   4. MOBILE NAV OVERLAY
+   =========================================== */
+
+/* Base state - hidden */
+.mobile-nav-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+    z-index: 9999 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    visibility: hidden !important;
+    overflow-y: auto !important;
+    padding-top: 70px !important;
+}
+
+/* RTL support */
+[dir="rtl"] .mobile-nav-overlay,
+.rtl-dir .mobile-nav-overlay {
+    transform: translateX(100%) !important;
+}
+
+/* Active/Open state */
+.mobile-nav-overlay.active {
+    transform: translateX(0) !important;
+    visibility: visible !important;
+}
+
+/* Prevent body scroll when menu is open */
+body.mobile-menu-open {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+}
+
+/* ===========================================
+   5. MOBILE MENU CLOSE BUTTON
+   =========================================== */
+
+.mobile-menu-close {
+    position: absolute !important;
+    top: 16px !important;
+    right: 16px !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--color-bg-secondary, #f8fafc) !important;
+    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    z-index: 10000 !important;
+    color: var(--color-text-primary, #1e293b) !important;
+    padding: 0 !important;
+}
+
+.mobile-menu-close:hover {
+    background: var(--color-bg-tertiary, #f1f5f9) !important;
+}
+
+.mobile-menu-close svg {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+/* RTL close button position */
+[dir="rtl"] .mobile-menu-close,
+.rtl-dir .mobile-menu-close {
+    right: auto !important;
+    left: 16px !important;
+}
+
+/* ===========================================
+   6. MOBILE NAV MENU ITEMS
+   =========================================== */
+
+.mobile-nav-menu {
+    list-style: none !important;
+    padding: 1rem !important;
+    margin: 0 !important;
+}
+
+.mobile-nav-item {
+    border-bottom: 1px solid var(--color-border-primary, #e2e8f0) !important;
+}
+
+.mobile-nav-link {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 1rem !important;
+    color: var(--color-text-primary, #1e293b) !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+    min-height: 56px !important;
+}
+
+.mobile-nav-submenu {
+    list-style: none !important;
+    padding: 0 0 1rem 1.5rem !important;
+    display: none !important;
+}
+
+.mobile-nav-item.expanded .mobile-nav-submenu {
+    display: block !important;
+}
+
+.mobile-nav-sublink {
+    display: flex !important;
+    align-items: center !important;
+    padding: 0.75rem 1rem !important;
+    color: var(--color-text-secondary, #64748b) !important;
+    text-decoration: none !important;
+    min-height: 48px !important;
+}
+
+.mobile-nav-sublink:hover {
+    color: var(--color-primary, #2563eb) !important;
+}
+
+/* ===========================================
+   7. HERO SECTION HEIGHT FIXES
+   =========================================== */
+
+/* CRITICAL: Show hero image on ALL screen sizes (override homepage.css hiding it on mobile) */
+.hero-image {
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    border-radius: 0.75rem !important;
+}
+
+.hero-image picture {
+    display: block !important;
+    width: 100% !important;
+}
+
+.hero-image picture img,
+.hero-image img {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 200px !important;
+    object-fit: cover !important;
+    border-radius: 0.75rem !important;
+}
+
+/* Hero grid - make main box match sidebar height */
+.hero-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+}
+
+@media (min-width: 1024px) {
+    .hero-grid {
+        grid-template-columns: 2fr 1fr !important;
+        align-items: stretch !important;
+    }
+    
+    /* Main hero card should fill height */
+    .hero-main,
+    .hero-grid > *:first-child {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+    }
+    
+    /* Hero image container fills available space */
+    .hero-main .hero-image,
+    .hero-grid > *:first-child .hero-image,
+    .hero-grid > *:first-child .article-image {
+        flex: 1 !important;
+        min-height: 350px !important;
+    }
+    
+    /* Sidebar column */
+    .hero-sidebar,
+    .hero-grid > *:last-child {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+        height: 100% !important;
+    }
+    
+    /* Secondary items in sidebar distribute evenly */
+    .hero-secondary,
+    .hero-sidebar > * {
+        flex: 1 !important;
+    }
+}
+
+.hero-img {
+    width: 100% !important;
+    min-height: 280px !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 0.75rem !important;
+}
+
+@media (min-width: 640px) {
+    .hero-img {
+        min-height: 350px !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .hero-img {
+        min-height: 400px !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .hero-img {
+        min-height: 100% !important;
+        aspect-ratio: auto !important;
+    }
+    
+    /* Main hero image fills container */
+    .hero-main .hero-img,
+    .hero-grid > *:first-child .hero-img {
+        height: 100% !important;
+        min-height: 400px !important;
+    }
+}
+
+.hero-section {
+    padding: 2rem 0 3rem !important;
+}
+
+@media (min-width: 768px) {
+    .hero-section {
+        padding: 3rem 0 4rem !important;
+    }
+}
+
+/* ===========================================
+   8. IMAGE SIZE CONSISTENCY & ARTICLE CARDS
+   =========================================== */
+
+/* Article card - ensure images fill full width */
+.article-card {
+    overflow: hidden !important;
+    border-radius: 0.75rem !important;
+}
+
+.article-card .article-image,
+.article-image {
+    position: relative !important;
+    width: 100% !important;
+    aspect-ratio: 16/10 !important;
+    overflow: hidden !important;
+    background: var(--color-bg-secondary, #f8fafc) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* Remove any border-radius from image container inside card */
+.article-card .article-image {
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.article-card .article-image img,
+.article-image img,
+.article-img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    transition: transform 0.3s ease !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* Ensure featured image fills container */
+.featured-image,
+.article-card .featured-image {
+    width: 100% !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.featured-image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+.placeholder-img {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #6b7280 !important;
+    font-weight: 600 !important;
+    border: 2px dashed #d1d5db !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.hero-img.placeholder-img {
+    min-height: 280px !important;
+}
+
+@media (min-width: 768px) {
+    .hero-img.placeholder-img {
+        min-height: 400px !important;
+    }
+}
+
+.secondary-image {
+    flex-shrink: 0 !important;
+    width: 100px !important;
+    height: 75px !important;
+    border-radius: 0.375rem !important;
+    overflow: hidden !important;
+    background: var(--color-bg-secondary, #f8fafc) !important;
+}
+
+.secondary-img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+/* ===========================================
+   9. FOOTER NEWSLETTER FORM FIXES
+   =========================================== */
+
+.site-footer .newsletter-form,
+.footer-section .newsletter-form,
+.newsletter-form {
+    margin-top: 1rem !important;
+}
+
+/* Newsletter input group - horizontal on all screens */
+.site-footer .newsletter-input-group,
+.footer-section .newsletter-input-group,
+.newsletter-input-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.5rem !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+}
+
+/* On very small screens, stack vertically */
+@media (max-width: 400px) {
+    .site-footer .newsletter-input-group,
+    .footer-section .newsletter-input-group,
+    .newsletter-input-group {
+        flex-direction: column !important;
+    }
+}
+
+/* Newsletter input field */
+.site-footer .newsletter-input,
+.footer-section .newsletter-input,
+.newsletter-input {
+    flex: 1 !important;
+    min-width: 0 !important;
+    padding: 0.75rem 1rem !important;
+    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    border-radius: 0.5rem !important;
+    font-size: 0.9375rem !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+    color: var(--color-text-primary, #1e293b) !important;
+    min-height: 48px !important;
+    height: 48px !important;
+}
+
+/* Newsletter submit button - fixed width, proper text */
+.site-footer .newsletter-submit,
+.footer-section .newsletter-submit,
+.newsletter-submit,
+.newsletter-button {
+    padding: 0.75rem 1.5rem !important;
+    background: var(--color-primary, #2563eb) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 0.5rem !important;
+    font-weight: 600 !important;
+    font-size: 0.9375rem !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    min-width: 100px !important;
+    line-height: 1 !important;
+    text-align: center !important;
+}
+
+.site-footer .newsletter-submit:hover,
+.footer-section .newsletter-submit:hover,
+.newsletter-submit:hover,
+.newsletter-button:hover {
+    background: var(--color-primary-hover, #1d4ed8) !important;
+}
+
+/* Fix for newsletter section in sidebar */
+.newsletter-section .newsletter-input-group {
+    flex-direction: column !important;
+}
+
+.newsletter-section .newsletter-button,
+.newsletter-section .newsletter-submit {
+    width: 100% !important;
+}
+
+/* ===========================================
+   10. BREAKING NEWS TICKER
+   =========================================== */
+
+.breaking-news-banner {
+    background: #dc2626 !important;
+    color: white !important;
+    padding: 0.375rem 0 !important;
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+    overflow: hidden !important;
+    position: relative !important;
+    z-index: 100 !important;
+    line-height: 1.4 !important;
+}
+
+/* Override container padding inside breaking news */
+.breaking-news-banner .container {
+    padding: 0 0.5rem !important;
+    max-width: 100% !important;
+}
+
+.breaking-news-content {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    max-width: 1280px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+.breaking-label {
+    flex-shrink: 0 !important;
+    background: white !important;
+    color: #dc2626 !important;
+    padding: 0.125rem 0.375rem !important;
+    border-radius: 0.25rem !important;
+    font-weight: 700 !important;
+    font-size: 0.5625rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    white-space: nowrap !important;
+    line-height: 1.2 !important;
+}
+
+.breaking-ticker {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    position: relative !important;
+    display: flex !important;
+}
+
+.breaking-ticker-content {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    animation: ticker-scroll 30s linear infinite !important;
+    white-space: nowrap !important;
+    padding-right: 2rem !important;
+}
+
+.breaking-ticker:hover .breaking-ticker-content {
+    animation-play-state: paused !important;
+}
+
+.ticker-item {
+    white-space: nowrap !important;
+}
+
+.ticker-link {
+    color: white !important;
+    text-decoration: none !important;
+    transition: opacity 0.2s ease !important;
+    font-size: 0.75rem !important;
+}
+
+.ticker-link:hover {
+    opacity: 0.8 !important;
+    text-decoration: underline !important;
+}
+
+.ticker-separator {
+    color: rgba(255, 255, 255, 0.6) !important;
+    margin: 0 0.25rem !important;
+}
+
+@keyframes ticker-scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* RTL support for breaking news */
+[dir="rtl"] .breaking-ticker-content,
+.rtl-dir .breaking-ticker-content {
+    animation: ticker-scroll-rtl 30s linear infinite !important;
+}
+
+@keyframes ticker-scroll-rtl {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(50%);
+    }
+}
+
+/* Mobile adjustments for breaking news - FORCE SINGLE ROW */
+@media screen and (max-width: 768px) {
+    .breaking-news-banner {
+        padding: 0.25rem 0 !important;
+        font-size: 0.6875rem !important;
+    }
+    
+    .breaking-news-banner .container {
+        padding: 0 0.375rem !important;
+    }
+    
+    .breaking-news-content {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.375rem !important;
+    }
+    
+    .breaking-label {
+        font-size: 0.5rem !important;
+        padding: 0.0625rem 0.25rem !important;
+        letter-spacing: 0 !important;
+    }
+    
+    .ticker-link {
+        font-size: 0.6875rem !important;
+    }
+    
+    .breaking-ticker-content {
+        font-size: 0.6875rem !important;
+        gap: 0.375rem !important;
+    }
+}
+
+/* ===========================================
+   11. DARK MODE FIXES
+   =========================================== */
+
+[data-theme="dark"] .mobile-menu-close {
+    background: var(--color-bg-secondary, #1e293b) !important;
+    border-color: var(--color-border-primary, #334155) !important;
+    color: var(--color-text-primary, #f1f5f9) !important;
+}
+
+[data-theme="dark"] .mobile-nav-overlay {
+    background: var(--color-bg-primary, #0f172a) !important;
+}
+
+[data-theme="dark"] .placeholder-img {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%) !important;
+    color: #9ca3af !important;
+    border-color: #6b7280 !important;
+}
+
+[data-theme="dark"] .site-footer .newsletter-input {
+    background: var(--color-bg-secondary, #1e293b) !important;
+    border-color: var(--color-border-primary, #334155) !important;
+    color: var(--color-text-primary, #f1f5f9) !important;
+}
+
+/* ===========================================
+   12. RTL SUPPORT
+   =========================================== */
+
+[dir="rtl"] .breaking-label,
+.rtl-dir .breaking-label {
+    margin-right: 0 !important;
+    margin-left: 1rem !important;
+}
+
+/* ===========================================
+   13. ACCESSIBILITY
+   =========================================== */
+
+.mobile-menu-toggle,
+.mobile-menu-close,
+.newsletter-submit,
+.social-link,
+.nav-link {
+    min-width: 44px !important;
+    min-height: 44px !important;
+}
+
+.mobile-menu-toggle:focus-visible,
+.mobile-menu-close:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb) !important;
+    outline-offset: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mobile-nav-overlay,
+    .hamburger-line,
+    .article-img,
+    .hero-img {
+        transition: none !important;
+    }
+}
+
+
+/* ===========================================
+   14. ARTICLE PAGE RESPONSIVE FIXES
+   =========================================== */
+
+/* Article layout - prevent overflow */
+.article-layout {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    padding: 1rem !important;
+}
+
+@media screen and (min-width: 768px) {
+    .article-layout {
+        padding: 2rem 1rem !important;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .article-layout {
+        display: grid !important;
+        grid-template-columns: 1fr 320px !important;
+        gap: 2rem !important;
+        padding: 2rem !important;
+    }
+}
+
+/* Article main content - prevent overflow */
+.article-main-enhanced {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    padding: 1rem !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+@media screen and (min-width: 768px) {
+    .article-main-enhanced {
+        padding: 2rem !important;
+    }
+}
+
+/* Article title - responsive sizing */
+.article-title-enhanced {
+    font-size: 1.5rem !important;
+    line-height: 1.3 !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    hyphens: auto !important;
+}
+
+@media screen and (min-width: 480px) {
+    .article-title-enhanced {
+        font-size: 1.75rem !important;
+    }
+}
+
+@media screen and (min-width: 640px) {
+    .article-title-enhanced {
+        font-size: 2rem !important;
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .article-title-enhanced {
+        font-size: 2.5rem !important;
+        line-height: 1.2 !important;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .article-title-enhanced {
+        font-size: 3rem !important;
+    }
+}
+
+/* Article content - prevent overflow */
+.article-content-enhanced,
+.article-content {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+.article-content-enhanced img,
+.article-content img {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+.article-content-enhanced pre,
+.article-content pre {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+}
+
+.article-content-enhanced table,
+.article-content table {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    display: block !important;
+}
+
+/* Article meta - responsive layout */
+.article-meta-enhanced {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    align-items: flex-start !important;
+}
+
+@media screen and (min-width: 640px) {
+    .article-meta-enhanced {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 1rem !important;
+        align-items: center !important;
+    }
+}
+
+/* Article stats - responsive */
+.article-stats-enhanced {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    font-size: 0.75rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .article-stats-enhanced {
+        gap: 1rem !important;
+        font-size: 0.875rem !important;
+    }
+}
+
+/* Featured image - responsive */
+.featured-image-enhanced {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 300px !important;
+    object-fit: cover !important;
+    border-radius: 0.5rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .featured-image-enhanced {
+        max-height: 400px !important;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .featured-image-enhanced {
+        max-height: 500px !important;
+    }
+}
+
+/* Sidebar - hide on mobile, show on desktop */
+.article-sidebar {
+    display: none !important;
+}
+
+@media screen and (min-width: 1024px) {
+    .article-sidebar {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1.5rem !important;
+    }
+}
+
+/* Engagement section - responsive */
+.engagement-section-enhanced {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+    padding: 1rem !important;
+    text-align: center !important;
+}
+
+@media screen and (min-width: 640px) {
+    .engagement-section-enhanced {
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 1.5rem !important;
+        text-align: left !important;
+    }
+}
+
+.engagement-buttons-enhanced {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    justify-content: center !important;
+}
+
+@media screen and (min-width: 640px) {
+    .engagement-buttons-enhanced {
+        justify-content: flex-start !important;
+    }
+}
+
+.social-sharing-enhanced {
+    display: flex !important;
+    gap: 0.5rem !important;
+    justify-content: center !important;
+}
+
+@media screen and (min-width: 640px) {
+    .social-sharing-enhanced {
+        justify-content: flex-end !important;
+    }
+}
+
+/* Text size controls - responsive */
+.text-size-controls {
+    display: flex !important;
+    gap: 0.25rem !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+}
+
+.text-size-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    font-size: 0.75rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .text-size-btn {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        font-size: 0.875rem !important;
+    }
+}
+
+/* ===========================================
+   15. BREADCRUMB RESPONSIVE FIXES
+   =========================================== */
+
+.breadcrumb-container {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    padding: 0.5rem 1rem !important;
+    background: var(--color-bg-secondary, #f8fafc) !important;
+}
+
+.breadcrumb-container .container {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+}
+
+.breadcrumb,
+nav.breadcrumb {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    font-size: 0.75rem !important;
+    color: var(--color-text-secondary, #64748b) !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+@media screen and (min-width: 640px) {
+    .breadcrumb,
+    nav.breadcrumb {
+        font-size: 0.875rem !important;
+        gap: 0.5rem !important;
+    }
+}
+
+.breadcrumb a {
+    color: var(--color-primary, #2563eb) !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    max-width: 150px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+@media screen and (min-width: 640px) {
+    .breadcrumb a {
+        max-width: 200px !important;
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .breadcrumb a {
+        max-width: none !important;
+    }
+}
+
+.breadcrumb .separator {
+    color: var(--color-text-muted, #94a3b8) !important;
+    margin: 0 0.125rem !important;
+}
+
+/* ===========================================
+   16. COMMENTS SECTION RESPONSIVE FIXES
+   =========================================== */
+
+.comments-section {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    padding: 0 1rem !important;
+    margin-top: 2rem !important;
+}
+
+@media screen and (min-width: 768px) {
+    .comments-section {
+        padding: 0 !important;
+        margin-top: 3rem !important;
+    }
+}
+
+.comments-container {
+    max-width: 100% !important;
+    padding: 1rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .comments-container {
+        padding: 1.5rem !important;
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .comments-container {
+        padding: 2rem !important;
+    }
+}
+
+.comments-title {
+    font-size: 1.25rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .comments-title {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* Comment form - responsive */
+.comment-form .form-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .comment-form .form-row {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+.comment-form input,
+.comment-form textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Reply form - responsive */
+.reply-form {
+    padding: 1rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .reply-form {
+        padding: 1.5rem !important;
+    }
+}
+
+.reply-form .form-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .reply-form .form-row {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+.reply-form-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+}
+
+@media screen and (min-width: 480px) {
+    .reply-form-actions {
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+    }
+}
+
+.submit-reply-btn,
+.cancel-reply-btn {
+    width: 100% !important;
+    min-width: auto !important;
+}
+
+@media screen and (min-width: 480px) {
+    .submit-reply-btn,
+    .cancel-reply-btn {
+        width: auto !important;
+        min-width: 100px !important;
+    }
+}
+
+/* Comment replies - responsive nesting */
+.comment-replies {
+    margin-left: 0.75rem !important;
+    padding-left: 0.75rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .comment-replies {
+        margin-left: 1.5rem !important;
+        padding-left: 1rem !important;
+    }
+}
+
+/* ===========================================
+   17. NEXT ARTICLE SECTION RESPONSIVE
+   =========================================== */
+
+.next-article-section {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    padding: 1rem !important;
+}
+
+@media screen and (min-width: 768px) {
+    .next-article-section {
+        padding: 2rem !important;
+    }
+}
+
+.next-article-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+}
+
+@media screen and (min-width: 640px) {
+    .next-article-content {
+        flex-direction: row !important;
+        align-items: center !important;
+    }
+}
+
+.next-article-image {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+@media screen and (min-width: 640px) {
+    .next-article-image {
+        width: 200px !important;
+        flex-shrink: 0 !important;
+    }
+}
+
+.next-article-image img {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16/9 !important;
+    object-fit: cover !important;
+    border-radius: 0.5rem !important;
+}
+
+.next-article-title {
+    font-size: 1rem !important;
+    line-height: 1.4 !important;
+}
+
+@media screen and (min-width: 640px) {
+    .next-article-title {
+        font-size: 1.125rem !important;
+    }
+}
+
+.next-article-excerpt {
+    display: none !important;
+}
+
+@media screen and (min-width: 640px) {
+    .next-article-excerpt {
+        display: block !important;
+        font-size: 0.875rem !important;
+    }
+}
+
+/* ===========================================
+   18. GLOBAL OVERFLOW PREVENTION
+   =========================================== */
+
+html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+}
+
+.container {
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    box-sizing: border-box !important;
+}
+
+@media screen and (min-width: 640px) {
+    .container {
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+
+/* Prevent any element from causing horizontal scroll */
+img, video, iframe, embed, object {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+pre, code {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+}
+
+table {
+    max-width: 100% !important;
+    display: block !important;
+    overflow-x: auto !important;
+}
+
+/* ===========================================
+   19. RELATED ARTICLES RESPONSIVE
+   =========================================== */
+
+.related-articles-section {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+.related-articles-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+}
+
+@media screen and (min-width: 480px) {
+    .related-articles-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .related-articles-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+/* ===========================================
+   20. POPULAR ARTICLES SIDEBAR RESPONSIVE
+   =========================================== */
+
+.popular-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+}
+
+.popular-item {
+    display: flex !important;
+    gap: 0.75rem !important;
+    padding: 0.5rem !important;
+}
+
+.popular-image {
+    width: 60px !important;
+    height: 60px !important;
+    flex-shrink: 0 !important;
+    border-radius: 0.375rem !important;
+    overflow: hidden !important;
+}
+
+.popular-image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+.popular-title {
+    font-size: 0.875rem !important;
+    line-height: 1.3 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+}
+
+.popular-meta {
+    font-size: 0.75rem !important;
+    color: var(--color-text-muted, #94a3b8) !important;
+}
+
+
+/* ===========================================
+   16. LOGO IMAGE SIZING
+   =========================================== */
+
+/* Logo image - constrain size in header */
+.site-logo .logo-image,
+.logo-link .logo-image,
+.logo-image,
+img.logo-image {
+    height: 40px !important;
+    max-height: 40px !important;
+    width: auto !important;
+    max-width: 150px !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
+/* Slightly smaller on mobile */
+@media screen and (max-width: 768px) {
+    .site-logo .logo-image,
+    .logo-link .logo-image,
+    .logo-image,
+    img.logo-image {
+        height: 32px !important;
+        max-height: 32px !important;
+        max-width: 120px !important;
+    }
+}
+
+/* Logo link container */
+.logo-link {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    text-decoration: none !important;
+}
+
+/* Site logo container */
+.site-logo {
+    display: flex !important;
+    align-items: center !important;
+}

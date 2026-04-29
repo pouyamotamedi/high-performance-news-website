@@ -1,0 +1,406 @@
+{{define "content"}}
+<div class="content-ingestion-management">
+    <!-- Header Section -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1><i class="fas fa-download"></i> Content Ingestion Management</h1>
+            <p class="subtitle">Manage external content sources, monitor ingestion, and process pending content</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="showCreateSourceModal()">
+                <i class="fas fa-plus"></i> Add Content Source
+            </button>
+            <button class="btn btn-secondary" onclick="refreshStats()">
+                <i class="fas fa-sync"></i> Refresh Stats
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Dashboard -->
+    <div class="stats-dashboard">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-rss text-blue"></i>
+            </div>
+            <div class="stat-content">
+                <h3 id="total-sources">0</h3>
+                <p>Active Sources</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock text-orange"></i>
+            </div>
+            <div class="stat-content">
+                <h3 id="pending-content">0</h3>
+                <p>Pending Content</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-check text-green"></i>
+            </div>
+            <div class="stat-content">
+                <h3 id="processed-today">0</h3>
+                <p>Processed Today</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-times text-red"></i>
+            </div>
+            <div class="stat-content">
+                <h3 id="rejected-today">0</h3>
+                <p>Rejected Today</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tab-navigation">
+        <button class="tab-btn active" onclick="showTab('sources')">
+            <i class="fas fa-database"></i> Content Sources
+        </button>
+        <button class="tab-btn" onclick="showTab('pending')">
+            <i class="fas fa-hourglass-half"></i> Pending Content
+        </button>
+        <button class="tab-btn" onclick="showTab('processed')">
+            <i class="fas fa-check-circle"></i> Processed Content
+        </button>
+        <button class="tab-btn" onclick="showTab('analytics')">
+            <i class="fas fa-chart-bar"></i> Analytics
+        </button>
+    </div>
+
+    <!-- Content Sources Tab -->
+    <div id="sources-tab" class="tab-content active">
+        <div class="section-header">
+            <h2>Content Sources</h2>
+            <div class="section-actions">
+                <input type="text" id="sources-search" placeholder="Search sources..." class="search-input">
+                <select id="sources-filter" class="filter-select">
+                    <option value="">All Types</option>
+                    <option value="api">API</option>
+                    <option value="webhook">Webhook</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table" id="sources-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Auto Publish</th>
+                        <th>Rate Limit</th>
+                        <th>Priority</th>
+                        <th>Last Activity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="sources-tbody">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pending Content Tab -->
+    <div id="pending-tab" class="tab-content">
+        <div class="section-header">
+            <h2>Pending Content</h2>
+            <div class="section-actions">
+                <button class="btn btn-success" onclick="processBatch()">
+                    <i class="fas fa-play"></i> Process Batch
+                </button>
+                <select id="pending-source-filter" class="filter-select">
+                    <option value="">All Sources</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table" id="pending-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all-pending"></th>
+                        <th>Title</th>
+                        <th>Source</th>
+                        <th>Author</th>
+                        <th>Category</th>
+                        <th>Received</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="pending-tbody">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Processed Content Tab -->
+    <div id="processed-tab" class="tab-content">
+        <div class="section-header">
+            <h2>Processed Content</h2>
+            <div class="section-actions">
+                <input type="text" id="processed-search" placeholder="Search processed content..." class="search-input">
+                <select id="processed-status-filter" class="filter-select">
+                    <option value="">All Status</option>
+                    <option value="processed">Processed</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="duplicate">Duplicate</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table" id="processed-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Source</th>
+                        <th>Status</th>
+                        <th>Processed</th>
+                        <th>Article</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="processed-tbody">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Analytics Tab -->
+    <div id="analytics-tab" class="tab-content">
+        <div class="analytics-header">
+            <h2>Content Ingestion Analytics</h2>
+            <div class="time-range-selector">
+                <select id="analytics-timerange" onchange="contentManager.updateAnalyticsTimeRange(this.value)">
+                    <option value="24">Last 24 Hours</option>
+                    <option value="168">Last 7 Days</option>
+                    <option value="720">Last 30 Days</option>
+                    <option value="2160">Last 90 Days</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="analytics-grid">
+            <!-- Ingestion Volume Chart -->
+            <div class="chart-container">
+                <h3>Ingestion Volume</h3>
+                <div class="chart-controls">
+                    <select id="volume-granularity" onchange="contentManager.updateVolumeChart(this.value)">
+                        <option value="hour">Hourly</option>
+                        <option value="day">Daily</option>
+                        <option value="week">Weekly</option>
+                    </select>
+                </div>
+                <canvas id="ingestion-volume-chart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Source Performance Chart -->
+            <div class="chart-container">
+                <h3>Source Performance</h3>
+                <div class="performance-metrics">
+                    <div class="metric-card">
+                        <h4>Success Rate</h4>
+                        <div class="metric-value" id="success-rate">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Avg Processing Time</h4>
+                        <div class="metric-value" id="avg-processing-time">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Error Rate</h4>
+                        <div class="metric-value" id="error-rate">-</div>
+                    </div>
+                </div>
+                <canvas id="source-performance-chart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Content Status Flow -->
+            <div class="chart-container">
+                <h3>Content Status Distribution</h3>
+                <canvas id="status-distribution-chart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Processing Timeline -->
+            <div class="chart-container">
+                <h3>Processing Timeline</h3>
+                <div class="timeline-stats">
+                    <div class="timeline-item">
+                        <span class="timeline-label">Pending Queue</span>
+                        <span class="timeline-value" id="pending-queue">-</span>
+                    </div>
+                    <div class="timeline-item">
+                        <span class="timeline-label">Avg Processing Time</span>
+                        <span class="timeline-value" id="processing-time">-</span>
+                    </div>
+                    <div class="timeline-item">
+                        <span class="timeline-label">Peak Hour</span>
+                        <span class="timeline-value" id="peak-hour">-</span>
+                    </div>
+                </div>
+                <canvas id="processing-timeline-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Source Modal -->
+<div id="source-modal" class="modal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h2 id="source-modal-title">Add Content Source</h2>
+            <button class="modal-close" onclick="closeSourceModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="source-form">
+                <input type="hidden" id="source-id">
+                
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="source-name">Source Name *</label>
+                            <input type="text" id="source-name" required maxlength="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="source-type">Type *</label>
+                            <select id="source-type" required>
+                                <option value="">Select Type</option>
+                                <option value="api">API</option>
+                                <option value="webhook">Webhook</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="form-section">
+                    <h3>Configuration</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="rate-limit">Rate Limit (per hour)</label>
+                            <input type="number" id="rate-limit" min="1" max="10000" value="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="priority">Priority (1-10)</label>
+                            <input type="number" id="priority" min="1" max="10" value="5">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="is-active" checked>
+                                Active
+                            </label>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="auto-publish">
+                                Auto Publish (trusted source)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="form-section">
+                    <h3>Advanced Settings</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="default-category">Default Category</label>
+                            <select id="default-category">
+                                <option value="">Select Category</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="default-author">Default Author</label>
+                            <select id="default-author">
+                                <option value="">Select Author</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="allowed-domains">Allowed Domains (one per line)</label>
+                        <textarea id="allowed-domains" rows="3" placeholder="example.com&#10;news.example.com"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="required-fields">Required Fields</label>
+                        <div class="checkbox-grid">
+                            <label><input type="checkbox" value="excerpt"> Excerpt</label>
+                            <label><input type="checkbox" value="author_name"> Author Name</label>
+                            <label><input type="checkbox" value="author_email"> Author Email</label>
+                            <label><input type="checkbox" value="category_name"> Category</label>
+                            <label><input type="checkbox" value="tags"> Tags</label>
+                            <label><input type="checkbox" value="source_url"> Source URL</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Key Display -->
+                <div class="form-section" id="api-key-section" style="display: none;">
+                    <h3>API Access</h3>
+                    <div class="api-key-display">
+                        <label>API Key</label>
+                        <div class="api-key-container">
+                            <input type="text" id="api-key" readonly>
+                            <button type="button" class="btn btn-secondary" onclick="copyApiKey()">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button type="button" class="btn btn-warning" onclick="regenerateApiKey()">
+                                <i class="fas fa-refresh"></i> Regenerate
+                            </button>
+                        </div>
+                    </div>
+                    <div class="api-usage-info">
+                        <h4>Usage Instructions</h4>
+                        <div class="code-block">
+                            <pre id="api-usage-example"></pre>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeSourceModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveSource()">Save Source</button>
+        </div>
+    </div>
+</div>
+
+<!-- Content Preview Modal -->
+<div id="content-modal" class="modal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h2 id="content-modal-title">Content Preview</h2>
+            <button class="modal-close" onclick="closeContentModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="content-preview">
+                <!-- Dynamic content preview -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeContentModal()">Close</button>
+            <button type="button" class="btn btn-danger" onclick="rejectContent()" id="reject-btn">
+                <i class="fas fa-times"></i> Reject
+            </button>
+            <button type="button" class="btn btn-success" onclick="approveContent()" id="approve-btn">
+                <i class="fas fa-check"></i> Approve & Publish
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/admin/content-ingestion.js"></script>
+{{end}}

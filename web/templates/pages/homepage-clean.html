@@ -1,0 +1,254 @@
+{{define "homepage.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/homepage.css">
+<link rel="stylesheet" href="/static/css/professional-news.css">
+{{end}}
+
+{{define "content"}}
+<div class="homepage">
+    <!-- Breaking News Banner -->
+    <section class="breaking-news-banner">
+        <div class="container">
+            <div class="breaking-news-content">
+                <span class="breaking-label">🔴 BREAKING</span>
+                <div class="breaking-text">
+                    <marquee behavior="scroll" direction="left">
+                        Latest breaking news updates • Major developments in technology sector • Important announcements
+                    </marquee>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="hero-grid">
+                <!-- Main Featured Article -->
+                <article class="hero-main">
+                    {{range $index, $article := .Articles}}
+                    {{if eq $index 0}}
+                    <div class="hero-image">
+                        {{if .FeaturedImage}}
+                        <img src="{{.FeaturedImage}}" alt="{{.Title}}" class="hero-img">
+                        {{else}}
+                        <div class="hero-img placeholder-img">
+                            <div class="placeholder-content">
+                                <span class="placeholder-icon">📰</span>
+                                <span class="placeholder-text">{{.Title}}</span>
+                            </div>
+                        </div>
+                        {{end}}
+                        <div class="hero-overlay">
+                            <span class="hero-category">{{.Category}}</span>
+                        </div>
+                    </div>
+                    <div class="hero-content">
+                        <h1 class="hero-title">
+                            <a href="/article/{{.Slug}}" class="hero-link">{{.Title}}</a>
+                        </h1>
+                        <p class="hero-excerpt">{{.Excerpt}}</p>
+                        <div class="hero-meta">
+                            <span class="hero-author">{{.Author}}</span>
+                            <span class="hero-date">{{.TimeAgo}}</span>
+                            <span class="hero-views">{{.ViewCount}} views</span>
+                        </div>
+                    </div>
+                    {{end}}
+                    {{end}}
+                </article>
+
+                <!-- Secondary Featured Articles -->
+                <div class="hero-sidebar">
+                    {{range $index, $article := .Articles}}
+                    {{if and (gt $index 0) (lt $index 5)}}
+                    <article class="hero-secondary">
+                        <div class="secondary-image">
+                            {{if .FeaturedImage}}
+                            <img src="{{.FeaturedImage}}" alt="{{.Title}}" class="secondary-img">
+                            {{else}}
+                            <div class="secondary-img placeholder-img">
+                                <span class="placeholder-icon">📰</span>
+                            </div>
+                            {{end}}
+                        </div>
+                        <div class="secondary-content">
+                            <h3 class="secondary-title">
+                                <a href="/article/{{.Slug}}" class="secondary-link">{{.Title}}</a>
+                            </h3>
+                            <div class="secondary-meta">
+                                <span class="secondary-date">{{.TimeAgo}}</span>
+                            </div>
+                        </div>
+                    </article>
+                    {{end}}
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Grid -->
+    <section class="main-content">
+        <div class="container">
+            <div class="content-grid">
+                <!-- Articles Section -->
+                <main class="articles-main">
+                    <!-- Latest News Section -->
+                    <section class="news-section">
+                        <header class="section-header">
+                            <h2 class="section-title">Latest News</h2>
+                            <a href="/latest" class="section-link">View All</a>
+                        </header>
+                        <div class="articles-grid">
+                            {{range $index, $article := .Articles}}
+                            {{if gt $index 3}}
+                            <article class="article-card">
+                                <div class="article-image">
+                                    {{if .FeaturedImage}}
+                                    <img src="{{.FeaturedImage}}" alt="{{.Title}}" class="article-img">
+                                    {{else}}
+                                    <div class="article-img placeholder-img">
+                                        <img src="/static/icons/phosphor/newspaper.svg" alt="Article" class="placeholder-icon">
+                                    </div>
+                                    {{end}}
+                                    <span class="article-category">{{.Category}}</span>
+                                </div>
+                                <div class="article-content">
+                                    <h3 class="article-title">
+                                        <a href="/article/{{.Slug}}" class="article-link">{{.Title}}</a>
+                                    </h3>
+                                    <p class="article-excerpt">{{.Excerpt}}</p>
+                                    <div class="article-meta">
+                                        <span class="article-author">{{.Author}}</span>
+                                        <span class="article-date">{{.TimeAgo}}</span>
+                                        <span class="article-views">{{.ViewCount}} views</span>
+                                    </div>
+                                </div>
+                            </article>
+                            {{end}}
+                            {{end}}
+                        </div>
+                    </section>
+
+                    <!-- Categories Section -->
+                    <section class="categories-section">
+                        <header class="section-header">
+                            <h2 class="section-title">Explore Topics</h2>
+                            <a href="/categories" class="section-link">View All</a>
+                        </header>
+                        <div class="categories-minimal">
+                            {{range .Categories}}
+                            <a href="/category/{{.Slug}}" class="category-item {{if not .ImageURL}}category-placeholder {{if eq .Name "Technology"}}tech{{else if eq .Name "Sports"}}sports{{else if eq .Name "Health"}}health{{else if eq .Name "News"}}news{{end}}{{end}}" {{if .ImageURL}}style="background-image: url('{{.ImageURL}}')"{{end}}>
+                                {{if not .ImageURL}}
+                                <img src="/static/icons/phosphor/{{if eq .Name "Technology"}}laptop{{else if eq .Name "Sports"}}soccer-ball{{else if eq .Name "Health"}}heart{{else if eq .Name "News"}}newspaper{{else}}folder{{end}}.svg" alt="{{.Name}}" class="category-icon">
+                                {{end}}
+                                <div class="category-content">
+                                    <h3 class="category-title">{{.Name}}</h3>
+                                    <span class="category-articles">{{.Count}} articles</span>
+                                </div>
+                            </a>
+                            {{end}}
+                        </div>
+                    </section>
+                </main>
+
+                <!-- Sidebar -->
+                <aside class="sidebar">
+                    <!-- Trending Articles -->
+                    <section class="trending-section">
+                        <header class="sidebar-header">
+                            <h3 class="sidebar-title">
+                                <img src="/static/icons/phosphor/fire.svg" alt="" class="section-icon">
+                                Trending Now
+                            </h3>
+                        </header>
+                        <div class="trending-list">
+                            {{range $index, $article := .TrendingArticles}}
+                            <article class="trending-item">
+                                <span class="trending-number">{{add $index 1}}</span>
+                                <div class="trending-content">
+                                    <h4 class="trending-title">
+                                        <a href="/article/{{.Slug}}" class="trending-link">{{.Title}}</a>
+                                    </h4>
+                                    <div class="trending-meta">
+                                        <span class="trending-views">{{.ViewCount}} views</span>
+                                    </div>
+                                </div>
+                            </article>
+                            {{end}}
+                        </div>
+                    </section>
+
+                    <!-- Newsletter Signup -->
+                    <section class="newsletter-section">
+                        <header class="newsletter-header">
+                            <h3 class="newsletter-title">
+                                <img src="/static/icons/phosphor/envelope.svg" alt="" class="section-icon">
+                                Stay Updated
+                            </h3>
+                            <p class="newsletter-description">Get the latest news delivered to your inbox</p>
+                        </header>
+                        <form class="newsletter-form" action="/newsletter/subscribe" method="POST">
+                            <div class="newsletter-input-group">
+                                <input type="email" name="email" class="newsletter-input" placeholder="Enter your email" required>
+                                <button type="submit" class="newsletter-button">Subscribe</button>
+                            </div>
+                            <p class="newsletter-privacy">We respect your privacy. Unsubscribe anytime.</p>
+                        </form>
+                    </section>
+
+                    <!-- Popular Tags -->
+                    <section class="tags-section">
+                        <header class="sidebar-header">
+                            <h3 class="sidebar-title">
+                                <img src="/static/icons/phosphor/tag.svg" alt="" class="section-icon">
+                                Popular Tags
+                            </h3>
+                        </header>
+                        <div class="tags-cloud">
+                            {{range .PopularTags}}
+                            <a href="/tag/{{.Slug}}" class="tag-item">
+                                {{.Name}}
+                                <span class="tag-count">{{.Count}}</span>
+                            </a>
+                            {{end}}
+                        </div>
+                    </section>
+
+                    <!-- Social Media -->
+                    <section class="social-section">
+                        <header class="sidebar-header">
+                            <h3 class="sidebar-title">
+                                <img src="/static/icons/phosphor/users.svg" alt="" class="section-icon">
+                                Follow Us
+                            </h3>
+                        </header>
+                        <div class="social-links">
+                            <a href="#" class="social-link facebook" title="Follow us on Facebook">
+                                <img src="/static/icons/phosphor/facebook-logo.svg" alt="Facebook" class="social-icon">
+                            </a>
+                            <a href="#" class="social-link twitter" title="Follow us on Twitter">
+                                <img src="/static/icons/phosphor/twitter-logo.svg" alt="Twitter" class="social-icon">
+                            </a>
+                            <a href="#" class="social-link instagram" title="Follow us on Instagram">
+                                <img src="/static/icons/phosphor/instagram-logo.svg" alt="Instagram" class="social-icon">
+                            </a>
+                            <a href="#" class="social-link youtube" title="Follow us on YouTube">
+                                <img src="/static/icons/phosphor/youtube-logo.svg" alt="YouTube" class="social-icon">
+                            </a>
+                        </div>
+                    </section>
+                </aside>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/homepage-simple.js"></script>
+{{end}}

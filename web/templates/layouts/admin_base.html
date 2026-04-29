@@ -1,0 +1,53 @@
+{{define "admin_base.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    {{template "head" .}}
+    
+    <!-- Admin Base Styles -->
+    <link rel="stylesheet" href="/static/css/admin.css">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;">
+</head>
+<body>
+    <!-- Admin Authentication Check -->
+    <script>
+        // Check authentication before rendering content
+        (function() {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            
+            if (!token || (role !== 'admin' && role !== 'editor')) {
+                window.location.href = '/admin/login';
+                return;
+            }
+            
+            // Show content since we have valid authentication
+            document.body.style.visibility = 'visible';
+        })();
+    </script>
+    
+    {{template "content" .}}
+    
+    <!-- Admin Base Scripts -->
+    <script>
+        // Global admin functions
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_role');
+            window.location.href = '/admin/login';
+        }
+        
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('Admin panel error:', e.error);
+        });
+    </script>
+</body>
+</html>
+{{end}}

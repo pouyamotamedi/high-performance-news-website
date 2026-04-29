@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="/static/css/admin/content-ingestion.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #e5e7eb; }
+        .dashboard-nav { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .nav-item { padding: 0.5rem 1rem; background-color: #f3f4f6; border-radius: 6px; text-decoration: none; color: #374151; transition: background-color 0.2s; }
+        .nav-item:hover, .nav-item.active { background-color: #3b82f6; color: white; }
+        .logout-btn { background-color: #ef4444; color: white; padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; }
+        .logout-btn:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1>{{.PageTitle}}</h1>
+                <p style="margin: 0; color: #6b7280;">{{.Description}}</p>
+            </div>
+            <div>
+                <a href="/admin/dashboard" class="logout-btn">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="dashboard-nav">
+            <a href="/admin/dashboard" class="nav-item {{if not .page}}active{{end}}">Dashboard</a>
+            <a href="/admin/analytics" class="nav-item {{if eq .page "analytics"}}active{{end}}">Analytics</a>
+            <a href="/admin/users" class="nav-item {{if eq .page "users"}}active{{end}}">Users</a>
+            <a href="/admin/content" class="nav-item {{if eq .page "content"}}active{{end}}">Content</a>
+            <a href="/admin/content-ingestion" class="nav-item {{if eq .page "content-ingestion"}}active{{end}}">Content Ingestion</a>
+            <a href="/admin/comments" class="nav-item {{if eq .page "comments"}}active{{end}}">Comments</a>
+            <a href="/admin/settings" class="nav-item {{if eq .page "settings"}}active{{end}}">Settings</a>
+            <a href="/admin/system" class="nav-item {{if eq .page "system"}}active{{end}}">System</a>
+        </div>
+
+        <!-- Content Ingestion Management Interface -->
+        {{template "content" .}}
+    </div>
+
+    <script src="/static/js/admin/content-ingestion.js"></script>
+</body>
+</html>

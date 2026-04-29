@@ -1,0 +1,46 @@
+/* Multilingual Support Styles */
+
+/* RTL Support */
+[dir="rtl"] {
+    text-align: right;
+}
+
+[dir="rtl"] .navbar {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .nav-links {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .article-meta {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .tags {
+    flex-direction: row-reverse;
+}
+
+/* Language-specific font adjustments */
+[lang="ar"], [lang="fa"], [lang="ur"] {
+    font-family: 'Tahoma', 'Arial Unicode MS', sans-serif;
+}
+
+[lang="zh"], [lang="ja"], [lang="ko"] {
+    font-family: 'Microsoft YaHei', 'SimHei', sans-serif;
+}
+
+[lang="hi"], [lang="bn"], [lang="ta"] {
+    font-family: 'Noto Sans Devanagari', 'Arial Unicode MS', sans-serif;
+}
+
+/* Text direction utilities */
+.ltr {
+    direction: ltr;
+    text-align: left;
+}
+
+.rtl {
+    direction: rtl;
+    text-align: right;
+}

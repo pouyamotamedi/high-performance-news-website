@@ -1,0 +1,228 @@
+# OWASP ZAP Configuration for Automated Security Testing
+# This configuration file defines security testing parameters for the news website
+
+# ZAP API Configuration
+zap:
+  api_url: "http://localhost:8080"
+  api_key: "${ZAP_API_KEY}"
+  timeout: 300  # 5 minutes timeout for scans
+
+# Target Application Configuration
+target:
+  base_url: "http://localhost:8080"
+  context_name: "news-website-security-test"
+  
+  # Authentication configuration
+  authentication:
+    method: "form"
+    login_url: "/api/v1/auth/login"
+    username_field: "username"
+    password_field: "password"
+    test_username: "${TEST_USERNAME}"
+    test_password: "${TEST_PASSWORD}"
+    
+  # Session management
+  session:
+    method: "cookie"
+    session_token_name: "session_token"
+
+# Spider Configuration
+spider:
+  max_depth: 5
+  max_children: 10
+  recurse: true
+  subtree_only: true
+  
+  # URLs to include in spidering
+  include_urls:
+    - "http://localhost:8080/api/v1/*"
+    - "http://localhost:8080/admin/*"
+    - "http://localhost:8080/articles/*"
+    - "http://localhost:8080/search*"
+    - "http://localhost:8080/rss/*"
+  
+  # URLs to exclude from spidering
+  exclude_urls:
+    - "http://localhost:8080/api/v1/auth/logout"
+    - "http://localhost:8080/admin/backup/*"
+    - "http://localhost:8080/static/*"
+
+# Active Scan Configuration
+active_scan:
+  policy: "Default Policy"
+  
+  # Scan policies to enable
+  scan_policies:
+    - "SQL Injection"
+    - "Cross Site Scripting (Reflected)"
+    - "Cross Site Scripting (Persistent)"
+    - "Path Traversal"
+    - "Remote File Inclusion"
+    - "Server Side Include"
+    - "Script Active Scan Rules"
+    - "Server Side Code Injection"
+    - "Remote OS Command Injection"
+    - "External Redirect"
+    - "CRLF Injection"
+    - "Parameter Tampering"
+    - "Generic Padding Oracle"
+    - "Expression Language Injection"
+    - "Insecure HTTP Method"
+    - "HTTP Parameter Override"
+    - "Heartbleed OpenSSL Vulnerability"
+    - "Shell Shock"
+    - "Remote Code Execution - CVE-2012-1823"
+    - "Backup File Disclosure"
+    - "Cross-Domain Misconfiguration"
+    - "Source Code Disclosure - /WEB-INF folder"
+    - "Source Code Disclosure - File Inclusion"
+    - "XML External Entity Attack"
+    - "Generic Padding Oracle"
+    - "Insecure Authentication"
+    - "Session Fixation"
+    - "Cookie Security"
+    - "HTTPS Content Available via HTTP"
+    - "Weak Authentication Method"
+    - "Information Disclosure - Debug Error Messages"
+    - "Information Disclosure - Database Error Messages"
+    - "Application Error Disclosure"
+    - "X-Frame-Options Header"
+    - "X-Content-Type-Options Header Missing"
+    - "Content Security Policy (CSP) Header Not Set"
+    - "Missing Anti-clickjacking Header"
+    - "Strict-Transport-Security Header"
+
+# Passive Scan Configuration
+passive_scan:
+  enabled: true
+  
+  # Passive scan rules to enable
+  rules:
+    - "Information Disclosure - Suspicious Comments"
+    - "Information Disclosure - Debug Error Messages"
+    - "Cookie Security"
+    - "Cross-Domain JavaScript Source File Inclusion"
+    - "Mixed Content"
+    - "Information Disclosure - Sensitive Information in URL"
+    - "Information Disclosure - Sensitive Information in HTTP Referrer Header"
+    - "Timestamp Disclosure"
+    - "Hash Disclosure"
+    - "Credit Card Number Disclosure"
+    - "Email Address Disclosure"
+    - "Private IP Disclosure"
+    - "SQL Injection - MySQL"
+    - "SQL Injection - Hypersonic SQL"
+    - "SQL Injection - Oracle"
+    - "SQL Injection - PostgreSQL"
+    - "Viewstate"
+    - "Google Analytics ID Disclosure"
+    - "Application Error Disclosure"
+    - "Cache Control"
+    - "Content Type Missing"
+    - "Information Disclosure - Suspicious Comments"
+    - "Insecure JSF ViewState"
+    - "Charset Mismatch"
+    - "Information Disclosure - Sensitive Information in URL"
+    - "X-AspNet-Version Response Header"
+    - "X-Debug-Token Information Leak"
+    - "Server Leaks Information via 'X-Powered-By' HTTP Response Header Field(s)"
+    - "Server Leaks Version Information via 'Server' HTTP Response Header Field"
+    - "Weak Authentication Method"
+    - "Username Hash Found"
+    - "Session ID in URL Rewrite"
+    - "Password Autocomplete in Browser"
+    - "Loosely Scoped Cookie"
+    - "Incomplete or No Cache-control and Pragma HTTP Header Set"
+    - "HTTP to HTTPS Insecure Transition in Form Post"
+    - "HTTPS to HTTP Insecure Transition in Form Post"
+    - "Cross-Domain JavaScript Source File Inclusion"
+    - "Content Security Policy (CSP) Header Not Set"
+    - "X-Frame-Options Header"
+    - "X-Content-Type-Options Header Missing"
+    - "Strict-Transport-Security Header Not Set"
+    - "Cookie Without Secure Flag"
+    - "Cookie Without HttpOnly Flag"
+    - "Cookie Without SameSite Attribute"
+
+# Reporting Configuration
+reporting:
+  formats:
+    - "html"
+    - "json"
+    - "xml"
+  
+  output_directory: "./reports/security/zap"
+  
+  # Report filtering
+  include_false_positives: false
+  min_risk_level: "Low"  # Low, Medium, High, Critical
+  
+  # Custom report template (optional)
+  template_path: "./configs/zap-report-template.html"
+
+# Alert Filtering
+alert_filters:
+  # Ignore specific alerts by ID
+  ignore_alerts:
+    - "10021"  # X-Content-Type-Options Header Missing (if handled by reverse proxy)
+    - "10020"  # X-Frame-Options Header Not Set (if handled by reverse proxy)
+  
+  # Ignore alerts for specific URLs
+  ignore_urls:
+    - "http://localhost:8080/static/*"
+    - "http://localhost:8080/favicon.ico"
+    - "http://localhost:8080/robots.txt"
+
+# Performance Configuration
+performance:
+  max_concurrent_scans: 5
+  request_delay: 0  # milliseconds between requests
+  max_scan_duration: 1800  # 30 minutes maximum scan time
+  
+  # Memory settings
+  max_memory_usage: "2G"
+  
+  # Thread settings
+  spider_threads: 5
+  scanner_threads: 10
+
+# Integration Settings
+integration:
+  # CI/CD Integration
+  fail_build_on_high_risk: true
+  fail_build_on_medium_risk: false
+  max_high_risk_alerts: 0
+  max_medium_risk_alerts: 10
+  
+  # Webhook notifications
+  webhook_url: "${SECURITY_WEBHOOK_URL}"
+  
+  # Slack integration
+  slack_webhook: "${SLACK_WEBHOOK_URL}"
+  slack_channel: "#security-alerts"
+
+# Custom Scripts (optional)
+scripts:
+  # Authentication script
+  authentication_script: "./scripts/zap-auth.js"
+  
+  # Custom scan rules
+  custom_rules_directory: "./scripts/zap-rules"
+  
+  # Post-scan processing
+  post_scan_script: "./scripts/zap-post-process.sh"
+
+# Environment-specific configurations
+environments:
+  development:
+    target_url: "http://localhost:8080"
+    aggressive_scan: false
+    
+  staging:
+    target_url: "https://staging.newswebsite.com"
+    aggressive_scan: true
+    
+  production:
+    target_url: "https://newswebsite.com"
+    aggressive_scan: false
+    read_only: true  # Only passive scanning in production
