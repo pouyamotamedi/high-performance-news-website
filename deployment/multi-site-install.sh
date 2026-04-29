@@ -277,6 +277,18 @@ if [ "$POSTGRES_READY" != true ]; then
     exit 1
 fi
 
+# Fix PostgreSQL authentication method (scram-sha-256 -> md5)
+log_info "Configuring PostgreSQL authentication..."
+docker compose exec -T postgres sh -c "sed -i 's/scram-sha-256/md5/g' /var/lib/postgresql/data/pg_hba.conf" 2>/dev/null || true
+docker compose exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -c "SELECT pg_reload_conf();" > /dev/null 2>&1 || true
+
+# Reset password with md5 encoding
+docker compose exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -c "ALTER USER ${SITE_NAME}app WITH PASSWORD '${DB_PASSWORD}';" > /dev/null 2>&1 || true
+
+# Ensure init-db.sql is executed
+log_info "Ensuring database schema is initialized..."
+docker compose exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -f /docker-entrypoint-initdb.d/init.sql > /dev/null 2>&1 || true
+
 sleep 5
 
 log_info "Starting application..."
