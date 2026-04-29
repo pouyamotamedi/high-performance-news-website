@@ -255,15 +255,15 @@ log_info "Step 6/7: Building and starting services..."
 cd $INSTALL_DIR/deployment
 
 log_info "Building application (this may take 2-4 minutes)..."
-docker compose build app --quiet 2>/dev/null || docker compose build app
+docker compose -p ${PROJECT_NAME} build app --quiet 2>/dev/null || docker compose -p ${PROJECT_NAME} build app
 
 log_info "Starting database and cache..."
-docker compose up -d postgres redis
+docker compose -p ${PROJECT_NAME} up -d postgres redis
 
 log_info "Waiting for database to initialize..."
 POSTGRES_READY=false
 for i in {1..60}; do
-    if docker compose exec -T postgres pg_isready -U ${SITE_NAME}app -d ${SITE_NAME}db > /dev/null 2>&1; then
+    if docker compose -p ${PROJECT_NAME} exec -T postgres pg_isready -U ${SITE_NAME}app -d ${SITE_NAME}db > /dev/null 2>&1; then
         POSTGRES_READY=true
         log_success "Database is ready"
         break
@@ -273,32 +273,32 @@ done
 
 if [ "$POSTGRES_READY" != true ]; then
     log_error "PostgreSQL failed to start"
-    docker compose logs postgres | tail -20
+    docker compose -p ${PROJECT_NAME} logs postgres | tail -20
     exit 1
 fi
 
 # Fix PostgreSQL authentication method (scram-sha-256 -> md5)
 log_info "Configuring PostgreSQL authentication..."
-docker compose exec -T postgres sh -c "sed -i 's/scram-sha-256/md5/g' /var/lib/postgresql/data/pg_hba.conf" 2>/dev/null || true
-docker compose exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -c "SELECT pg_reload_conf();" > /dev/null 2>&1 || true
+docker compose -p ${PROJECT_NAME} exec -T postgres sh -c "sed -i 's/scram-sha-256/md5/g' /var/lib/postgresql/data/pg_hba.conf" 2>/dev/null || true
+docker compose -p ${PROJECT_NAME} exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -c "SELECT pg_reload_conf();" > /dev/null 2>&1 || true
 
 # Reset password with md5 encoding
-docker compose exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -c "ALTER USER ${SITE_NAME}app WITH PASSWORD '${DB_PASSWORD}';" > /dev/null 2>&1 || true
+docker compose -p ${PROJECT_NAME} exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -c "ALTER USER ${SITE_NAME}app WITH PASSWORD '${DB_PASSWORD}';" > /dev/null 2>&1 || true
 
 # Ensure init-db.sql is executed
 log_info "Ensuring database schema is initialized..."
-docker compose exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -f /docker-entrypoint-initdb.d/init.sql > /dev/null 2>&1 || true
+docker compose -p ${PROJECT_NAME} exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -f /docker-entrypoint-initdb.d/init.sql > /dev/null 2>&1 || true
 
 sleep 5
 
 log_info "Starting application..."
-docker compose up -d app
+docker compose -p ${PROJECT_NAME} up -d app
 
 log_info "Waiting for application to initialize..."
 ADMIN_CREATED=false
 for i in {1..20}; do
     sleep 5
-    USER_COUNT=$(docker compose exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -t -c "SELECT COUNT(*) FROM users WHERE role='admin';" 2>/dev/null | tr -d ' ' || echo "0")
+    USER_COUNT=$(docker compose -p ${PROJECT_NAME} exec -T postgres psql -U ${SITE_NAME}app -d ${SITE_NAME}db -t -c "SELECT COUNT(*) FROM users WHERE role='admin';" 2>/dev/null | tr -d ' ' || echo "0")
     if [ "$USER_COUNT" -gt 0 ] 2>/dev/null; then
         ADMIN_CREATED=true
         log_success "Admin user created successfully"
@@ -308,7 +308,7 @@ done
 
 if [ "$ADMIN_CREATED" != true ]; then
     log_warning "Restarting app to ensure database connection..."
-    docker compose restart app
+    docker compose -p ${PROJECT_NAME} restart app
     sleep 15
 fi
 
