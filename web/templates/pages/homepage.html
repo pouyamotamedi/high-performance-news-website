@@ -37,7 +37,7 @@
                     </div>
                     <div class="hero-content">
                         <h1 class="hero-title">
-                            <a href="/article/{{.Slug}}" class="hero-link">{{.Title}}</a>
+                            <a href="{{if .URL}}{{.URL}}{{else}}/article/{{.Slug}}{{end}}" class="hero-link">{{.Title}}</a>
                         </h1>
                         <p class="hero-excerpt">{{.Excerpt}}</p>
                         <div class="hero-meta">
@@ -68,7 +68,7 @@
                         </div>
                         <div class="secondary-content">
                             <h3 class="secondary-title">
-                                <a href="/article/{{.Slug}}" class="secondary-link">{{.Title}}</a>
+                                <a href="{{if .URL}}{{.URL}}{{else}}/article/{{.Slug}}{{end}}" class="secondary-link">{{.Title}}</a>
                             </h3>
                             <div class="secondary-meta">
                                 <span class="secondary-date">{{.TimeAgo}}</span>
@@ -110,7 +110,7 @@
                                 </div>
                                 <div class="article-content">
                                     <h3 class="article-title">
-                                        <a href="/article/{{.Slug}}" class="article-link">{{.Title}}</a>
+                                        <a href="{{if .URL}}{{.URL}}{{else}}/article/{{.Slug}}{{end}}" class="article-link">{{.Title}}</a>
                                     </h3>
                                     <p class="article-excerpt">{{.Excerpt}}</p>
                                     <div class="article-meta">
@@ -133,7 +133,7 @@
                         </header>
                         <div class="categories-minimal">
                             {{range .Categories}}
-                            <a href="/category/{{.Slug}}" class="category-item {{if not .ImageURL}}category-placeholder {{if eq .Name "Technology"}}tech{{else if eq .Name "Sports"}}sports{{else if eq .Name "Health"}}health{{else if eq .Name "News"}}news{{end}}{{end}}" {{if .ImageURL}}style="background-image: url('{{.ImageURL}}')"{{end}}>
+                            <a href="{{if .URL}}{{.URL}}{{else}}/category/{{.Slug}}{{end}}" class="category-item {{if not .ImageURL}}category-placeholder {{if eq .Name "Technology"}}tech{{else if eq .Name "Sports"}}sports{{else if eq .Name "Health"}}health{{else if eq .Name "News"}}news{{end}}{{end}}" {{if .ImageURL}}style="background-image: url('{{.ImageURL}}')"{{end}}>
                                 {{if not .ImageURL}}
                                 <img src="/static/icons/phosphor/{{if eq .Name "Technology"}}laptop{{else if eq .Name "Sports"}}soccer-ball{{else if eq .Name "Health"}}heart{{else if eq .Name "News"}}newspaper{{else}}folder{{end}}.svg" alt="{{.Name}}" class="category-icon">
                                 {{end}}
@@ -252,7 +252,7 @@
                                 <span class="trending-number">{{add $index 1}}</span>
                                 <div class="trending-content">
                                     <h4 class="trending-title">
-                                        <a href="/article/{{.Slug}}" class="trending-link">{{.Title}}</a>
+                                        <a href="{{if .URL}}{{.URL}}{{else}}/article/{{.Slug}}{{end}}" class="trending-link">{{.Title}}</a>
                                     </h4>
                                     <div class="trending-meta">
                                         <span class="trending-views">{{.ViewCount}} views</span>
@@ -291,7 +291,7 @@
                         </header>
                         <div class="tags-cloud">
                             {{range .PopularTags}}
-                            <a href="/tag/{{.Slug}}" class="tag-item">
+                            <a href="{{if .URL}}{{.URL}}{{else}}/tag/{{.Slug}}{{end}}" class="tag-item">
                                 {{.Name}}
                                 <span class="tag-count">{{.Count}}</span>
                             </a>

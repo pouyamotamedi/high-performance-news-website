@@ -45,12 +45,41 @@
             </button>
             
             <!-- Language switcher (desktop only) -->
-            {{if .AlternateURLs}}
-            <div class="language-switcher desktop-only">
-                <button class="language-toggle" aria-haspopup="true" aria-expanded="false">
-                    {{if eq .LanguageCode "fa"}}فا{{else if eq .LanguageCode "ar"}}ع{{else if eq .LanguageCode "en"}}EN{{else}}{{upper .LanguageCode}}{{end}}
+            {{if .AvailableLanguages}}
+            <div class="language-switcher desktop-only" style="position:relative;">
+                <button class="language-toggle" id="lang-toggle-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:4px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-weight:500;">
+                    {{if eq .LanguageCode "ar"}}العربية{{else if eq .LanguageCode "de"}}DE{{else if eq .LanguageCode "fr"}}FR{{else if eq .LanguageCode "es"}}ES{{else}}EN{{end}}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </button>
+                <div id="lang-dropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);min-width:150px;z-index:1000;">
+                    {{range .AvailableLanguages}}
+                    <a href="{{.URL}}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;color:#1e293b;text-decoration:none;border-bottom:1px solid #f1f5f9;{{if eq .Code $.LanguageCode}}background:#f0f9ff;font-weight:600;{{end}}" hreflang="{{.Code}}">
+                        <span>{{.NativeName}}</span>
+                        <span style="color:#64748b;font-size:0.875rem;">{{.Name}}</span>
+                    </a>
+                    {{end}}
+                </div>
             </div>
+            <script>
+            (function() {
+                var langBtn = document.getElementById('lang-toggle-btn');
+                var langDropdown = document.getElementById('lang-dropdown');
+                if (langBtn && langDropdown) {
+                    langBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        var isOpen = langDropdown.style.display === 'block';
+                        langDropdown.style.display = isOpen ? 'none' : 'block';
+                        langBtn.setAttribute('aria-expanded', !isOpen);
+                    };
+                    document.addEventListener('click', function() {
+                        langDropdown.style.display = 'none';
+                        langBtn.setAttribute('aria-expanded', 'false');
+                    });
+                }
+            })();
+            </script>
             {{end}}
             
             <!-- Login (desktop only) -->
