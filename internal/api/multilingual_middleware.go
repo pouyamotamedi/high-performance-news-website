@@ -14,7 +14,7 @@ func MultilingualMiddleware(multilingualService *services.MultilingualService) g
 	return func(c *gin.Context) {
 		// Extract language from URL
 		languageCode, remainingPath := services.ExtractLanguageFromURL(c.Request.URL.Path)
-		
+
 		// Validate language code
 		if err := multilingualService.ValidateLanguageCode(languageCode); err != nil {
 			// If invalid language code, use default and don't modify path
@@ -25,11 +25,11 @@ func MultilingualMiddleware(multilingualService *services.MultilingualService) g
 				c.Request.URL.Path = "/" + remainingPath
 			}
 		}
-		
+
 		// Store language information in context
 		c.Set("language_code", languageCode)
 		c.Set("original_path", c.Request.URL.Path)
-		
+
 		// Get language configuration
 		config, err := multilingualService.GetLanguageConfig()
 		if err == nil {
@@ -37,7 +37,7 @@ func MultilingualMiddleware(multilingualService *services.MultilingualService) g
 			c.Set("is_rtl", config.IsRTL(languageCode))
 			c.Set("is_default_language", languageCode == config.DefaultLanguage)
 		}
-		
+
 		c.Next()
 	}
 }
@@ -50,26 +50,26 @@ func LanguageRedirectMiddleware(multilingualService *services.MultilingualServic
 			c.Next()
 			return
 		}
-		
+
 		// Skip for static assets
 		if strings.HasPrefix(c.Request.URL.Path, "/static/") ||
-		   strings.HasPrefix(c.Request.URL.Path, "/assets/") ||
-		   strings.HasPrefix(c.Request.URL.Path, "/favicon.ico") {
+			strings.HasPrefix(c.Request.URL.Path, "/assets/") ||
+			strings.HasPrefix(c.Request.URL.Path, "/favicon.ico") {
 			c.Next()
 			return
 		}
-		
+
 		// Get preferred language from Accept-Language header
 		acceptLanguage := c.GetHeader("Accept-Language")
 		preferredLang := parseAcceptLanguage(acceptLanguage)
-		
+
 		// Get active languages
 		config, err := multilingualService.GetLanguageConfig()
 		if err != nil {
 			c.Next()
 			return
 		}
-		
+
 		// Check if preferred language is active
 		var targetLang string
 		for _, activeLang := range config.ActiveLanguages {
@@ -78,27 +78,27 @@ func LanguageRedirectMiddleware(multilingualService *services.MultilingualServic
 				break
 			}
 		}
-		
+
 		// If no preferred language found, use default
 		if targetLang == "" {
 			targetLang = config.DefaultLanguage
 		}
-		
+
 		// Extract current language from URL
 		currentLang, _ := services.ExtractLanguageFromURL(c.Request.URL.Path)
-		
+
 		// If current language matches target, continue
 		if currentLang == targetLang {
 			c.Next()
 			return
 		}
-		
+
 		// If target is default language and no language in URL, continue
 		if targetLang == config.DefaultLanguage && currentLang == config.DefaultLanguage {
 			c.Next()
 			return
 		}
-		
+
 		// Redirect to appropriate language version
 		var redirectURL string
 		if targetLang == config.DefaultLanguage {
@@ -110,10 +110,10 @@ func LanguageRedirectMiddleware(multilingualService *services.MultilingualServic
 			_, remainingPath := services.ExtractLanguageFromURL(c.Request.URL.Path)
 			redirectURL = "/" + targetLang + "/" + remainingPath
 		}
-		
+
 		// Clean up double slashes
 		redirectURL = strings.ReplaceAll(redirectURL, "//", "/")
-		
+
 		c.Redirect(http.StatusFound, redirectURL)
 		c.Abort()
 	}
@@ -122,15 +122,15 @@ func LanguageRedirectMiddleware(multilingualService *services.MultilingualServic
 // parseAcceptLanguage parses the Accept-Language header and returns the preferred language
 func parseAcceptLanguage(acceptLanguage string) string {
 	if acceptLanguage == "" {
-		return "fa" // Default to Persian
+		return "en" // Default to English
 	}
-	
+
 	// Simple parsing - take the first language code
 	languages := strings.Split(acceptLanguage, ",")
 	if len(languages) == 0 {
-		return "fa"
+		return "en"
 	}
-	
+
 	// Extract language code (before any semicolon or dash)
 	firstLang := strings.TrimSpace(languages[0])
 	if idx := strings.Index(firstLang, ";"); idx != -1 {
@@ -139,13 +139,13 @@ func parseAcceptLanguage(acceptLanguage string) string {
 	if idx := strings.Index(firstLang, "-"); idx != -1 {
 		firstLang = firstLang[:idx]
 	}
-	
+
 	// Ensure it's 2 characters
 	if len(firstLang) >= 2 {
 		return strings.ToLower(firstLang[:2])
 	}
-	
-	return "fa"
+
+	return "en"
 }
 
 // GetLanguageFromContext extracts language code from Gin context
@@ -155,7 +155,7 @@ func GetLanguageFromContext(c *gin.Context) string {
 			return langStr
 		}
 	}
-	return "fa" // Default to Persian
+	return "en" // Default to English
 }
 
 // IsRTLFromContext checks if current language is RTL from Gin context
@@ -165,7 +165,7 @@ func IsRTLFromContext(c *gin.Context) bool {
 			return rtl
 		}
 	}
-	return true // Default to RTL (Persian)
+	return false // Default to LTR (English)
 }
 
 // IsDefaultLanguageFromContext checks if current language is default from Gin context
@@ -175,7 +175,7 @@ func IsDefaultLanguageFromContext(c *gin.Context) bool {
 			return def
 		}
 	}
-	return true // Default to true (Persian is default)
+	return true // Default to true (English is default)
 }
 
 // GetLanguageConfigFromContext extracts language config from Gin context
@@ -187,35 +187,35 @@ func GetLanguageConfigFromContext(c *gin.Context) *models.LanguageConfig {
 	}
 	// Return default config
 	return &models.LanguageConfig{
-		DefaultLanguage:  "fa",
-		FallbackLanguage: "fa",
-		ActiveLanguages:  []string{"fa"},
-		RTLLanguages:     []string{"fa"},
+		DefaultLanguage:  "en",
+		FallbackLanguage: "en",
+		ActiveLanguages:  []string{"en", "de", "fr", "es", "ar"},
+		RTLLanguages:     []string{"ar"},
 	}
 }
 
 // GenerateLanguageAlternates generates alternate language URLs for the current page
 func GenerateLanguageAlternates(c *gin.Context, multilingualService *services.MultilingualService, contentType, slug string) map[string]string {
 	currentLang := GetLanguageFromContext(c)
-	
+
 	routeInfo, err := multilingualService.GenerateLanguageRouteInfo(contentType, slug, currentLang)
 	if err != nil {
 		return make(map[string]string)
 	}
-	
+
 	return routeInfo.AlternateURLs
 }
 
 // SetLanguageHeaders sets appropriate headers for multilingual content
 func SetLanguageHeaders(c *gin.Context, multilingualService *services.MultilingualService) {
 	languageCode := GetLanguageFromContext(c)
-	
+
 	// Set Content-Language header
 	c.Header("Content-Language", languageCode)
-	
+
 	// Set Vary header to indicate language-dependent content
 	c.Header("Vary", "Accept-Language")
-	
+
 	// Get language info
 	isRTL, err := multilingualService.IsRTLLanguage(languageCode)
 	if err == nil && isRTL {

@@ -46,8 +46,8 @@
     {{end}}
     
     <!-- Language alternates -->
-    {{range $lang, $url := .AlternateURLs}}
-    <link rel="alternate" hreflang="{{$lang}}" href="{{$url}}">
+    {{range .AlternateURLs}}
+    <link rel="alternate" hreflang="{{.lang}}" href="{{.url}}">
     {{end}}
     
     <!-- Stylesheets -->
@@ -59,11 +59,7 @@
     {{end}}
     
     <!-- Language-specific fonts -->
-    {{if eq .LanguageCode "fa"}}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazir:wght@300;400;500;700&display=swap" rel="stylesheet">
-    {{else if eq .LanguageCode "ar"}}
+    {{if eq .LanguageCode "ar"}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
@@ -82,10 +78,14 @@
 <body class="{{.LanguageCode}}-lang {{.LanguageDirection}}-dir">
     <!-- Skip to content link for accessibility -->
     <a href="#main-content" class="skip-link">
-        {{if eq .LanguageCode "fa"}}
-            پرش به محتوا
-        {{else if eq .LanguageCode "ar"}}
+        {{if eq .LanguageCode "ar"}}
             انتقال إلى المحتوى
+        {{else if eq .LanguageCode "de"}}
+            Zum Inhalt springen
+        {{else if eq .LanguageCode "fr"}}
+            Aller au contenu
+        {{else if eq .LanguageCode "es"}}
+            Saltar al contenido
         {{else}}
             Skip to content
         {{end}}
@@ -97,14 +97,16 @@
             <!-- Language switcher -->
             <div class="language-switcher">
                 <button class="language-toggle" aria-haspopup="true" aria-expanded="false">
-                    {{if eq .LanguageCode "fa"}}
-                        فارسی
-                    {{else if eq .LanguageCode "ar"}}
+                    {{if eq .LanguageCode "ar"}}
                         العربية
-                    {{else if eq .LanguageCode "en"}}
-                        English
+                    {{else if eq .LanguageCode "de"}}
+                        Deutsch
+                    {{else if eq .LanguageCode "fr"}}
+                        Français
+                    {{else if eq .LanguageCode "es"}}
+                        Español
                     {{else}}
-                        {{.LanguageCode}}
+                        English
                     {{end}}
                     <span class="dropdown-arrow">▼</span>
                 </button>
@@ -120,14 +122,18 @@
             </div>
             
             <!-- Site navigation -->
-            <nav class="main-navigation" role="navigation" aria-label="{{if eq .LanguageCode "fa"}}منوی اصلی{{else if eq .LanguageCode "ar"}}القائمة الرئيسية{{else}}Main navigation{{end}}">
+            <nav class="main-navigation" role="navigation" aria-label="{{if eq .LanguageCode "ar"}}القائمة الرئيسية{{else if eq .LanguageCode "de"}}Hauptnavigation{{else if eq .LanguageCode "fr"}}Navigation principale{{else if eq .LanguageCode "es"}}Navegación principal{{else}}Main navigation{{end}}">
                 <ul class="nav-menu">
                     <li class="nav-item">
                         <a href="{{.HomeURL}}" class="nav-link">
-                            {{if eq .LanguageCode "fa"}}
-                                خانه
-                            {{else if eq .LanguageCode "ar"}}
+                            {{if eq .LanguageCode "ar"}}
                                 الرئيسية
+                            {{else if eq .LanguageCode "de"}}
+                                Startseite
+                            {{else if eq .LanguageCode "fr"}}
+                                Accueil
+                            {{else if eq .LanguageCode "es"}}
+                                Inicio
                             {{else}}
                                 Home
                             {{end}}
@@ -145,7 +151,7 @@
     
     <!-- Breadcrumbs -->
     {{if .Breadcrumbs}}
-    <nav class="breadcrumb-nav" aria-label="{{if eq .LanguageCode "fa"}}مسیر صفحه{{else if eq .LanguageCode "ar"}}مسار الصفحة{{else}}Breadcrumb{{end}}">
+    <nav class="breadcrumb-nav" aria-label="{{if eq .LanguageCode "ar"}}مسار الصفحة{{else if eq .LanguageCode "de"}}Brotkrümelnavigation{{else if eq .LanguageCode "fr"}}Fil d'Ariane{{else if eq .LanguageCode "es"}}Migas de pan{{else}}Breadcrumb{{end}}">
         <div class="multilingual-container">
             <ol class="breadcrumb">
                 {{range $index, $crumb := .Breadcrumbs}}
@@ -175,19 +181,27 @@
             <div class="footer-content">
                 <div class="footer-section">
                     <h3 class="footer-title">
-                        {{if eq .LanguageCode "fa"}}
-                            درباره ما
-                        {{else if eq .LanguageCode "ar"}}
+                        {{if eq .LanguageCode "ar"}}
                             معلومات عنا
+                        {{else if eq .LanguageCode "de"}}
+                            Über uns
+                        {{else if eq .LanguageCode "fr"}}
+                            À propos
+                        {{else if eq .LanguageCode "es"}}
+                            Sobre nosotros
                         {{else}}
                             About Us
                         {{end}}
                     </h3>
                     <p class="footer-text">
-                        {{if eq .LanguageCode "fa"}}
-                            سایت خبری با پشتیبانی از چندین زبان
-                        {{else if eq .LanguageCode "ar"}}
+                        {{if eq .LanguageCode "ar"}}
                             موقع إخباري يدعم عدة لغات
+                        {{else if eq .LanguageCode "de"}}
+                            Mehrsprachige Nachrichtenwebsite
+                        {{else if eq .LanguageCode "fr"}}
+                            Site d'actualités multilingue
+                        {{else if eq .LanguageCode "es"}}
+                            Sitio de noticias multilingüe
                         {{else}}
                             Multilingual news website
                         {{end}}
@@ -196,29 +210,41 @@
                 
                 <div class="footer-section">
                     <h3 class="footer-title">
-                        {{if eq .LanguageCode "fa"}}
-                            لینک‌های مفید
-                        {{else if eq .LanguageCode "ar"}}
+                        {{if eq .LanguageCode "ar"}}
                             روابط مفيدة
+                        {{else if eq .LanguageCode "de"}}
+                            Nützliche Links
+                        {{else if eq .LanguageCode "fr"}}
+                            Liens utiles
+                        {{else if eq .LanguageCode "es"}}
+                            Enlaces útiles
                         {{else}}
                             Useful Links
                         {{end}}
                     </h3>
                     <ul class="footer-links">
                         <li><a href="{{.ContactURL}}">
-                            {{if eq .LanguageCode "fa"}}
-                                تماس با ما
-                            {{else if eq .LanguageCode "ar"}}
+                            {{if eq .LanguageCode "ar"}}
                                 اتصل بنا
+                            {{else if eq .LanguageCode "de"}}
+                                Kontakt
+                            {{else if eq .LanguageCode "fr"}}
+                                Contactez-nous
+                            {{else if eq .LanguageCode "es"}}
+                                Contáctenos
                             {{else}}
                                 Contact Us
                             {{end}}
                         </a></li>
                         <li><a href="{{.PrivacyURL}}">
-                            {{if eq .LanguageCode "fa"}}
-                                حریم خصوصی
-                            {{else if eq .LanguageCode "ar"}}
+                            {{if eq .LanguageCode "ar"}}
                                 سياسة الخصوصية
+                            {{else if eq .LanguageCode "de"}}
+                                Datenschutz
+                            {{else if eq .LanguageCode "fr"}}
+                                Politique de confidentialité
+                            {{else if eq .LanguageCode "es"}}
+                                Política de privacidad
                             {{else}}
                                 Privacy Policy
                             {{end}}
@@ -229,10 +255,14 @@
             
             <div class="footer-bottom">
                 <p class="copyright">
-                    {{if eq .LanguageCode "fa"}}
-                        © {{.CurrentYear}} تمامی حقوق محفوظ است.
-                    {{else if eq .LanguageCode "ar"}}
+                    {{if eq .LanguageCode "ar"}}
                         © {{.CurrentYear}} جميع الحقوق محفوظة.
+                    {{else if eq .LanguageCode "de"}}
+                        © {{.CurrentYear}} Alle Rechte vorbehalten.
+                    {{else if eq .LanguageCode "fr"}}
+                        © {{.CurrentYear}} Tous droits réservés.
+                    {{else if eq .LanguageCode "es"}}
+                        © {{.CurrentYear}} Todos los derechos reservados.
                     {{else}}
                         © {{.CurrentYear}} All rights reserved.
                     {{end}}

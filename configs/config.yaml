@@ -29,3 +29,19 @@ search:
   meilisearch_url: "http://localhost:7700"
   meilisearch_api_key: "YOUR_MEILISEARCH_API_KEY"
   index_name: "articles"
+
+# Multilingual configuration
+multilingual:
+  enabled: true
+  default_language: "en"
+  fallback_language: "en"
+  active_languages:
+    - "en"
+    - "de"
+    - "fr"
+    - "es"
+    - "ar"
+  rtl_languages:
+    - "ar"
+  url_strategy: "subfolder"  # subfolder: /en/, /de/, etc.
+  redirect_root: true        # Redirect / to /en/

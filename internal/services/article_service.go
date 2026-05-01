@@ -56,7 +56,7 @@ func (s *ArticleService) triggerSearchIndexing(article *models.Article) {
 	if s.searchService == nil || article == nil {
 		return
 	}
-	
+
 	// Only index published articles
 	if article.Status != "published" {
 		// If article was unpublished, remove from index
@@ -68,21 +68,21 @@ func (s *ArticleService) triggerSearchIndexing(article *models.Article) {
 		}()
 		return
 	}
-	
+
 	// Run in background with retry mechanism to not block the main operation
 	go func() {
 		maxRetries := 3
 		retryDelay := 1 * time.Second
-		
+
 		for attempt := 1; attempt <= maxRetries; attempt++ {
 			if err := s.searchService.IndexArticle(article); err != nil {
 				log.Printf("[SEARCH_INDEX] Attempt %d/%d failed for article %d: %v", attempt, maxRetries, article.ID, err)
-				
+
 				if attempt < maxRetries {
 					time.Sleep(retryDelay)
 					retryDelay *= 2 // Exponential backoff
 				} else {
-					log.Printf("[SEARCH_INDEX] FAILED after %d attempts for article %d: %s - marking for manual reindex", 
+					log.Printf("[SEARCH_INDEX] FAILED after %d attempts for article %d: %s - marking for manual reindex",
 						maxRetries, article.ID, article.Title)
 					// In production, this could write to a failed_indexing table for later retry
 				}
@@ -98,20 +98,20 @@ func (s *ArticleService) triggerSearchIndexing(article *models.Article) {
 func (s *ArticleService) triggerStaticRegeneration(article *models.Article) {
 	log.Printf("DEBUG: triggerStaticRegeneration called for article: %v", article)
 	log.Printf("DEBUG: staticGenerator is nil: %v", s.staticGenerator == nil)
-	
+
 	if s.staticGenerator == nil || article == nil {
 		log.Printf("DEBUG: Skipping static regeneration - staticGenerator nil: %v, article nil: %v", s.staticGenerator == nil, article == nil)
 		return
 	}
-	
+
 	// Only regenerate for published articles
 	if article.Status != "published" {
 		log.Printf("DEBUG: Skipping static regeneration - article status is: %s", article.Status)
 		return
 	}
-	
+
 	log.Printf("DEBUG: Starting static regeneration for article: %s (ID: %d)", article.Slug, article.ID)
-	
+
 	// Run in background to not block the main operation
 	go func() {
 		ctx := context.Background()
@@ -125,13 +125,15 @@ func (s *ArticleService) triggerStaticRegeneration(article *models.Article) {
 
 // ArticleFilters represents filters for article listing
 type ArticleFilters struct {
-	Status     string    `json:"status,omitempty"`
-	CategoryID *uint64   `json:"category_id,omitempty"`
-	AuthorID   *uint64   `json:"author_id,omitempty"`
-	Search     string    `json:"search,omitempty"`
-	Tags       []uint64  `json:"tags,omitempty"`
-	DateFrom   string    `json:"date_from,omitempty"`
-	DateTo     string    `json:"date_to,omitempty"`
+	Status       string   `json:"status,omitempty"`
+	CategoryID   *uint64  `json:"category_id,omitempty"`
+	AuthorID     *uint64  `json:"author_id,omitempty"`
+	Search       string   `json:"search,omitempty"`
+	Tags         []uint64 `json:"tags,omitempty"`
+	TagID        *uint64  `json:"tag_id,omitempty"`
+	DateFrom     string   `json:"date_from,omitempty"`
+	DateTo       string   `json:"date_to,omitempty"`
+	LanguageCode string   `json:"language_code,omitempty"`
 }
 
 // Create creates a new article with permission checking
@@ -143,12 +145,12 @@ func (s *ArticleService) Create(ctx context.Context, article *models.Article, cu
 
 	// Set author to current user
 	article.AuthorID = currentUser.ID
-	
+
 	// Set timestamps
 	now := time.Now()
 	article.CreatedAt = now
 	article.UpdatedAt = now
-	
+
 	// Set published_at if status is published
 	if article.Status == "published" {
 		article.PublishedAt = &now
@@ -173,7 +175,7 @@ func (s *ArticleService) Create(ctx context.Context, article *models.Article, cu
 
 	// Trigger static file regeneration for published articles
 	s.triggerStaticRegeneration(createdArticle)
-	
+
 	// Trigger search indexing for published articles
 	s.triggerSearchIndexing(createdArticle)
 
@@ -229,14 +231,14 @@ func (s *ArticleService) Update(ctx context.Context, id uint64, req interface{},
 			article.Slug = models.GenerateSlug(*updateReq.Title)
 		}
 	}
-	
+
 	if updateReq.Slug != nil && *updateReq.Slug != "" {
 		article.Slug = *updateReq.Slug
 	}
 
 	if updateReq.Content != nil {
 		article.Content = *updateReq.Content
-		
+
 		// Process auto-linking if enabled and service is available
 		if s.autoLinkService != nil && article.AutoLinking {
 			processedContent, err := s.autoLinkService.ProcessHTMLContent(ctx, article)
@@ -261,7 +263,7 @@ func (s *ArticleService) Update(ctx context.Context, id uint64, req interface{},
 	if len(updateReq.CategoryIDs) > 0 {
 		// Set primary category to first one for backward compatibility
 		article.CategoryID = updateReq.CategoryIDs[0]
-		
+
 		// Update article categories in junction table
 		err = s.repo.UpdateArticleCategories(ctx, id, updateReq.CategoryIDs)
 		if err != nil {
@@ -272,7 +274,7 @@ func (s *ArticleService) Update(ctx context.Context, id uint64, req interface{},
 	if updateReq.Status != nil {
 		oldStatus := article.Status
 		article.Status = *updateReq.Status
-		
+
 		// Set published_at when changing from draft to published
 		if oldStatus != "published" && *updateReq.Status == "published" {
 			now := time.Now()
@@ -318,25 +320,25 @@ func (s *ArticleService) Update(ctx context.Context, id uint64, req interface{},
 		if err != nil {
 			return nil, fmt.Errorf("failed to update article tags: %w", err)
 		}
-		
+
 		// Reload article with updated tags
 		updatedArticle, err := s.repo.GetByID(ctx, article.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to reload article with tags: %w", err)
 		}
-		
+
 		// Trigger static file regeneration
 		s.triggerStaticRegeneration(updatedArticle)
-		
+
 		// Trigger search indexing
 		s.triggerSearchIndexing(updatedArticle)
-		
+
 		return updatedArticle, nil
 	}
 
 	// Trigger static file regeneration
 	s.triggerStaticRegeneration(article)
-	
+
 	// Trigger search indexing
 	s.triggerSearchIndexing(article)
 
@@ -363,7 +365,7 @@ func (s *ArticleService) Delete(ctx context.Context, id uint64, currentUser *mod
 	if err != nil {
 		return fmt.Errorf("failed to delete article: %w", err)
 	}
-	
+
 	// Remove from search index
 	if s.searchService != nil {
 		go func() {
@@ -470,7 +472,7 @@ func (s *ArticleService) List(ctx context.Context, limit, offset int, filters Ar
 		FROM articles a
 		LEFT JOIN images i ON a.featured_image_id = i.id
 		WHERE 1=1`
-	
+
 	args := []interface{}{}
 	argIndex := 1
 
@@ -509,6 +511,20 @@ func (s *ArticleService) List(ctx context.Context, limit, offset int, filters Ar
 	if filters.DateTo != "" {
 		query += fmt.Sprintf(" AND a.published_at <= $%d", argIndex)
 		args = append(args, filters.DateTo)
+		argIndex++
+	}
+
+	// Filter by language code
+	if filters.LanguageCode != "" {
+		query += fmt.Sprintf(" AND a.language_code = $%d", argIndex)
+		args = append(args, filters.LanguageCode)
+		argIndex++
+	}
+
+	// Filter by tag ID (using article_tags junction table)
+	if filters.TagID != nil {
+		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM article_tags at WHERE at.article_id = a.id AND at.tag_id = $%d)", argIndex)
+		args = append(args, *filters.TagID)
 		argIndex++
 	}
 
@@ -615,6 +631,14 @@ func (s *ArticleService) List(ctx context.Context, limit, offset int, filters Ar
 		countQuery += fmt.Sprintf(" AND a.published_at <= $%d", argIndex)
 		argIndex++
 	}
+	if filters.LanguageCode != "" {
+		countQuery += fmt.Sprintf(" AND a.language_code = $%d", argIndex)
+		argIndex++
+	}
+	if filters.TagID != nil {
+		countQuery += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM article_tags at WHERE at.article_id = a.id AND at.tag_id = $%d)", argIndex)
+		argIndex++
+	}
 
 	var total int
 	err = s.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total)
@@ -659,7 +683,7 @@ func (s *ArticleService) Publish(ctx context.Context, id uint64, currentUser *mo
 
 	// Trigger static file regeneration for newly published article
 	s.triggerStaticRegeneration(article)
-	
+
 	// Trigger search indexing for newly published article
 	s.triggerSearchIndexing(article)
 
@@ -749,7 +773,7 @@ func (s *ArticleService) BulkCreate(ctx context.Context, articles []models.Artic
 		articles[i].AuthorID = currentUser.ID
 		articles[i].CreatedAt = now
 		articles[i].UpdatedAt = now
-		
+
 		// Set published_at if status is published
 		if articles[i].Status == "published" {
 			articles[i].PublishedAt = &now
@@ -781,8 +805,8 @@ type UpdateArticleRequest struct {
 	Slug            *string         `json:"slug,omitempty"`
 	Content         *string         `json:"content,omitempty"`
 	Excerpt         *string         `json:"excerpt,omitempty"`
-	CategoryID      *uint64         `json:"category_id,omitempty"`      // Backward compatibility
-	CategoryIDs     []uint64        `json:"category_ids,omitempty"`     // Multiple categories support
+	CategoryID      *uint64         `json:"category_id,omitempty"`  // Backward compatibility
+	CategoryIDs     []uint64        `json:"category_ids,omitempty"` // Multiple categories support
 	Status          *string         `json:"status,omitempty"`
 	Tags            []string        `json:"tags,omitempty"`
 	FeaturedImageID *uint64         `json:"featured_image_id,omitempty"`
@@ -831,20 +855,20 @@ func (s *ArticleService) AssociateTagWithArticle(ctx context.Context, articleID,
 	if err != nil {
 		return fmt.Errorf("failed to check existing association: %w", err)
 	}
-	
+
 	if exists {
 		log.Printf("Association between article %d and tag %d already exists", articleID, tagID)
 		return nil
 	}
-	
+
 	// Insert into article_tags table
 	query := `INSERT INTO article_tags (article_id, tag_id, created_at) VALUES ($1, $2, NOW())`
-	
+
 	_, err = s.db.ExecContext(ctx, query, articleID, tagID)
 	if err != nil {
 		return fmt.Errorf("failed to associate tag %d with article %d: %w", tagID, articleID, err)
 	}
-	
+
 	return nil
 }
 
@@ -852,35 +876,37 @@ func (s *ArticleService) AssociateTagWithArticle(ctx context.Context, articleID,
 func (s *ArticleService) GetDB() *database.DB {
 	return s.db
 }
+
 // GetByCategory retrieves articles by category
 func (s *ArticleService) GetByCategory(ctx context.Context, categoryID uint64, limit, offset int) ([]models.Article, error) {
-return s.repo.GetByCategory(ctx, categoryID, limit, offset)
+	return s.repo.GetByCategory(ctx, categoryID, limit, offset)
 }
 
-// GetByTag retrieves articles by tag  
+// GetByTag retrieves articles by tag
 func (s *ArticleService) GetByTag(ctx context.Context, tagID uint64, limit, offset int) ([]models.Article, error) {
-return s.repo.GetByTag(ctx, tagID, limit, offset)
+	return s.repo.GetByTag(ctx, tagID, limit, offset)
 }
+
 // UpdateLikeCount updates the like count for an article
 func (s *ArticleService) UpdateLikeCount(articleID uint64, newCount int) error {
 	query := `UPDATE articles SET like_count = $1, updated_at = NOW() WHERE id = $2`
-	
+
 	_, err := s.db.Exec(query, newCount, articleID)
 	if err != nil {
 		return fmt.Errorf("failed to update like count for article %d: %w", articleID, err)
 	}
-	
+
 	return nil
 }
 
 // UpdateDislikeCount updates the dislike count for an article
 func (s *ArticleService) UpdateDislikeCount(articleID uint64, newCount int) error {
 	query := `UPDATE articles SET dislike_count = $1, updated_at = NOW() WHERE id = $2`
-	
+
 	_, err := s.db.Exec(query, newCount, articleID)
 	if err != nil {
 		return fmt.Errorf("failed to update dislike count for article %d: %w", articleID, err)
 	}
-	
+
 	return nil
 }

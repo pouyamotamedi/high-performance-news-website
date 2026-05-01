@@ -8,13 +8,14 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Cache    CacheConfig    `mapstructure:"cache"`
-	Search   SearchConfig   `mapstructure:"search"`
-	App      AppConfig      `mapstructure:"app"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Backup   BackupConfig   `mapstructure:"backup"`
+	Server       ServerConfig       `mapstructure:"server"`
+	Database     DatabaseConfig     `mapstructure:"database"`
+	Cache        CacheConfig        `mapstructure:"cache"`
+	Search       SearchConfig       `mapstructure:"search"`
+	App          AppConfig          `mapstructure:"app"`
+	JWT          JWTConfig          `mapstructure:"jwt"`
+	Backup       BackupConfig       `mapstructure:"backup"`
+	Multilingual MultilingualConfig `mapstructure:"multilingual"`
 }
 
 type ServerConfig struct {
@@ -25,16 +26,16 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host         string `mapstructure:"host"`
-	Port         int    `mapstructure:"port"`
-	User         string `mapstructure:"user"`
-	Password     string `mapstructure:"password"`
-	DBName       string `mapstructure:"dbname"`
-	SSLMode      string `mapstructure:"sslmode"`
-	MaxConns     int    `mapstructure:"max_conns"`
-	MinConns     int    `mapstructure:"min_conns"`
-	UsePgBouncer bool   `mapstructure:"use_pgbouncer"`
-	PgBouncerPort int   `mapstructure:"pgbouncer_port"`
+	Host          string `mapstructure:"host"`
+	Port          int    `mapstructure:"port"`
+	User          string `mapstructure:"user"`
+	Password      string `mapstructure:"password"`
+	DBName        string `mapstructure:"dbname"`
+	SSLMode       string `mapstructure:"sslmode"`
+	MaxConns      int    `mapstructure:"max_conns"`
+	MinConns      int    `mapstructure:"min_conns"`
+	UsePgBouncer  bool   `mapstructure:"use_pgbouncer"`
+	PgBouncerPort int    `mapstructure:"pgbouncer_port"`
 }
 
 type CacheConfig struct {
@@ -66,6 +67,45 @@ type JWTConfig struct {
 	Secret               string `mapstructure:"secret"`
 	AccessTokenDuration  string `mapstructure:"access_token_duration"`
 	RefreshTokenDuration string `mapstructure:"refresh_token_duration"`
+}
+
+// MultilingualConfig holds configuration for multilingual support
+type MultilingualConfig struct {
+	Enabled          bool     `mapstructure:"enabled"`
+	DefaultLanguage  string   `mapstructure:"default_language"`
+	FallbackLanguage string   `mapstructure:"fallback_language"`
+	ActiveLanguages  []string `mapstructure:"active_languages"`
+	RTLLanguages     []string `mapstructure:"rtl_languages"`
+	URLStrategy      string   `mapstructure:"url_strategy"`  // "subfolder" or "subdomain"
+	RedirectRoot     bool     `mapstructure:"redirect_root"` // Redirect / to /en/
+}
+
+// IsRTL checks if a language code is RTL
+func (c *MultilingualConfig) IsRTL(langCode string) bool {
+	for _, rtl := range c.RTLLanguages {
+		if rtl == langCode {
+			return true
+		}
+	}
+	return false
+}
+
+// IsActiveLanguage checks if a language code is active
+func (c *MultilingualConfig) IsActiveLanguage(langCode string) bool {
+	for _, lang := range c.ActiveLanguages {
+		if lang == langCode {
+			return true
+		}
+	}
+	return false
+}
+
+// GetDirection returns "rtl" or "ltr" for a language code
+func (c *MultilingualConfig) GetDirection(langCode string) string {
+	if c.IsRTL(langCode) {
+		return "rtl"
+	}
+	return "ltr"
 }
 
 func Load() (*Config, error) {
@@ -158,28 +198,41 @@ func setBackupDefaults() {
 	viper.SetDefault("backup.compression_level", 6)
 	viper.SetDefault("backup.encryption_enabled", true)
 	viper.SetDefault("backup.encryption_key", "")
-	
+
 	// Backup scheduling defaults
 	viper.SetDefault("backup.full_backup_interval", "24h")
 	viper.SetDefault("backup.incremental_backup_interval", "1h")
-	
+
 	// Cross-region replication defaults
 	viper.SetDefault("backup.cross_region_enabled", false)
 	viper.SetDefault("backup.replication_targets", []interface{}{})
-	
+
 	// Point-in-time recovery defaults
 	viper.SetDefault("backup.wal_archive_enabled", true)
 	viper.SetDefault("backup.wal_archive_dir", "/var/backups/news-website/wal")
-	
+
 	// Disaster recovery testing defaults
 	viper.SetDefault("backup.testing_enabled", true)
 	viper.SetDefault("backup.testing_interval", "168h") // Weekly
 	viper.SetDefault("backup.testing_retention", 5)
-	
+
 	// Notification defaults
 	viper.SetDefault("backup.notification_enabled", true)
 	viper.SetDefault("backup.notification_emails", []string{})
 	viper.SetDefault("backup.slack_webhook_url", "")
+
+	// Multilingual defaults
+	setMultilingualDefaults()
+}
+
+func setMultilingualDefaults() {
+	viper.SetDefault("multilingual.enabled", true)
+	viper.SetDefault("multilingual.default_language", "en")
+	viper.SetDefault("multilingual.fallback_language", "en")
+	viper.SetDefault("multilingual.active_languages", []string{"en", "de", "fr", "es", "ar"})
+	viper.SetDefault("multilingual.rtl_languages", []string{"ar"})
+	viper.SetDefault("multilingual.url_strategy", "subfolder")
+	viper.SetDefault("multilingual.redirect_root", true)
 }
 
 func (c *Config) GetDatabaseDSN() string {
@@ -187,7 +240,7 @@ func (c *Config) GetDatabaseDSN() string {
 	if c.Database.UsePgBouncer {
 		port = c.Database.PgBouncerPort
 	}
-	
+
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Database.Host,
 		port,

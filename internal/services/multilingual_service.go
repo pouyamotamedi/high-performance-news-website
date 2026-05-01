@@ -27,13 +27,13 @@ func (s *MultilingualService) GetLanguages() ([]models.Language, error) {
 		FROM languages
 		ORDER BY sort_order, name
 	`
-	
+
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query languages: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var languages []models.Language
 	for rows.Next() {
 		var lang models.Language
@@ -51,7 +51,7 @@ func (s *MultilingualService) GetLanguages() ([]models.Language, error) {
 		}
 		languages = append(languages, lang)
 	}
-	
+
 	return languages, nil
 }
 
@@ -63,13 +63,13 @@ func (s *MultilingualService) GetActiveLanguages() ([]models.Language, error) {
 		WHERE is_active = true
 		ORDER BY sort_order, name
 	`
-	
+
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active languages: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var languages []models.Language
 	for rows.Next() {
 		var lang models.Language
@@ -87,7 +87,7 @@ func (s *MultilingualService) GetActiveLanguages() ([]models.Language, error) {
 		}
 		languages = append(languages, lang)
 	}
-	
+
 	return languages, nil
 }
 
@@ -97,21 +97,21 @@ func (s *MultilingualService) GetLanguageConfig() (*models.LanguageConfig, error
 	if err != nil {
 		return nil, err
 	}
-	
+
 	config := &models.LanguageConfig{
-		DefaultLanguage:  "fa", // Persian is default
-		FallbackLanguage: "fa",
+		DefaultLanguage:  "en", // English is default
+		FallbackLanguage: "en",
 		ActiveLanguages:  make([]string, 0, len(languages)),
 		RTLLanguages:     make([]string, 0),
 	}
-	
+
 	for _, lang := range languages {
 		config.ActiveLanguages = append(config.ActiveLanguages, lang.Code)
 		if lang.Direction == "rtl" {
 			config.RTLLanguages = append(config.RTLLanguages, lang.Code)
 		}
 	}
-	
+
 	return config, nil
 }
 
@@ -120,7 +120,7 @@ func (s *MultilingualService) CreateTranslationGroup(groupType string, contentID
 	if len(contentIDs) < 2 {
 		return 0, fmt.Errorf("translation group must contain at least 2 items")
 	}
-	
+
 	// Validate group type
 	validTypes := map[string]bool{
 		"article":  true,
@@ -130,13 +130,13 @@ func (s *MultilingualService) CreateTranslationGroup(groupType string, contentID
 	if !validTypes[groupType] {
 		return 0, fmt.Errorf("invalid group type: %s", groupType)
 	}
-	
+
 	tx, err := s.db.Begin()
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
-	
+
 	// Create translation group
 	var groupID uint64
 	err = tx.QueryRow(
@@ -146,7 +146,7 @@ func (s *MultilingualService) CreateTranslationGroup(groupType string, contentID
 	if err != nil {
 		return 0, fmt.Errorf("failed to create translation group: %w", err)
 	}
-	
+
 	// Link content to the group
 	var tableName string
 	switch groupType {
@@ -157,7 +157,7 @@ func (s *MultilingualService) CreateTranslationGroup(groupType string, contentID
 	case "tag":
 		tableName = "tags"
 	}
-	
+
 	for _, contentID := range contentIDs {
 		query := fmt.Sprintf(
 			"UPDATE %s SET translation_group_id = $1 WHERE id = $2",
@@ -168,11 +168,11 @@ func (s *MultilingualService) CreateTranslationGroup(groupType string, contentID
 			return 0, fmt.Errorf("failed to link content %d to translation group: %w", contentID, err)
 		}
 	}
-	
+
 	if err = tx.Commit(); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	
+
 	return groupID, nil
 }
 
@@ -209,10 +209,10 @@ func (s *MultilingualService) GetArticleTranslations(articleID uint64) (*models.
 				 a.meta_title, a.meta_description, a.canonical_url, a.schema_type, a.auto_linking,
 				 l.name, l.native_name, l.direction
 	`
-	
+
 	var article models.MultilingualArticle
 	var translationsJSON []byte
-	
+
 	err := s.db.QueryRow(query, articleID).Scan(
 		&article.ID,
 		&article.Title,
@@ -246,14 +246,14 @@ func (s *MultilingualService) GetArticleTranslations(articleID uint64) (*models.
 		}
 		return nil, fmt.Errorf("failed to query article translations: %w", err)
 	}
-	
+
 	// Parse translations JSON
 	if len(translationsJSON) > 0 {
 		if err := article.Translations.Scan(translationsJSON); err != nil {
 			return nil, fmt.Errorf("failed to parse translations: %w", err)
 		}
 	}
-	
+
 	return &article, nil
 }
 
@@ -288,13 +288,13 @@ func (s *MultilingualService) GetArticlesByLanguage(languageCode, fallbackLangua
 		SELECT * FROM fallback_articles
 		ORDER BY published_at DESC
 	`
-	
+
 	rows, err := s.db.Query(query, languageCode, fallbackLanguage, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query articles by language: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var articles []models.MultilingualArticle
 	for rows.Next() {
 		var article models.MultilingualArticle
@@ -317,7 +317,7 @@ func (s *MultilingualService) GetArticlesByLanguage(languageCode, fallbackLangua
 		}
 		articles = append(articles, article)
 	}
-	
+
 	return articles, nil
 }
 
@@ -351,18 +351,18 @@ func (s *MultilingualService) GetCategoriesByLanguage(languageCode string) ([]mo
 				 l.name, l.native_name, l.direction
 		ORDER BY c.sort_order, c.name
 	`
-	
+
 	rows, err := s.db.Query(query, languageCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query categories by language: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var categories []models.MultilingualCategory
 	for rows.Next() {
 		var category models.MultilingualCategory
 		var translationsJSON []byte
-		
+
 		err := rows.Scan(
 			&category.ID,
 			&category.Name,
@@ -382,17 +382,17 @@ func (s *MultilingualService) GetCategoriesByLanguage(languageCode string) ([]mo
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan category: %w", err)
 		}
-		
+
 		// Parse translations JSON
 		if len(translationsJSON) > 0 {
 			if err := category.Translations.Scan(translationsJSON); err != nil {
 				return nil, fmt.Errorf("failed to parse translations: %w", err)
 			}
 		}
-		
+
 		categories = append(categories, category)
 	}
-	
+
 	return categories, nil
 }
 
@@ -426,19 +426,19 @@ func (s *MultilingualService) GetTagsByLanguage(languageCode string) ([]models.M
 				 l.name, l.native_name, l.direction
 		ORDER BY t.name
 	`
-	
+
 	rows, err := s.db.Query(query, languageCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tags by language: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var tags []models.MultilingualTag
 	for rows.Next() {
 		var tag models.MultilingualTag
 		var translationsJSON []byte
 		var keywordsJSON []byte
-		
+
 		err := rows.Scan(
 			&tag.ID,
 			&tag.Name,
@@ -458,24 +458,24 @@ func (s *MultilingualService) GetTagsByLanguage(languageCode string) ([]models.M
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan tag: %w", err)
 		}
-		
+
 		// Parse keywords JSON
 		if len(keywordsJSON) > 0 {
 			if err := tag.Tag.Scan(keywordsJSON); err != nil {
 				return nil, fmt.Errorf("failed to parse keywords: %w", err)
 			}
 		}
-		
+
 		// Parse translations JSON
 		if len(translationsJSON) > 0 {
 			if err := tag.Translations.Scan(translationsJSON); err != nil {
 				return nil, fmt.Errorf("failed to parse translations: %w", err)
 			}
 		}
-		
+
 		tags = append(tags, tag)
 	}
-	
+
 	return tags, nil
 }
 
@@ -485,13 +485,13 @@ func (s *MultilingualService) GenerateLanguageRouteInfo(contentType, slug, langu
 	if err != nil {
 		return nil, err
 	}
-	
+
 	isDefault := languageCode == config.DefaultLanguage
 	var urlPrefix string
 	if !isDefault {
 		urlPrefix = "/" + languageCode
 	}
-	
+
 	// Get language info
 	var direction string
 	for _, lang := range config.RTLLanguages {
@@ -503,22 +503,22 @@ func (s *MultilingualService) GenerateLanguageRouteInfo(contentType, slug, langu
 	if direction == "" {
 		direction = "ltr"
 	}
-	
+
 	// Generate alternate URLs for all active languages
 	alternateURLs := make(map[string]string)
 	for _, langCode := range config.ActiveLanguages {
 		if langCode == languageCode {
 			continue
 		}
-		
+
 		var prefix string
 		if langCode != config.DefaultLanguage {
 			prefix = "/" + langCode
 		}
-		
+
 		alternateURLs[langCode] = fmt.Sprintf("%s/%s/%s", prefix, contentType, slug)
 	}
-	
+
 	return &models.LanguageRouteInfo{
 		LanguageCode:  languageCode,
 		IsDefault:     isDefault,
@@ -533,28 +533,28 @@ func (s *MultilingualService) ValidateLanguageCode(languageCode string) error {
 	if languageCode == "" {
 		return fmt.Errorf("language code is required")
 	}
-	
+
 	if len(languageCode) != 2 {
 		return fmt.Errorf("language code must be exactly 2 characters")
 	}
-	
+
 	query := "SELECT COUNT(*) FROM languages WHERE code = $1 AND is_active = true"
 	var count int
 	err := s.db.QueryRow(query, languageCode).Scan(&count)
 	if err != nil {
 		return fmt.Errorf("failed to validate language code: %w", err)
 	}
-	
+
 	if count == 0 {
 		return fmt.Errorf("language code '%s' is not supported or not active", languageCode)
 	}
-	
+
 	return nil
 }
 
 // GetDefaultLanguage returns the default language code
 func (s *MultilingualService) GetDefaultLanguage() string {
-	return "fa" // Persian is the default language
+	return "en" // English is the default language
 }
 
 // IsRTLLanguage checks if a language is right-to-left
@@ -568,7 +568,7 @@ func (s *MultilingualService) IsRTLLanguage(languageCode string) (bool, error) {
 		}
 		return false, fmt.Errorf("failed to check language direction: %w", err)
 	}
-	
+
 	return direction == "rtl", nil
 }
 
@@ -576,13 +576,13 @@ func (s *MultilingualService) IsRTLLanguage(languageCode string) (bool, error) {
 func ExtractLanguageFromURL(path string) (string, string) {
 	// Remove leading slash
 	path = strings.TrimPrefix(path, "/")
-	
+
 	// Split path into segments
 	segments := strings.Split(path, "/")
 	if len(segments) == 0 {
-		return "fa", path // Default to Persian
+		return "en", path // Default to English
 	}
-	
+
 	// Check if first segment is a language code
 	firstSegment := segments[0]
 	if len(firstSegment) == 2 {
@@ -590,7 +590,195 @@ func ExtractLanguageFromURL(path string) (string, string) {
 		remainingPath := strings.Join(segments[1:], "/")
 		return firstSegment, remainingPath
 	}
-	
+
 	// No language code in URL, return default
-	return "fa", path
+	return "en", path
+}
+
+// LanguageInfo holds information about a language for templates
+type LanguageInfo struct {
+	Code       string `json:"code"`
+	Name       string `json:"name"`
+	NativeName string `json:"native_name"`
+	Direction  string `json:"direction"`
+	URL        string `json:"url"`
+	IsActive   bool   `json:"is_active"`
+}
+
+// AlternateURL represents an alternate language URL for hreflang
+type AlternateURL struct {
+	Lang string `json:"lang"`
+	URL  string `json:"url"`
+}
+
+// GenerateAlternateURLs generates alternate URLs for all active languages
+func (s *MultilingualService) GenerateAlternateURLs(baseURL, currentPath string) ([]AlternateURL, error) {
+	languages, err := s.GetActiveLanguages()
+	if err != nil {
+		return nil, err
+	}
+
+	var alternates []AlternateURL
+
+	// Clean the path - remove any existing language prefix
+	cleanPath := currentPath
+	if len(cleanPath) > 3 && cleanPath[0] == '/' {
+		// Check if path starts with a language code like /en/, /de/, etc.
+		possibleLang := cleanPath[1:3]
+		if len(cleanPath) > 3 && cleanPath[3] == '/' {
+			// Validate if it's actually a language code
+			for _, lang := range languages {
+				if lang.Code == possibleLang {
+					cleanPath = cleanPath[3:] // Remove /xx prefix
+					break
+				}
+			}
+		} else if len(cleanPath) == 3 {
+			// Path is just /xx
+			for _, lang := range languages {
+				if lang.Code == possibleLang {
+					cleanPath = "/"
+					break
+				}
+			}
+		}
+	}
+
+	// Generate alternate URLs for each language
+	for _, lang := range languages {
+		url := fmt.Sprintf("%s/%s%s", baseURL, lang.Code, cleanPath)
+		// Clean up double slashes
+		url = strings.ReplaceAll(url, "//", "/")
+		url = strings.Replace(url, ":/", "://", 1) // Fix protocol
+
+		alternates = append(alternates, AlternateURL{
+			Lang: lang.Code,
+			URL:  url,
+		})
+	}
+
+	// Add x-default pointing to English
+	defaultURL := fmt.Sprintf("%s/en%s", baseURL, cleanPath)
+	defaultURL = strings.ReplaceAll(defaultURL, "//", "/")
+	defaultURL = strings.Replace(defaultURL, ":/", "://", 1)
+	alternates = append(alternates, AlternateURL{
+		Lang: "x-default",
+		URL:  defaultURL,
+	})
+
+	return alternates, nil
+}
+
+// GenerateCanonicalURL generates the canonical URL for a page
+func (s *MultilingualService) GenerateCanonicalURL(baseURL, languageCode, path string) string {
+	url := fmt.Sprintf("%s/%s%s", baseURL, languageCode, path)
+	// Clean up double slashes
+	url = strings.ReplaceAll(url, "//", "/")
+	url = strings.Replace(url, ":/", "://", 1) // Fix protocol
+	return url
+}
+
+// GetAvailableLanguagesForTemplate returns language info formatted for templates
+func (s *MultilingualService) GetAvailableLanguagesForTemplate(baseURL, currentPath string) ([]LanguageInfo, error) {
+	languages, err := s.GetActiveLanguages()
+	if err != nil {
+		return nil, err
+	}
+
+	// Clean the path - remove any existing language prefix
+	cleanPath := currentPath
+	if len(cleanPath) > 3 && cleanPath[0] == '/' {
+		possibleLang := cleanPath[1:3]
+		if len(cleanPath) > 3 && cleanPath[3] == '/' {
+			for _, lang := range languages {
+				if lang.Code == possibleLang {
+					cleanPath = cleanPath[3:]
+					break
+				}
+			}
+		} else if len(cleanPath) == 3 {
+			for _, lang := range languages {
+				if lang.Code == possibleLang {
+					cleanPath = "/"
+					break
+				}
+			}
+		}
+	}
+
+	var result []LanguageInfo
+	for _, lang := range languages {
+		url := fmt.Sprintf("/%s%s", lang.Code, cleanPath)
+		// Clean up double slashes
+		url = strings.ReplaceAll(url, "//", "/")
+
+		result = append(result, LanguageInfo{
+			Code:       lang.Code,
+			Name:       lang.Name,
+			NativeName: lang.NativeName,
+			Direction:  lang.Direction,
+			URL:        url,
+			IsActive:   lang.IsActive,
+		})
+	}
+
+	return result, nil
+}
+
+// GetLanguageByCode returns a specific language by its code
+func (s *MultilingualService) GetLanguageByCode(code string) (*models.Language, error) {
+	query := `
+		SELECT code, name, native_name, direction, is_active, sort_order, created_at
+		FROM languages
+		WHERE code = $1
+	`
+
+	var lang models.Language
+	err := s.db.QueryRow(query, code).Scan(
+		&lang.Code,
+		&lang.Name,
+		&lang.NativeName,
+		&lang.Direction,
+		&lang.IsActive,
+		&lang.SortOrder,
+		&lang.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("language '%s' not found", code)
+		}
+		return nil, fmt.Errorf("failed to get language: %w", err)
+	}
+
+	return &lang, nil
+}
+
+// GetLanguageNativeName returns the native name for a language code
+func (s *MultilingualService) GetLanguageNativeName(code string) string {
+	nativeNames := map[string]string{
+		"en": "English",
+		"de": "Deutsch",
+		"fr": "Français",
+		"es": "Español",
+		"ar": "العربية",
+	}
+	if name, ok := nativeNames[code]; ok {
+		return name
+	}
+	return code
+}
+
+// GetLanguageName returns the English name for a language code
+func (s *MultilingualService) GetLanguageName(code string) string {
+	names := map[string]string{
+		"en": "English",
+		"de": "German",
+		"fr": "French",
+		"es": "Spanish",
+		"ar": "Arabic",
+	}
+	if name, ok := names[code]; ok {
+		return name
+	}
+	return code
 }

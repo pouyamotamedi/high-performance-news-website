@@ -50,31 +50,31 @@ func (c *CacheServiceAdapter) DeletePattern(pattern string) error {
 }
 
 type Server struct {
-	config                   *config.Config
-	router                   *gin.Engine
-	cache                    cache.CacheService
-	db                       *database.DB
-	apiRouter                *api.Router
-	templateEngine           *templates.TemplateEngine
-	rssHandlers              *api.RSSHandlers
-	googleNewsHandlers       *api.GoogleNewsHandlers
-	metricsService           *services.MetricsService
-	healthService            *services.HealthService
-	alertingService          *services.AlertingService
-	monitoringConfig         *config.MonitoringConfig
-	analyticsService         *services.AnalyticsService
-	advertisementService     *services.AdvertisementService
-	pushNotificationService  *services.PushNotificationService
-	widgetService            *services.WidgetService
-	themeService             *services.ThemeService
-	cdnService               services.CDNServiceInterface
-	articleService           *services.ArticleService
-	categoryService          *services.CategoryService
-	tagService               *services.TagService
-	authService              *auth.AuthService
-	mediaService             *services.MediaService
-	staticGenerator          *services.StaticGenerator
-	enterpriseSearchService  *services.EnterpriseSearchService
+	config                  *config.Config
+	router                  *gin.Engine
+	cache                   cache.CacheService
+	db                      *database.DB
+	apiRouter               *api.Router
+	templateEngine          *templates.TemplateEngine
+	rssHandlers             *api.RSSHandlers
+	googleNewsHandlers      *api.GoogleNewsHandlers
+	metricsService          *services.MetricsService
+	healthService           *services.HealthService
+	alertingService         *services.AlertingService
+	monitoringConfig        *config.MonitoringConfig
+	analyticsService        *services.AnalyticsService
+	advertisementService    *services.AdvertisementService
+	pushNotificationService *services.PushNotificationService
+	widgetService           *services.WidgetService
+	themeService            *services.ThemeService
+	cdnService              services.CDNServiceInterface
+	articleService          *services.ArticleService
+	categoryService         *services.CategoryService
+	tagService              *services.TagService
+	authService             *auth.AuthService
+	mediaService            *services.MediaService
+	staticGenerator         *services.StaticGenerator
+	enterpriseSearchService *services.EnterpriseSearchService
 }
 
 // requireAuth middleware checks authentication for admin routes
@@ -118,7 +118,7 @@ func (s *Server) requireAuth(c *gin.Context) {
 	c.Set("user_id", claims.UserID)
 	c.Set("user_role", claims.Role)
 	c.Set("username", claims.Username)
-	
+
 	c.Next()
 }
 
@@ -126,15 +126,15 @@ func (s *Server) requireAuth(c *gin.Context) {
 func (s *Server) redirectToLogin(c *gin.Context, reason string) {
 	// Log the reason for debugging
 	log.Printf("Authentication failed: %s", reason)
-	
+
 	// Check if it's an AJAX request
-	if c.GetHeader("X-Requested-With") == "XMLHttpRequest" || 
-	   c.GetHeader("Accept") == "application/json" ||
-	   strings.Contains(c.GetHeader("Accept"), "application/json") {
+	if c.GetHeader("X-Requested-With") == "XMLHttpRequest" ||
+		c.GetHeader("Accept") == "application/json" ||
+		strings.Contains(c.GetHeader("Accept"), "application/json") {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Authentication required",
+			"error":    "Authentication required",
 			"redirect": "/admin/login",
-			"reason": reason,
+			"reason":   reason,
 		})
 	} else {
 		// For browser requests, redirect immediately
@@ -192,7 +192,7 @@ func New(cfg *config.Config) (*Server, error) {
 		log.Println("Using mock RSS and Google News services")
 		mockRSSService := services.NewMockRSSService()
 		rssHandlers = api.NewRSSHandlers(mockRSSService)
-		
+
 		mockGoogleNewsSitemapService := services.NewMockGoogleNewsSitemapService()
 		googleNewsHandlers = api.NewGoogleNewsHandlers(mockGoogleNewsSitemapService)
 	}
@@ -229,56 +229,56 @@ func New(cfg *config.Config) (*Server, error) {
 		// Initialize full services when database is available
 		authService = auth.NewAuthService(cfg.JWT.Secret, cfg.JWT.Secret)
 		userService = services.NewUserService(db.DB, authService)
-		
+
 		if err := createDemoUser(userService); err != nil {
 			log.Printf("Warning: Failed to create demo user: %v", err)
 		}
-		
+
 		configService = services.NewConfigService(db.DB, cacheClient)
 		configService.LoadDefaults()
-		
+
 		// Initialize monitoring configuration
 		monitoringConfig = config.LoadMonitoringConfig()
 		if err := monitoringConfig.Validate(); err != nil {
 			log.Printf("Warning: Invalid monitoring config: %v", err)
 		}
-		
+
 		// Initialize metrics service with proper parameters
 		metricsService = services.NewMetricsService(db.DB, cacheClient, monitoringConfig)
-		
+
 		// Initialize health service
 		healthService = services.NewHealthService(db.DB, cacheClient, monitoringConfig, metricsService)
-		
+
 		// Initialize alerting service
 		var emailService services.EmailService // This would be initialized based on config
 		alertingService = services.NewAlertingService(monitoringConfig, emailService)
-		
+
 		categoryService = services.NewCategoryService(db.DB)
 		tagService = services.NewTagService(db.DB)
-		
+
 		articleRepo := repositories.NewArticleRepository(db, cacheClient, cfg.Server.StaticPath)
-		
+
 		// Initialize widget and theme services
 		widgetRepo := repositories.NewWidgetRepository(db.DB)
 		themeRepo := repositories.NewThemeRepository(db.DB)
 		categoryRepo := repositories.NewCategoryRepository(db.DB)
 		tagRepo := repositories.NewTagRepository(db.DB)
-		
+
 		// Create cache adapter for services that expect the old interface
 		cacheAdapter := &CacheServiceAdapter{cache: cacheClient}
 		widgetService = services.NewWidgetService(widgetRepo, articleRepo, categoryRepo, tagRepo, cacheAdapter)
 		themeService = services.NewThemeService(themeRepo, cacheAdapter, "web/templates")
-		
+
 		// Initialize additional admin services
 		analyticsRepo := repositories.NewAnalyticsRepository(db.DB)
 		analyticsService = services.NewAnalyticsService(analyticsRepo)
-		
+
 		advertisementRepo := repositories.NewAdvertisementRepository(db.DB)
 		advertisementService = services.NewAdvertisementService(advertisementRepo, cacheAdapter, baseURL)
-		
+
 		pushNotificationRepo := repositories.NewPushNotificationRepository(db.DB)
 		pushNotificationService = services.NewPushNotificationService(pushNotificationRepo, "", "", "")
-		
+
 		// Initialize CDN service
 		cdnConfig := config.LoadCDNConfig()
 		if cdnConfig.Enabled {
@@ -286,7 +286,7 @@ func New(cfg *config.Config) (*Server, error) {
 		}
 
 		redisClient := dragonflyCache.GetRedisClient()
-		
+
 		if cfg.Search.Enabled {
 			searchIndexer := services.NewSearchIndexer(
 				cfg.Search.MeiliSearchURL,
@@ -314,11 +314,11 @@ func New(cfg *config.Config) (*Server, error) {
 		}
 
 		articleService = services.NewArticleService(db, articleRepo, nil)
-		
+
 		// Initialize comment handlers with proper dependencies
 		commentRepo := repositories.NewCommentRepository(db.DB)
 		userRepo := repositories.NewUserRepository(db.DB)
-		
+
 		// Initialize content ingestion service with proper dependencies (after userRepo is defined)
 		ingestionRepo := repositories.NewContentIngestionRepository(db)
 		contentIngestionService = services.NewContentIngestionService(
@@ -343,7 +343,7 @@ func New(cfg *config.Config) (*Server, error) {
 		fmt.Printf("DEBUG: Creating MediaService with database connection\n")
 		mediaService = services.NewMediaService(db.DB)
 		fmt.Printf("DEBUG: MediaService created successfully, is nil: %v\n", mediaService == nil)
-		
+
 		// Initialize static generator for automatic static file generation
 		// Uses the same templates as dynamic pages with adapted data structure
 		// NOTE: mediaService must be created before this to enable responsive image generation
@@ -378,10 +378,9 @@ func New(cfg *config.Config) (*Server, error) {
 			imageProcessor,
 			mediaService,
 			"web/static/uploads/images",
-			10 * 1024 * 1024, // 10MB max file size
+			10*1024*1024, // 10MB max file size
 		)
 		fmt.Printf("DEBUG: ImageHandlers created successfully\n")
-
 
 		// Initialize real RSS services now that articleRepo is available
 		if rssHandlers == nil {
@@ -432,7 +431,7 @@ func New(cfg *config.Config) (*Server, error) {
 		log.Println("Skipping API router initialization - using mock services only")
 		apiRouter = nil
 	}
-	
+
 	if !useMockServices {
 		seoService = services.NewSEOService(baseURL, cfg.App.Name, "en")
 		breadcrumbService = services.NewBreadcrumbService(baseURL, cfg.App.Name)
@@ -443,7 +442,7 @@ func New(cfg *config.Config) (*Server, error) {
 		log.Println("Using mock RSS and Google News services")
 		mockRSSService := services.NewMockRSSService()
 		rssHandlers = api.NewRSSHandlers(mockRSSService)
-		
+
 		mockGoogleNewsSitemapService := services.NewMockGoogleNewsSitemapService()
 		googleNewsHandlers = api.NewGoogleNewsHandlers(mockGoogleNewsSitemapService)
 	}
@@ -462,7 +461,7 @@ func New(cfg *config.Config) (*Server, error) {
 	var finalHealthService *services.HealthService
 	var finalAlertingService *services.AlertingService
 	var finalMonitoringConfig *config.MonitoringConfig
-	
+
 	if !useMockServices {
 		finalMetricsService = metricsService
 		finalHealthService = healthService
@@ -478,7 +477,7 @@ func New(cfg *config.Config) (*Server, error) {
 	var finalThemeService *services.ThemeService
 	var finalCDNService services.CDNServiceInterface
 	var finalMediaService *services.MediaService
-	
+
 	if !useMockServices {
 		finalAnalyticsService = analyticsService
 		finalAdvertisementService = advertisementService
@@ -490,31 +489,31 @@ func New(cfg *config.Config) (*Server, error) {
 	}
 
 	return &Server{
-		config:                   cfg,
-		router:                   router,
-		cache:                    cacheClient,
-		db:                       db,
-		apiRouter:                apiRouter,
-		templateEngine:           templateEngine,
-		rssHandlers:              rssHandlers,
-		googleNewsHandlers:       googleNewsHandlers,
-		metricsService:           finalMetricsService,
-		healthService:            finalHealthService,
-		alertingService:          finalAlertingService,
-		monitoringConfig:         finalMonitoringConfig,
-		analyticsService:         finalAnalyticsService,
-		advertisementService:     finalAdvertisementService,
-		pushNotificationService:  finalPushNotificationService,
-		widgetService:            finalWidgetService,
-		themeService:             finalThemeService,
-		cdnService:               finalCDNService,
-		articleService:           articleService,
-		categoryService:          categoryService,
-		tagService:               tagService,
-		authService:              authService,
-		mediaService:             finalMediaService,
-		staticGenerator:          staticGenerator,
-		enterpriseSearchService:  enterpriseSearchService,
+		config:                  cfg,
+		router:                  router,
+		cache:                   cacheClient,
+		db:                      db,
+		apiRouter:               apiRouter,
+		templateEngine:          templateEngine,
+		rssHandlers:             rssHandlers,
+		googleNewsHandlers:      googleNewsHandlers,
+		metricsService:          finalMetricsService,
+		healthService:           finalHealthService,
+		alertingService:         finalAlertingService,
+		monitoringConfig:        finalMonitoringConfig,
+		analyticsService:        finalAnalyticsService,
+		advertisementService:    finalAdvertisementService,
+		pushNotificationService: finalPushNotificationService,
+		widgetService:           finalWidgetService,
+		themeService:            finalThemeService,
+		cdnService:              finalCDNService,
+		articleService:          articleService,
+		categoryService:         categoryService,
+		tagService:              tagService,
+		authService:             authService,
+		mediaService:            finalMediaService,
+		staticGenerator:         staticGenerator,
+		enterpriseSearchService: enterpriseSearchService,
 	}, nil
 }
 
@@ -523,19 +522,27 @@ func (s *Server) setupRoutes() {
 	if s.apiRouter != nil {
 		s.apiRouter.SetupRoutes(s.router)
 	}
-	
+
 	s.setupRSSRoutes()
 	s.setupGoogleNewsRoutes()
 
 	// Health route is handled by the monitoring handler
 
 	s.router.Static("/static", "./web/static")
-	s.router.GET("/", s.handleHomepage)
+
+	// Root redirect to default language
+	s.router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/en/")
+	})
+
 	s.router.GET("/offline", s.handleOfflinePage)
-	
+
 	// Setup admin frontend routes FIRST (before catch-all routes)
 	s.setupAdminFrontendRoutes()
-	
+
+	// Setup multilingual frontend routes
+	s.setupMultilingualRoutes()
+
 	// Frontend website routes - set up AFTER admin routes
 	// This is important because setupProductionFrontendRoutes has a catch-all /:slug route
 	s.setupProductionFrontendRoutes()
@@ -543,7 +550,7 @@ func (s *Server) setupRoutes() {
 
 func (s *Server) Start() error {
 	s.setupRoutes()
-	
+
 	// Start monitoring system if available
 	if s.metricsService != nil && s.monitoringConfig != nil {
 		log.Println("Starting monitoring system...")
@@ -553,9 +560,9 @@ func (s *Server) Start() error {
 	} else {
 		log.Println("Monitoring system not available (development mode)")
 	}
-	
+
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
-	
+
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: s.router,
@@ -616,17 +623,17 @@ func createDemoUser(userService *services.UserService) error {
 	if adminEmail == "" {
 		adminEmail = "admin@example.com"
 	}
-	
+
 	adminPassword := os.Getenv("NEWS_ADMIN_PASSWORD")
 	if adminPassword == "" {
 		adminPassword = "Admin123!"
 	}
-	
+
 	_, err := userService.GetByEmail(adminEmail)
 	if err == nil {
 		return nil
 	}
-	
+
 	createReq := &services.CreateUserRequest{
 		Username:  "admin",
 		Email:     adminEmail,
@@ -636,12 +643,12 @@ func createDemoUser(userService *services.UserService) error {
 		LastName:  "User",
 		Bio:       "Administrator account",
 	}
-	
+
 	_, err = userService.Create(createReq, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create admin user: %w", err)
 	}
-	
+
 	log.Printf("Admin user created successfully (%s)", adminEmail)
 	return nil
 }
@@ -650,7 +657,7 @@ func (s *Server) handleOfflinePage(c *gin.Context) {
 	data := s.createBaseTemplateData(c)
 	data["Title"] = "Offline"
 	data["PageType"] = "offline"
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("offline", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -658,7 +665,7 @@ func (s *Server) handleOfflinePage(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// Fallback to simple HTML
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>Offline</title></head><body><h1>You're Offline</h1><p>Please check your internet connection.</p></body></html>`)
@@ -670,12 +677,12 @@ func (s *Server) handleHomepage(c *gin.Context) {
 		s.handleDevHomepage(c)
 		return
 	}
-	
+
 	// Create proper template data for homepage
 	data := s.createBaseTemplateData(c)
 	data["Title"] = s.config.App.Name
 	data["PageType"] = "homepage"
-	
+
 	// Get real articles from database
 	if s.articleService != nil {
 		// Get latest published articles for homepage
@@ -718,19 +725,19 @@ func (s *Server) handleHomepage(c *gin.Context) {
 						}
 					}
 				}
-				
+
 				// Handle featured image
 				featuredImage := ""
 				if article.FeaturedImage != "" {
 					featuredImage = article.FeaturedImage
 				}
-				
+
 				// Build responsive image data if article has a featured image ID
 				var imageData *services.ResponsiveImageData
 				if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 && s.mediaService != nil {
 					imageData = s.buildResponsiveImageData(*article.FeaturedImageID, article.Title)
 				}
-				
+
 				articleData[i] = gin.H{
 					"ID":            article.ID,
 					"Title":         article.Title,
@@ -753,7 +760,7 @@ func (s *Server) handleHomepage(c *gin.Context) {
 	} else {
 		data["Articles"] = []gin.H{}
 	}
-	
+
 	// Get real categories from database
 	if s.categoryService != nil {
 		categories, err := s.categoryService.GetAll()
@@ -762,13 +769,13 @@ func (s *Server) handleHomepage(c *gin.Context) {
 			categoryData := make([]gin.H, len(categories))
 			for i, cat := range categories {
 				categoryData[i] = gin.H{
-					"ID":          cat.ID,
-					"Name":        cat.Name,
-					"Slug":        cat.Slug,
-					"Description": cat.Description,
-					"ImageURL":    cat.GetImageURL(),
-"ImageAltText": cat.GetImageAltText(),
-"Count":       s.getCategoryArticleCount(cat.ID),
+					"ID":           cat.ID,
+					"Name":         cat.Name,
+					"Slug":         cat.Slug,
+					"Description":  cat.Description,
+					"ImageURL":     cat.GetImageURL(),
+					"ImageAltText": cat.GetImageAltText(),
+					"Count":        s.getCategoryArticleCount(cat.ID),
 				}
 			}
 			data["Categories"] = categoryData
@@ -821,7 +828,7 @@ func (s *Server) handleHomepage(c *gin.Context) {
 
 	// Video articles - filter by video tag or category if available
 	data["VideoArticles"] = []gin.H{}
-	
+
 	// Opinion/editorial articles - would filter by opinion category
 	data["OpinionArticles"] = []gin.H{}
 
@@ -835,12 +842,12 @@ func (s *Server) handleHomepage(c *gin.Context) {
 				Slug  string
 				Count int
 			}
-			
+
 			tagList := make([]TagWithCount, 0)
 			for _, tag := range tags {
 				// Get article count for this tag
 				articleCount := s.getTagArticleCount(tag.ID)
-				
+
 				// Only include tags that have articles
 				if articleCount > 0 {
 					tagList = append(tagList, TagWithCount{
@@ -850,7 +857,7 @@ func (s *Server) handleHomepage(c *gin.Context) {
 					})
 				}
 			}
-			
+
 			// Sort by article count (most popular first)
 			for i := 0; i < len(tagList)-1; i++ {
 				for j := i + 1; j < len(tagList); j++ {
@@ -859,12 +866,12 @@ func (s *Server) handleHomepage(c *gin.Context) {
 					}
 				}
 			}
-			
+
 			// Limit to 8 most popular tags
 			if len(tagList) > 8 {
 				tagList = tagList[:8]
 			}
-			
+
 			// Convert to gin.H format
 			tagData := make([]gin.H, len(tagList))
 			for i, tag := range tagList {
@@ -874,7 +881,7 @@ func (s *Server) handleHomepage(c *gin.Context) {
 					"Count": tag.Count,
 				}
 			}
-			
+
 			data["PopularTags"] = tagData
 		} else {
 			log.Printf("Error fetching tags for homepage: %v", err)
@@ -883,7 +890,7 @@ func (s *Server) handleHomepage(c *gin.Context) {
 	} else {
 		data["PopularTags"] = []gin.H{}
 	}
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("homepage", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -891,7 +898,7 @@ func (s *Server) handleHomepage(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// Fallback to simple response
 	c.String(http.StatusOK, "Homepage (Template not available)")
 }
@@ -903,13 +910,13 @@ func (s *Server) setupRSSRoutes() {
 	s.router.GET("/rss.xml", s.rssHandlers.HandleMainRSSFeed)
 	s.router.GET("/feed", s.rssHandlers.HandleMainRSSFeed)
 	s.router.GET("/feed.xml", s.rssHandlers.HandleMainRSSFeed)
-	
+
 	// Category RSS feeds
 	s.router.GET("/rss/category/:slug", s.rssHandlers.HandleCategoryRSSFeed)
-	
+
 	// Tag RSS feeds
 	s.router.GET("/rss/tag/:slug", s.rssHandlers.HandleTagRSSFeed)
-	
+
 	// Google News RSS feed
 	s.router.GET("/rss/googlenews", s.rssHandlers.HandleGoogleNewsRSSFeed)
 	s.router.GET("/rss/googlenews.xml", s.rssHandlers.HandleGoogleNewsRSSFeed)
@@ -920,10 +927,10 @@ func (s *Server) setupGoogleNewsRoutes() {
 	// Google News sitemap
 	s.router.GET("/sitemap-news.xml", s.googleNewsHandlers.HandleGoogleNewsSitemap)
 	s.router.GET("/sitemap-news-:page.xml", s.googleNewsHandlers.HandleGoogleNewsSitemap)
-	
+
 	// Google News sitemap index
 	s.router.GET("/sitemap-news-index.xml", s.googleNewsHandlers.HandleGoogleNewsSitemapIndex)
-	
+
 	// Main sitemap routes
 	s.router.GET("/sitemap.xml", s.handleSitemapIndex)
 	s.router.GET("/sitemap-main.xml", s.handleMainSitemap)
@@ -939,9 +946,9 @@ func (s *Server) handleSitemapIndex(c *gin.Context) {
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("https://%s", c.Request.Host)
 	}
-	
+
 	now := time.Now().Format(time.RFC3339)
-	
+
 	xml := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
@@ -965,7 +972,7 @@ func (s *Server) handleSitemapIndex(c *gin.Context) {
     <lastmod>%s</lastmod>
   </sitemap>
 </sitemapindex>`, baseURL, now, baseURL, now, baseURL, now, baseURL, now, baseURL, now)
-	
+
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.String(http.StatusOK, xml)
 }
@@ -976,9 +983,9 @@ func (s *Server) handleMainSitemap(c *gin.Context) {
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("https://%s", c.Request.Host)
 	}
-	
+
 	now := time.Now().Format(time.RFC3339)
-	
+
 	xml := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -1000,7 +1007,7 @@ func (s *Server) handleMainSitemap(c *gin.Context) {
     <priority>0.9</priority>
   </url>
 </urlset>`, baseURL, now, baseURL, now, baseURL, now)
-	
+
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.String(http.StatusOK, xml)
 }
@@ -1011,9 +1018,9 @@ func (s *Server) handleArticlesSitemap(c *gin.Context) {
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("https://%s", c.Request.Host)
 	}
-	
+
 	var urls []string
-	
+
 	// Get all published articles from database
 	if s.db != nil {
 		query := `
@@ -1022,7 +1029,7 @@ func (s *Server) handleArticlesSitemap(c *gin.Context) {
 			WHERE status = 'published' AND published_at IS NOT NULL
 			ORDER BY published_at DESC
 			LIMIT 50000`
-		
+
 		rows, err := s.db.DB.Query(query)
 		if err != nil {
 			log.Printf("Error fetching articles for sitemap: %v", err)
@@ -1042,12 +1049,12 @@ func (s *Server) handleArticlesSitemap(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	xml := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 %s
 </urlset>`, strings.Join(urls, "\n"))
-	
+
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.String(http.StatusOK, xml)
 }
@@ -1058,13 +1065,13 @@ func (s *Server) handleCategoriesSitemap(c *gin.Context) {
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("https://%s", c.Request.Host)
 	}
-	
+
 	var urls []string
-	
+
 	// Get all categories from database
 	if s.db != nil {
 		query := `SELECT slug, updated_at FROM categories ORDER BY name`
-		
+
 		rows, err := s.db.DB.Query(query)
 		if err != nil {
 			log.Printf("Error fetching categories for sitemap: %v", err)
@@ -1084,12 +1091,12 @@ func (s *Server) handleCategoriesSitemap(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	xml := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 %s
 </urlset>`, strings.Join(urls, "\n"))
-	
+
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.String(http.StatusOK, xml)
 }
@@ -1100,13 +1107,13 @@ func (s *Server) handleTagsSitemap(c *gin.Context) {
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("https://%s", c.Request.Host)
 	}
-	
+
 	var urls []string
-	
+
 	// Get all tags from database
 	if s.db != nil {
 		query := `SELECT slug, updated_at FROM tags ORDER BY name`
-		
+
 		rows, err := s.db.DB.Query(query)
 		if err != nil {
 			log.Printf("Error fetching tags for sitemap: %v", err)
@@ -1126,12 +1133,12 @@ func (s *Server) handleTagsSitemap(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	xml := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 %s
 </urlset>`, strings.Join(urls, "\n"))
-	
+
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.String(http.StatusOK, xml)
 }
@@ -1141,7 +1148,7 @@ func (s *Server) handleRobotsTxt(c *gin.Context) {
 	// Try to get custom robots.txt from admin settings via API
 	// For now, use the shared variable from api package
 	robotsTxt := api.GetRobotsTxtContent()
-	
+
 	c.Header("Content-Type", "text/plain; charset=utf-8")
 	c.String(http.StatusOK, robotsTxt)
 }
@@ -1149,39 +1156,39 @@ func (s *Server) handleRobotsTxt(c *gin.Context) {
 // newDevelopmentServer creates a server with mock services for development mode
 func newDevelopmentServer(cfg *config.Config, router *gin.Engine) (*Server, error) {
 	log.Println("Initializing mock services for development mode...")
-	
+
 	// Create mock RSS service
 	mockRSSService := services.NewMockRSSService()
 	rssHandlers := api.NewRSSHandlers(mockRSSService)
-	
+
 	// Create mock Google News sitemap service
 	mockGoogleNewsSitemapService := services.NewMockGoogleNewsSitemapService()
 	googleNewsHandlers := api.NewGoogleNewsHandlers(mockGoogleNewsSitemapService)
-	
+
 	// Create a minimal template engine for development
 	templateEngine := templates.NewTemplateEngine(true)
-	
+
 	// Create a basic auth service for development mode
 	devAuthService := auth.NewAuthService(cfg.JWT.Secret, cfg.JWT.Secret)
-	
+
 	server := &Server{
-		config:                   cfg,
-		router:                   router,
-		cache:                    nil, // No cache in dev mode
-		db:                       nil, // No database in dev mode
-		apiRouter:                nil, // No API router in dev mode
-		templateEngine:           templateEngine,
-		rssHandlers:              rssHandlers,
-		googleNewsHandlers:       googleNewsHandlers,
-		authService:              devAuthService,
+		config:             cfg,
+		router:             router,
+		cache:              nil, // No cache in dev mode
+		db:                 nil, // No database in dev mode
+		apiRouter:          nil, // No API router in dev mode
+		templateEngine:     templateEngine,
+		rssHandlers:        rssHandlers,
+		googleNewsHandlers: googleNewsHandlers,
+		authService:        devAuthService,
 	}
-	
+
 	// Setup development routes
 	server.setupDevRoutes()
-	
+
 	// Setup admin routes for development mode too
 	server.setupAdminFrontendRoutes()
-	
+
 	log.Println("Development server initialized with mock services")
 	return server, nil
 }
@@ -1196,50 +1203,275 @@ func (s *Server) setupDevRoutes() {
 	s.router.GET("/article/:slug", s.handleDevArticle)
 }
 
+// setupMultilingualRoutes sets up language-prefixed routes for multilingual support
+func (s *Server) setupMultilingualRoutes() {
+	log.Println("Setting up multilingual routes...")
+
+	// Supported languages
+	supportedLanguages := []string{"en", "de", "fr", "es", "ar"}
+
+	for _, lang := range supportedLanguages {
+		langGroup := s.router.Group("/" + lang)
+		{
+			// Homepage for each language
+			langGroup.GET("/", s.handleMultilingualHomepage)
+			langGroup.GET("", s.handleMultilingualHomepage)
+
+			// Article pages
+			langGroup.GET("/article/:slug", s.handleMultilingualArticle)
+
+			// Category pages
+			langGroup.GET("/category/:slug", s.handleMultilingualCategory)
+			langGroup.GET("/categories", s.handleMultilingualCategories)
+
+			// Tag pages
+			langGroup.GET("/tag/:slug", s.handleMultilingualTag)
+			langGroup.GET("/tags", s.handleMultilingualTags)
+
+			// Content listing pages
+			langGroup.GET("/latest", s.handleMultilingualLatest)
+			langGroup.GET("/trending", s.handleMultilingualTrending)
+			langGroup.GET("/search", s.handleMultilingualSearch)
+
+			// Static pages
+			langGroup.GET("/about", s.handleMultilingualAbout)
+			langGroup.GET("/contact", s.handleMultilingualContact)
+		}
+		log.Printf("Route group registered: /%s/*", lang)
+	}
+
+	// Multilingual sitemaps
+	s.router.GET("/sitemap.xml", s.handleSitemapIndex)
+	for _, lang := range supportedLanguages {
+		s.router.GET("/sitemap-"+lang+".xml", s.handleLanguageSitemap)
+	}
+
+	log.Println("Multilingual routes setup completed")
+}
+
+// validateLanguageMiddleware validates the language code in the URL
+func (s *Server) validateLanguageMiddleware(c *gin.Context) {
+	lang := c.Param("lang")
+	supportedLanguages := map[string]bool{
+		"en": true,
+		"de": true,
+		"fr": true,
+		"es": true,
+		"ar": true,
+	}
+
+	if !supportedLanguages[lang] {
+		c.Redirect(http.StatusMovedPermanently, "/en"+c.Request.URL.Path)
+		c.Abort()
+		return
+	}
+
+	// Set language info in context
+	c.Set("language_code", lang)
+	c.Set("language_direction", getLanguageDirection(lang))
+	c.Next()
+}
+
+// getLanguageDirection returns the text direction for a language
+func getLanguageDirection(lang string) string {
+	if lang == "ar" {
+		return "rtl"
+	}
+	return "ltr"
+}
+
+// getLanguageNativeName returns the native name for a language
+func getLanguageNativeName(lang string) string {
+	names := map[string]string{
+		"en": "English",
+		"de": "Deutsch",
+		"fr": "Français",
+		"es": "Español",
+		"ar": "العربية",
+	}
+	if name, ok := names[lang]; ok {
+		return name
+	}
+	return lang
+}
+
+// getLanguageName returns the English name for a language
+func getLanguageName(lang string) string {
+	names := map[string]string{
+		"en": "English",
+		"de": "German",
+		"fr": "French",
+		"es": "Spanish",
+		"ar": "Arabic",
+	}
+	if name, ok := names[lang]; ok {
+		return name
+	}
+	return lang
+}
+
+// generateAlternateURLs generates alternate language URLs for hreflang tags
+func (s *Server) generateAlternateURLs(currentPath string) []map[string]string {
+	languages := []string{"en", "de", "fr", "es", "ar"}
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://a.10top.shop"
+	}
+
+	// Remove any existing language prefix from the path
+	cleanPath := currentPath
+	for _, lang := range languages {
+		prefix := "/" + lang + "/"
+		if strings.HasPrefix(cleanPath, prefix) {
+			cleanPath = cleanPath[len(prefix)-1:]
+			break
+		}
+		if cleanPath == "/"+lang {
+			cleanPath = "/"
+			break
+		}
+	}
+
+	var alternates []map[string]string
+	for _, lang := range languages {
+		url := baseURL + "/" + lang + cleanPath
+		// Clean up double slashes
+		url = strings.ReplaceAll(url, "//", "/")
+		url = strings.Replace(url, ":/", "://", 1)
+
+		alternates = append(alternates, map[string]string{
+			"lang": lang,
+			"url":  url,
+		})
+	}
+
+	// Add x-default pointing to English
+	alternates = append(alternates, map[string]string{
+		"lang": "x-default",
+		"url":  baseURL + "/en" + cleanPath,
+	})
+
+	return alternates
+}
+
+// generateCanonicalURL generates the canonical URL for a page
+func (s *Server) generateCanonicalURL(lang, path string) string {
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://a.10top.shop"
+	}
+
+	url := baseURL + "/" + lang + path
+	// Clean up double slashes
+	url = strings.ReplaceAll(url, "//", "/")
+	url = strings.Replace(url, ":/", "://", 1)
+	return url
+}
+
+// getAvailableLanguages returns language info for the language switcher
+func (s *Server) getAvailableLanguages(currentPath string) []map[string]interface{} {
+	languages := []struct {
+		Code       string
+		Name       string
+		NativeName string
+		Direction  string
+	}{
+		{"en", "English", "English", "ltr"},
+		{"de", "German", "Deutsch", "ltr"},
+		{"fr", "French", "Français", "ltr"},
+		{"es", "Spanish", "Español", "ltr"},
+		{"ar", "Arabic", "العربية", "rtl"},
+	}
+
+	// Remove any existing language prefix from the path
+	cleanPath := currentPath
+	for _, lang := range languages {
+		prefix := "/" + lang.Code + "/"
+		if strings.HasPrefix(cleanPath, prefix) {
+			cleanPath = cleanPath[len(prefix)-1:]
+			break
+		}
+		if cleanPath == "/"+lang.Code {
+			cleanPath = "/"
+			break
+		}
+	}
+
+	var result []map[string]interface{}
+	for _, lang := range languages {
+		url := "/" + lang.Code + cleanPath
+		// Clean up double slashes
+		url = strings.ReplaceAll(url, "//", "/")
+
+		result = append(result, map[string]interface{}{
+			"Code":       lang.Code,
+			"Name":       lang.Name,
+			"NativeName": lang.NativeName,
+			"Direction":  lang.Direction,
+			"URL":        url,
+		})
+	}
+
+	return result
+}
+
+// addMultilingualData adds multilingual data to template context
+func (s *Server) addMultilingualData(data map[string]interface{}, lang, currentPath string) {
+	data["LanguageCode"] = lang
+	data["LanguageDirection"] = getLanguageDirection(lang)
+	data["LanguageName"] = getLanguageName(lang)
+	data["LanguageNativeName"] = getLanguageNativeName(lang)
+	data["AlternateURLs"] = s.generateAlternateURLs(currentPath)
+	data["AvailableLanguages"] = s.getAvailableLanguages(currentPath)
+	data["CanonicalURL"] = s.generateCanonicalURL(lang, currentPath)
+	data["IsRTL"] = lang == "ar"
+	data["BaseURL"] = s.config.App.BaseURL
+}
+
 // setupProductionFrontendRoutes sets up frontend routes for production mode
 // This was missing from Task 22 implementation
 func (s *Server) setupProductionFrontendRoutes() {
 	log.Println("Setting up production frontend routes...")
-	
+
 	// Article pages
 	s.router.GET("/article/:slug", s.handleProductionArticle)
 	log.Println("Route registered: /article/:slug")
-	
-	// Category pages  
+
+	// Category pages
 	s.router.GET("/category/:slug", s.handleProductionCategory)
 	log.Println("Route registered: /category/:slug")
 	s.router.GET("/categories", s.handleProductionCategories)
 	log.Println("Route registered: /categories")
-	
+
 	// Tag pages
 	s.router.GET("/tag/:slug", s.handleProductionTag)
 	log.Println("Route registered: /tag/:slug")
 	s.router.GET("/tags", s.handleProductionTags)
 	log.Println("Route registered: /tags")
-	
+
 	// Content listing pages
 	s.router.GET("/latest", s.handleProductionLatest)
 	s.router.GET("/trending", s.handleProductionTrending)
 	s.router.GET("/search", s.handleProductionSearch)
 	log.Println("Route registered: /search")
-	
+
 	// Static pages
 	s.router.GET("/about", s.handleProductionAbout)
 	s.router.GET("/contact", s.handleProductionContact)
-	
+
 	// API endpoints for article engagement are handled by the API router at /api/v1/articles/:id/like etc.
-	
+
 	// NOTE: Removed catch-all /:slug route to prevent duplicate URLs for articles
 	// All articles should be accessed via /article/:slug for SEO consistency
 	// The catch-all route was causing duplicate content issues (same article at /slug and /article/slug)
-	
+
 	log.Println("Production frontend routes setup completed")
 }
 
 // Production frontend handlers (missing from Task 22)
 func (s *Server) handleProductionArticle(c *gin.Context) {
 	slug := c.Param("slug")
-	
+
 	// Get the real article from the database
 	if s.articleService != nil {
 		// Get article by slug from the service
@@ -1249,7 +1481,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 			data := s.createBaseTemplateData(c)
 			data["Title"] = "Article Not Found"
 			data["Content"] = "<div class='error-message'><h2>Article Not Found</h2><p>The article you're looking for doesn't exist or may have been moved.</p><a href='/'>← Back to Home</a></div>"
-			
+
 			if s.templateEngine != nil {
 				if html, err := s.templateEngine.Render("homepage", data); err == nil {
 					c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1260,31 +1492,31 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 			c.String(http.StatusNotFound, "Article not found: "+slug)
 			return
 		}
-		
+
 		// Debug: Log the article data
-		log.Printf("Article data: ID=%d, ViewCount=%d, LikeCount=%d, DislikeCount=%d", 
+		log.Printf("Article data: ID=%d, ViewCount=%d, LikeCount=%d, DislikeCount=%d",
 			article.ID, article.ViewCount, article.LikeCount, article.DislikeCount)
-		
+
 		// Convert article to template data using actual model fields
 		articleData := gin.H{
-			"ID":              article.ID,
-			"Title":           article.Title,
-			"Slug":            article.Slug,
-			"Content":         article.Content,
-			"Excerpt":         article.Excerpt,
-			"PublishedAt":     article.PublishedAt,
-			"ViewCount":       article.ViewCount,
-			"LikeCount":       article.LikeCount,
-			"DislikeCount":    article.DislikeCount,
-			"CommentCount":    0, // TODO: Implement comment count
-			"ReadTime":        calculateReadTime(article.Content),
+			"ID":           article.ID,
+			"Title":        article.Title,
+			"Slug":         article.Slug,
+			"Content":      article.Content,
+			"Excerpt":      article.Excerpt,
+			"PublishedAt":  article.PublishedAt,
+			"ViewCount":    article.ViewCount,
+			"LikeCount":    article.LikeCount,
+			"DislikeCount": article.DislikeCount,
+			"CommentCount": 0, // TODO: Implement comment count
+			"ReadTime":     calculateReadTime(article.Content),
 			// Add SEO fields from individual columns
 			"MetaTitle":       article.MetaTitle,
 			"MetaDescription": article.MetaDescription,
 			"CanonicalURL":    article.CanonicalURL,
 			"SchemaType":      article.SchemaType,
 		}
-		
+
 		// Get featured image if available (only local paths starting with /uploads/)
 		if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 {
 			log.Printf("DEBUG: FeaturedImageID is %d", *article.FeaturedImageID)
@@ -1304,7 +1536,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 				if imageData != nil {
 					articleData["ImageData"] = imageData
 					log.Printf("DEBUG: Set ImageData with HasVariants=%v", imageData.HasVariants)
-					
+
 					// Trigger static regeneration in background if static file doesn't exist
 					// This ensures articles with responsive images get proper static files
 					if s.staticGenerator != nil && imageData.HasVariants {
@@ -1326,7 +1558,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 		} else {
 			log.Printf("DEBUG: FeaturedImageID is nil or 0")
 		}
-		
+
 		// Increment view count in background
 		if s.db != nil {
 			go func() {
@@ -1337,7 +1569,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 				}
 			}()
 		}
-		
+
 		// Add tags if available from article model
 		if len(article.Tags) > 0 {
 			tags := make([]gin.H, len(article.Tags))
@@ -1349,14 +1581,14 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 			}
 			articleData["Tags"] = tags
 		}
-		
+
 		// Add author info
 		articleData["Author"] = gin.H{
 			"FirstName": "Article",
-			"LastName":  "Author", 
+			"LastName":  "Author",
 			"Bio":       "Content Creator",
 		}
-		
+
 		// Get category info and add it to the article data
 		// Check if article has multiple categories loaded
 		if len(article.Categories) > 0 {
@@ -1387,7 +1619,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 			articleData["Category"] = fallbackCategory
 			articleData["Categories"] = []gin.H{fallbackCategory}
 		}
-		
+
 		// Get tags for the article and add them to article data (if not already loaded)
 		if articleData["Tags"] == nil {
 			tags, err := s.getArticleTags(article.ID)
@@ -1398,12 +1630,12 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 				articleData["Tags"] = []gin.H{}
 			}
 		}
-		
+
 		// Create template data
 		data := s.createBaseTemplateData(c)
 		data["Title"] = article.Title
 		data["Article"] = articleData
-		
+
 		// Add HeroImage to root level for base template preload tag
 		if featuredImage, ok := articleData["FeaturedImage"].(string); ok && featuredImage != "" {
 			data["HeroImage"] = featuredImage
@@ -1411,7 +1643,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 		} else {
 			log.Printf("DEBUG: FeaturedImage not found or empty in articleData")
 		}
-		
+
 		// Add SEO fields to root level for base template
 		// Use meta fields if they exist, otherwise use article title/excerpt
 		if article.MetaTitle != "" {
@@ -1419,19 +1651,19 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 		} else {
 			data["SEOTitle"] = article.Title + " - " + s.config.App.Name
 		}
-		
+
 		if article.MetaDescription != "" {
 			data["SEODescription"] = article.MetaDescription
 		} else {
 			data["SEODescription"] = article.Excerpt
 		}
-		
+
 		if article.CanonicalURL != "" {
 			data["CanonicalURL"] = article.CanonicalURL
 		} else {
 			data["CanonicalURL"] = fmt.Sprintf("%s/article/%s", s.config.App.BaseURL, article.Slug)
 		}
-		
+
 		// Set OG and Twitter image URLs (must be absolute URLs)
 		baseURL := s.config.App.BaseURL
 		if baseURL == "" {
@@ -1447,16 +1679,16 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 				data["TwitterImage"] = featuredImage
 			}
 		}
-		
+
 		// Set OG type for articles
 		data["OGType"] = "article"
-		
+
 		// Build breadcrumb items
 		breadcrumbItems := []gin.H{
 			{"Name": "Home", "URL": baseURL, "Position": 1},
 		}
 		position := 2
-		
+
 		// Add category to breadcrumbs if available
 		if categoryData, ok := articleData["Category"].(gin.H); ok {
 			if catName, ok := categoryData["Name"].(string); ok && catName != "" {
@@ -1470,7 +1702,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		// Add current article (active item)
 		breadcrumbItems = append(breadcrumbItems, gin.H{
 			"Name":     article.Title,
@@ -1478,7 +1710,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 			"Position": position,
 			"Active":   true,
 		})
-		
+
 		// Generate BreadcrumbList JSON-LD schema
 		breadcrumbListElements := make([]gin.H, len(breadcrumbItems))
 		for i, item := range breadcrumbItems {
@@ -1489,13 +1721,13 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 				"item":     item["URL"],
 			}
 		}
-		
+
 		breadcrumbSchema := gin.H{
 			"@context":        "https://schema.org",
 			"@type":           "BreadcrumbList",
 			"itemListElement": breadcrumbListElements,
 		}
-		
+
 		// Convert breadcrumb schema to JSON string
 		breadcrumbJSON, err := json.Marshal(breadcrumbSchema)
 		if err == nil {
@@ -1504,10 +1736,10 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 		} else {
 			log.Printf("ERROR: Failed to marshal breadcrumb schema: %v", err)
 		}
-		
+
 		// Also pass breadcrumb items for HTML rendering
 		data["BreadcrumbItems"] = breadcrumbItems
-		
+
 		// Generate NewsArticle structured data
 		publishedTime := ""
 		modifiedTime := ""
@@ -1517,7 +1749,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 		if !article.UpdatedAt.IsZero() {
 			modifiedTime = article.UpdatedAt.Format(time.RFC3339)
 		}
-		
+
 		// Build keywords from tags
 		var keywords []string
 		if tags, ok := articleData["Tags"].([]gin.H); ok {
@@ -1527,14 +1759,14 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		articleSchema := gin.H{
-			"@context":         "https://schema.org",
-			"@type":            "NewsArticle",
-			"headline":         article.Title,
-			"description":      article.Excerpt,
-			"datePublished":    publishedTime,
-			"dateModified":     modifiedTime,
+			"@context":      "https://schema.org",
+			"@type":         "NewsArticle",
+			"headline":      article.Title,
+			"description":   article.Excerpt,
+			"datePublished": publishedTime,
+			"dateModified":  modifiedTime,
 			"mainEntityOfPage": gin.H{
 				"@type": "WebPage",
 				"@id":   fmt.Sprintf("%s/article/%s", baseURL, article.Slug),
@@ -1552,33 +1784,33 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 				},
 			},
 		}
-		
+
 		// Add image if available
 		if featuredImage, ok := articleData["FeaturedImage"].(string); ok && featuredImage != "" {
 			articleSchema["image"] = fmt.Sprintf("%s%s", baseURL, featuredImage)
 		}
-		
+
 		// Add keywords if available
 		if len(keywords) > 0 {
 			articleSchema["keywords"] = strings.Join(keywords, ", ")
 		}
-		
+
 		// Convert article schema to JSON string
 		articleSchemaJSON, err := json.Marshal(articleSchema)
 		if err == nil {
 			data["StructuredData"] = string(articleSchemaJSON)
 		}
-		
+
 		// Add related articles (could be enhanced to get real related articles)
 		data["RelatedArticles"] = []gin.H{
 			{"Title": "Related Article 1", "Slug": "related-1", "Excerpt": "Related content"},
 			{"Title": "Related Article 2", "Slug": "related-2", "Excerpt": "More related content"},
 		}
-		
+
 		// Debug: Log the article data being passed to template
-		log.Printf("Article data for template: Title=%s, MetaTitle=%s, Tags=%v, Category=%v", 
+		log.Printf("Article data for template: Title=%s, MetaTitle=%s, Tags=%v, Category=%v",
 			articleData["Title"], articleData["MetaTitle"], articleData["Tags"], articleData["Category"])
-		
+
 		if s.templateEngine != nil {
 			if html, err := s.templateEngine.Render("article", data); err == nil {
 				c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1591,7 +1823,7 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 			log.Printf("Template engine is nil")
 		}
 	}
-	
+
 	// Fallback to simple response
 	c.String(http.StatusOK, "Article: "+slug+" (Template not available)")
 }
@@ -1599,9 +1831,9 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 func (s *Server) handleProductionCategory(c *gin.Context) {
 	slug := c.Param("slug")
 	log.Printf("handleProductionCategory called with slug: %s", slug)
-	
+
 	data := s.createBaseTemplateData(c)
-	
+
 	// Get real category from database
 	if s.categoryService != nil {
 		category, err := s.categoryService.GetBySlug(slug)
@@ -1610,7 +1842,7 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 			c.String(http.StatusNotFound, "Category not found")
 			return
 		}
-		
+
 		data["Title"] = "Category: " + category.Name
 		data["Category"] = gin.H{
 			"ID":          category.ID,
@@ -1618,7 +1850,7 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 			"Slug":        category.Slug,
 			"Description": category.Description,
 		}
-		
+
 		// Get real articles for this category (including from junction table)
 		articles := []gin.H{}
 		if s.db != nil {
@@ -1634,13 +1866,13 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 				ORDER BY a.published_at DESC
 				LIMIT 20
 			`
-			
+
 			rows, err := s.db.DB.Query(query, category.ID)
 			if err != nil {
 				log.Printf("Error fetching articles for category %s: %v", slug, err)
 			} else {
 				defer rows.Close()
-				
+
 				for rows.Next() {
 					var id uint64
 					var title, articleSlug, excerpt string
@@ -1648,13 +1880,13 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 					var viewCount int
 					var featuredImage sql.NullString
 					var firstName, lastName sql.NullString
-					
+
 					err := rows.Scan(&id, &title, &articleSlug, &excerpt, &publishedAt, &viewCount, &featuredImage, &firstName, &lastName)
 					if err != nil {
 						log.Printf("Error scanning article row: %v", err)
 						continue
 					}
-					
+
 					// Format author name
 					author := "Unknown Author"
 					if firstName.Valid && lastName.Valid {
@@ -1662,7 +1894,7 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 					} else if firstName.Valid {
 						author = firstName.String
 					}
-					
+
 					// Prepare article data
 					articleData := gin.H{
 						"ID":      id,
@@ -1673,23 +1905,23 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 						"TimeAgo": formatTimeAgo(&publishedAt),
 						"Views":   viewCount,
 					}
-					
+
 					// Add featured image if available
 					if featuredImage.Valid && featuredImage.String != "" {
 						articleData["FeaturedImage"] = featuredImage.String
 					}
-					
+
 					articles = append(articles, articleData)
 				}
 			}
 		}
-		
+
 		data["Articles"] = articles
 	} else {
 		c.String(http.StatusNotFound, "Category service not available")
 		return
 	}
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("category", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1697,7 +1929,7 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	c.String(http.StatusOK, "Category: "+slug+" (Template not available)")
 }
 
@@ -1705,7 +1937,7 @@ func (s *Server) handleProductionCategories(c *gin.Context) {
 	log.Println("handleProductionCategories called")
 	data := s.createBaseTemplateData(c)
 	data["Title"] = "All Categories"
-	
+
 	// Get real categories from database
 	if s.categoryService != nil {
 		categories, err := s.categoryService.GetAll()
@@ -1714,13 +1946,13 @@ func (s *Server) handleProductionCategories(c *gin.Context) {
 			categoryData := make([]gin.H, len(categories))
 			for i, cat := range categories {
 				categoryData[i] = gin.H{
-					"ID":          cat.ID,
-					"Name":        cat.Name,
-					"Slug":        cat.Slug,
-					"Description": cat.Description,
-					"ImageURL":    cat.GetImageURL(),
-"ImageAltText": cat.GetImageAltText(),
-"Count":       s.getCategoryArticleCount(cat.ID),
+					"ID":           cat.ID,
+					"Name":         cat.Name,
+					"Slug":         cat.Slug,
+					"Description":  cat.Description,
+					"ImageURL":     cat.GetImageURL(),
+					"ImageAltText": cat.GetImageAltText(),
+					"Count":        s.getCategoryArticleCount(cat.ID),
 				}
 			}
 			data["Categories"] = categoryData
@@ -1733,7 +1965,7 @@ func (s *Server) handleProductionCategories(c *gin.Context) {
 		// Fallback if service not available
 		data["Categories"] = []gin.H{}
 	}
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("categories", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1741,16 +1973,16 @@ func (s *Server) handleProductionCategories(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	c.String(http.StatusOK, "All Categories (Template not available)")
 }
 
 func (s *Server) handleProductionTag(c *gin.Context) {
 	slug := c.Param("slug")
 	log.Printf("handleProductionTag called with slug: %s", slug)
-	
+
 	data := s.createBaseTemplateData(c)
-	
+
 	// Get real tag from database
 	if s.tagService != nil {
 		tag, err := s.tagService.GetBySlug(slug)
@@ -1759,7 +1991,7 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 			c.String(http.StatusNotFound, "Tag not found")
 			return
 		}
-		
+
 		data["Title"] = "Tag: " + tag.Name
 		data["Tag"] = gin.H{
 			"ID":          tag.ID,
@@ -1768,7 +2000,7 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 			"Description": tag.Description,
 			"Color":       tag.Color,
 		}
-		
+
 		// Get real articles for this tag
 		articles := []gin.H{}
 		if s.db != nil {
@@ -1784,13 +2016,13 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 				ORDER BY a.published_at DESC
 				LIMIT 20
 			`
-			
+
 			rows, err := s.db.DB.Query(query, tag.ID)
 			if err != nil {
 				log.Printf("Error fetching articles for tag %s: %v", slug, err)
 			} else {
 				defer rows.Close()
-				
+
 				for rows.Next() {
 					var id uint64
 					var title, articleSlug, excerpt string
@@ -1798,13 +2030,13 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 					var viewCount int
 					var featuredImage sql.NullString
 					var firstName, lastName sql.NullString
-					
+
 					err := rows.Scan(&id, &title, &articleSlug, &excerpt, &publishedAt, &viewCount, &featuredImage, &firstName, &lastName)
 					if err != nil {
 						log.Printf("Error scanning article row: %v", err)
 						continue
 					}
-					
+
 					// Format author name
 					author := "Unknown Author"
 					if firstName.Valid && lastName.Valid {
@@ -1812,7 +2044,7 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 					} else if firstName.Valid {
 						author = firstName.String
 					}
-					
+
 					// Prepare article data
 					articleData := gin.H{
 						"ID":      id,
@@ -1823,23 +2055,23 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 						"TimeAgo": formatTimeAgo(&publishedAt),
 						"Views":   viewCount,
 					}
-					
+
 					// Add featured image if available
 					if featuredImage.Valid && featuredImage.String != "" {
 						articleData["FeaturedImage"] = featuredImage.String
 					}
-					
+
 					articles = append(articles, articleData)
 				}
 			}
 		}
-		
+
 		data["Articles"] = articles
 	} else {
 		c.String(http.StatusNotFound, "Tag service not available")
 		return
 	}
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("tag", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1847,7 +2079,7 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	c.String(http.StatusOK, "Tag: "+slug+" (Template not available)")
 }
 
@@ -1855,7 +2087,7 @@ func (s *Server) handleProductionTags(c *gin.Context) {
 	log.Println("handleProductionTags called")
 	data := s.createBaseTemplateData(c)
 	data["Title"] = "All Tags"
-	
+
 	// Get real tags from database
 	if s.tagService != nil {
 		tags, err := s.tagService.GetAll()
@@ -1865,7 +2097,7 @@ func (s *Server) handleProductionTags(c *gin.Context) {
 			for _, tag := range tags {
 				// Get article count for this tag
 				articleCount := s.getTagArticleCount(tag.ID)
-				
+
 				// Include all tags (even with 0 count) for the tags page
 				tagData = append(tagData, gin.H{
 					"ID":    tag.ID,
@@ -1874,7 +2106,7 @@ func (s *Server) handleProductionTags(c *gin.Context) {
 					"Count": articleCount,
 				})
 			}
-			
+
 			// Sort by article count (most used first)
 			for i := 0; i < len(tagData)-1; i++ {
 				for j := i + 1; j < len(tagData); j++ {
@@ -1883,7 +2115,7 @@ func (s *Server) handleProductionTags(c *gin.Context) {
 					}
 				}
 			}
-			
+
 			data["AllTags"] = tagData
 		} else {
 			log.Printf("Error fetching tags: %v", err)
@@ -1894,7 +2126,7 @@ func (s *Server) handleProductionTags(c *gin.Context) {
 		// Fallback if service not available
 		data["AllTags"] = []gin.H{}
 	}
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("tags", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1902,7 +2134,7 @@ func (s *Server) handleProductionTags(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	c.String(http.StatusOK, "All Tags (Template not available)")
 }
 
@@ -1911,34 +2143,34 @@ func (s *Server) handleProductionLatest(c *gin.Context) {
 	data["Title"] = "Latest Articles"
 	data["Articles"] = []gin.H{
 		{
-			"Title":   "Latest Breaking News Story",
-			"Slug":    "latest-breaking-news",
-			"Excerpt": "This is the most recent breaking news story",
-			"Author":  "News Reporter",
-			"TimeAgo": "2 minutes ago",
-			"Views":   1234,
+			"Title":    "Latest Breaking News Story",
+			"Slug":     "latest-breaking-news",
+			"Excerpt":  "This is the most recent breaking news story",
+			"Author":   "News Reporter",
+			"TimeAgo":  "2 minutes ago",
+			"Views":    1234,
 			"Category": "Breaking News",
 		},
 		{
-			"Title":   "New Technology Innovation Announced",
-			"Slug":    "tech-innovation",
-			"Excerpt": "A groundbreaking technology innovation",
-			"Author":  "Tech Writer",
-			"TimeAgo": "15 minutes ago",
-			"Views":   856,
+			"Title":    "New Technology Innovation Announced",
+			"Slug":     "tech-innovation",
+			"Excerpt":  "A groundbreaking technology innovation",
+			"Author":   "Tech Writer",
+			"TimeAgo":  "15 minutes ago",
+			"Views":    856,
 			"Category": "Technology",
 		},
 		{
-			"Title":   "Major Sports Championship Update",
-			"Slug":    "sports-update",
-			"Excerpt": "Latest updates from the championship",
-			"Author":  "Sports Reporter",
-			"TimeAgo": "30 minutes ago",
-			"Views":   642,
+			"Title":    "Major Sports Championship Update",
+			"Slug":     "sports-update",
+			"Excerpt":  "Latest updates from the championship",
+			"Author":   "Sports Reporter",
+			"TimeAgo":  "30 minutes ago",
+			"Views":    642,
 			"Category": "Sports",
 		},
 	}
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("latest", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1946,7 +2178,7 @@ func (s *Server) handleProductionLatest(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	c.String(http.StatusOK, "Latest Articles (Template not available)")
 }
 
@@ -1955,34 +2187,34 @@ func (s *Server) handleProductionTrending(c *gin.Context) {
 	data["Title"] = "Trending Articles"
 	data["Articles"] = []gin.H{
 		{
-			"Title":   "🔥 Most Viral Story of the Week",
-			"Slug":    "viral-story",
-			"Excerpt": "This story has gone viral across social media",
-			"Author":  "Viral Reporter",
-			"TimeAgo": "2 hours ago",
-			"Views":   15420,
+			"Title":    "🔥 Most Viral Story of the Week",
+			"Slug":     "viral-story",
+			"Excerpt":  "This story has gone viral across social media",
+			"Author":   "Viral Reporter",
+			"TimeAgo":  "2 hours ago",
+			"Views":    15420,
 			"Category": "Viral",
 		},
 		{
-			"Title":   "📈 Trending Technology News",
-			"Slug":    "trending-tech",
-			"Excerpt": "This tech story is gaining massive attention",
-			"Author":  "Tech Analyst",
-			"TimeAgo": "4 hours ago",
-			"Views":   12350,
+			"Title":    "📈 Trending Technology News",
+			"Slug":     "trending-tech",
+			"Excerpt":  "This tech story is gaining massive attention",
+			"Author":   "Tech Analyst",
+			"TimeAgo":  "4 hours ago",
+			"Views":    12350,
 			"Category": "Technology",
 		},
 		{
-			"Title":   "⚡ Breaking Sports Sensation",
-			"Slug":    "trending-sports",
-			"Excerpt": "A sports story capturing everyone's attention",
-			"Author":  "Sports Writer",
-			"TimeAgo": "6 hours ago",
-			"Views":   9870,
+			"Title":    "⚡ Breaking Sports Sensation",
+			"Slug":     "trending-sports",
+			"Excerpt":  "A sports story capturing everyone's attention",
+			"Author":   "Sports Writer",
+			"TimeAgo":  "6 hours ago",
+			"Views":    9870,
 			"Category": "Sports",
 		},
 	}
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("trending", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1990,14 +2222,14 @@ func (s *Server) handleProductionTrending(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	c.String(http.StatusOK, "Trending Articles (Template not available)")
 }
 
 func (s *Server) handleProductionAbout(c *gin.Context) {
 	data := s.createBaseTemplateData(c)
 	data["Title"] = "About Us"
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("about", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -2005,19 +2237,19 @@ func (s *Server) handleProductionAbout(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	c.String(http.StatusOK, "About Us (Template not available)")
 }
 
 func (s *Server) handleProductionSearch(c *gin.Context) {
 	data := s.createBaseTemplateData(c)
-	
+
 	// Get query parameters
 	searchQuery := c.Query("q")
 	categoryID := c.Query("category_id")
 	sortBy := c.DefaultQuery("sort_by", "relevance")
 	page := c.DefaultQuery("page", "1")
-	
+
 	// Build canonical URL
 	baseURL := s.config.App.BaseURL
 	if baseURL == "" {
@@ -2027,13 +2259,13 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 	if searchQuery != "" {
 		canonicalURL += "?q=" + searchQuery
 	}
-	
+
 	// Parse page number
 	pageNum := 1
 	if p, err := strconv.Atoi(page); err == nil && p > 0 {
 		pageNum = p
 	}
-	
+
 	// Set page data
 	data["Title"] = "Search"
 	if searchQuery != "" {
@@ -2045,12 +2277,12 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 	data["SearchQuery"] = searchQuery
 	data["SelectedCategory"] = categoryID
 	data["SortBy"] = sortBy
-	
+
 	// Perform server-side search for SEO and initial load
 	var articles []gin.H
 	var totalResults int64
 	var searchTime int64
-	
+
 	if searchQuery != "" && s.enterpriseSearchService != nil {
 		// Build search request
 		searchReq := services.SearchRequest{
@@ -2058,7 +2290,7 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 			Limit:  20,
 			Offset: (pageNum - 1) * 20,
 		}
-		
+
 		// Add sort
 		if sortBy != "" && sortBy != "relevance" {
 			searchReq.Sort = &services.SearchSort{
@@ -2066,13 +2298,13 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 				Order: "desc",
 			}
 		}
-		
+
 		// Perform search using enterprise service wrapper
 		wrapper := services.NewEnterpriseSearchServiceWrapper(s.enterpriseSearchService)
 		if result, err := wrapper.Search(searchReq); err == nil {
 			totalResults = result.Total
 			searchTime = result.ProcessingTime
-			
+
 			for _, article := range result.Articles {
 				// Get category info
 				categoryName := ""
@@ -2083,7 +2315,7 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 						categorySlug = cat.Slug
 					}
 				}
-				
+
 				articles = append(articles, gin.H{
 					"ID":            article.ID,
 					"Title":         article.Title,
@@ -2100,17 +2332,17 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	data["Articles"] = articles
 	data["TotalResults"] = totalResults
 	data["SearchTime"] = searchTime
 	data["CurrentPage"] = pageNum
-	
+
 	// Pagination URLs
 	if pageNum > 1 {
 		data["PrevPageURL"] = canonicalURL + "&page=" + strconv.Itoa(pageNum-1)
 	}
-	
+
 	// Get categories for filter
 	categories := []gin.H{}
 	if s.categoryService != nil {
@@ -2126,7 +2358,7 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 		}
 	}
 	data["Categories"] = categories
-	
+
 	// Get popular tags for filter
 	popularTags := []gin.H{}
 	if s.tagService != nil {
@@ -2145,7 +2377,7 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 	data["SelectedTags"] = []string{}
 	data["InfiniteScroll"] = false
 	data["ActiveFiltersCount"] = 0
-	
+
 	// Build pagination
 	if totalResults > 0 {
 		totalPages := int((totalResults + 19) / 20)
@@ -2164,7 +2396,7 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 			data["NextPageURL"] = canonicalURL + "&page=" + strconv.Itoa(pageNum+1)
 		}
 	}
-	
+
 	// Render template
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("search", data); err == nil {
@@ -2175,14 +2407,14 @@ func (s *Server) handleProductionSearch(c *gin.Context) {
 			log.Printf("Search template render error: %v", err)
 		}
 	}
-	
+
 	c.String(http.StatusOK, "Search (Template not available)")
 }
 
 func (s *Server) handleProductionContact(c *gin.Context) {
 	data := s.createBaseTemplateData(c)
 	data["Title"] = "Contact Us"
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("contact", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -2190,14 +2422,14 @@ func (s *Server) handleProductionContact(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	c.String(http.StatusOK, "Contact Us (Template not available)")
 }
 
 // handleProductionArticleBySlug handles article pages with direct slug URLs (e.g., /my-article-slug)
 func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 	slug := c.Param("slug")
-	
+
 	// Skip known routes that shouldn't be treated as article slugs
 	knownRoutes := []string{"admin", "api", "static", "assets", "rss", "sitemap", "robots.txt", "favicon.ico"}
 	for _, route := range knownRoutes {
@@ -2206,11 +2438,11 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// Try to get the real article from the database
 	var articleData gin.H
 	var articleTitle string
-	
+
 	// Get the real article from the database directly
 	if s.db != nil {
 		// Get article by slug directly from database
@@ -2222,10 +2454,10 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 			FROM articles 
 			WHERE slug = $1 AND status = 'published'
 		`
-		
+
 		var publishedAt, createdAt, updatedAt time.Time
 		var featuredImageID sql.NullInt64
-		
+
 		err := s.db.DB.QueryRow(query, slug).Scan(
 			&article.ID, &article.Title, &article.Slug, &article.Content, &article.Excerpt,
 			&article.AuthorID, &article.CategoryID, &article.Status,
@@ -2234,26 +2466,26 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 			&article.MetaTitle, &article.MetaDescription, &article.CanonicalURL, &article.SchemaType,
 			&featuredImageID,
 		)
-		
+
 		// Set time fields
 		if err == nil {
 			article.PublishedAt = &publishedAt
 			article.CreatedAt = createdAt
 			article.UpdatedAt = updatedAt
-			
+
 			// Set featured image ID if available
 			if featuredImageID.Valid {
 				val := uint64(featuredImageID.Int64)
 				article.FeaturedImageID = &val
 			}
 		}
-		
+
 		if err != nil {
 			// Article not found, show 404
 			data := s.createBaseTemplateData(c)
 			data["Title"] = "Article Not Found"
 			data["Content"] = "<div class='error-message'><h2>Article Not Found</h2><p>The article you're looking for doesn't exist or may have been moved.</p><a href='/'>← Back to Home</a></div>"
-			
+
 			if s.templateEngine != nil {
 				if html, err := s.templateEngine.Render("homepage", data); err == nil {
 					c.Header("Content-Type", "text/html; charset=utf-8")
@@ -2264,31 +2496,31 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 			c.String(http.StatusNotFound, "Article not found: "+slug)
 			return
 		}
-		
+
 		// Debug: Log the article data
-		log.Printf("Article data: ID=%d, ViewCount=%d, LikeCount=%d, DislikeCount=%d", 
+		log.Printf("Article data: ID=%d, ViewCount=%d, LikeCount=%d, DislikeCount=%d",
 			article.ID, article.ViewCount, article.LikeCount, article.DislikeCount)
-		
+
 		// Convert article to template data using actual model fields
 		articleData = gin.H{
-			"ID":              article.ID,
-			"Title":           article.Title,
-			"Slug":            article.Slug,
-			"Content":         article.Content,
-			"Excerpt":         article.Excerpt,
-			"PublishedAt":     article.PublishedAt,
-			"ViewCount":       article.ViewCount,
-			"LikeCount":       article.LikeCount,
-			"DislikeCount":    article.DislikeCount,
-			"CommentCount":    0, // TODO: Implement comment system
-			"ReadTime":        calculateReadTime(article.Content),
+			"ID":           article.ID,
+			"Title":        article.Title,
+			"Slug":         article.Slug,
+			"Content":      article.Content,
+			"Excerpt":      article.Excerpt,
+			"PublishedAt":  article.PublishedAt,
+			"ViewCount":    article.ViewCount,
+			"LikeCount":    article.LikeCount,
+			"DislikeCount": article.DislikeCount,
+			"CommentCount": 0, // TODO: Implement comment system
+			"ReadTime":     calculateReadTime(article.Content),
 			// Add SEO fields from individual columns
 			"MetaTitle":       article.MetaTitle,
 			"MetaDescription": article.MetaDescription,
 			"CanonicalURL":    article.CanonicalURL,
 			"SchemaType":      article.SchemaType,
 		}
-		
+
 		// Get featured image if available (only local paths starting with /uploads/)
 		if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 {
 			if s.db != nil {
@@ -2300,7 +2532,7 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		// Increment view count
 		if s.db != nil {
 			go func() {
@@ -2311,7 +2543,7 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 				}
 			}()
 		}
-		
+
 		// Add tags if available
 		if len(article.Tags) > 0 {
 			tags := make([]gin.H, len(article.Tags))
@@ -2323,14 +2555,14 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 			}
 			articleData["Tags"] = tags
 		}
-		
+
 		// TODO: Get author info from user service
 		articleData["Author"] = gin.H{
 			"FirstName": "Article",
-			"LastName":  "Author", 
+			"LastName":  "Author",
 			"Bio":       "Content Creator",
 		}
-		
+
 		// Get category info and add it to the article data
 		// Check if article has multiple categories loaded
 		if len(article.Categories) > 0 {
@@ -2361,7 +2593,7 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 			articleData["Category"] = fallbackCategory
 			articleData["Categories"] = []gin.H{fallbackCategory}
 		}
-		
+
 		// Get tags for the article and add them to article data
 		tags, err := s.getArticleTags(article.ID)
 		if err == nil && len(tags) > 0 {
@@ -2370,7 +2602,7 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 			// Provide empty tags array if none found
 			articleData["Tags"] = []gin.H{}
 		}
-		
+
 		articleTitle = article.Title
 	} else {
 		// Fallback to sample data if no article service
@@ -2398,46 +2630,46 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 		}
 		articleTitle = "Sample Article: " + slug
 	}
-	
+
 	// Create template data
 	data := s.createBaseTemplateData(c)
 	data["Title"] = articleTitle
 	data["Article"] = articleData
-	
+
 	// Add HeroImage to root level for base template preload tag
 	if featuredImage, ok := articleData["FeaturedImage"].(string); ok && featuredImage != "" {
 		data["HeroImage"] = featuredImage
 	}
-	
+
 	// Add SEO fields to root level for base template (catch-all route)
 	if metaTitle, ok := articleData["MetaTitle"].(string); ok && metaTitle != "" {
 		data["SEOTitle"] = metaTitle
 	} else {
 		data["SEOTitle"] = articleTitle
 	}
-	
+
 	if metaDesc, ok := articleData["MetaDescription"].(string); ok && metaDesc != "" {
 		data["SEODescription"] = metaDesc
 	} else if excerpt, ok := articleData["Excerpt"].(string); ok {
 		data["SEODescription"] = excerpt
 	}
-	
+
 	if canonicalURL, ok := articleData["CanonicalURL"].(string); ok && canonicalURL != "" {
 		data["CanonicalURL"] = canonicalURL
 	}
-	
+
 	// Add related articles (could be enhanced to get real related articles)
 	data["RelatedArticles"] = []gin.H{
 		{"Title": "Related Article 1", "Slug": "related-1", "Excerpt": "Related content"},
 		{"Title": "Related Article 2", "Slug": "related-2", "Excerpt": "More related content"},
 	}
-	
+
 	// Debug: Log the article data being passed to template
-	log.Printf("Article data for template: Title=%s, MetaTitle=%s, Tags=%v, Category=%v", 
+	log.Printf("Article data for template: Title=%s, MetaTitle=%s, Tags=%v, Category=%v",
 		articleData["Title"], articleData["MetaTitle"], articleData["Tags"], articleData["Category"])
-	log.Printf("Root template data: Title=%s, SEOTitle=%s, SEODescription=%s", 
+	log.Printf("Root template data: Title=%s, SEOTitle=%s, SEODescription=%s",
 		data["Title"], data["SEOTitle"], data["SEODescription"])
-	
+
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("article", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -2449,7 +2681,7 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 	} else {
 		log.Printf("Template engine is nil")
 	}
-	
+
 	// Fallback to simple response
 	c.String(http.StatusOK, "Article: "+slug+" (Template not available)")
 }
@@ -2458,7 +2690,7 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 func (s *Server) setupAdminFrontendRoutes() {
 	// Admin login page (no auth required)
 	s.router.GET("/admin/login", s.handleAdminLogin)
-	
+
 	// Admin dashboard and pages (require authentication)
 	adminGroup := s.router.Group("/admin")
 	adminGroup.Use(s.requireAuth) // Add authentication middleware
@@ -2467,32 +2699,32 @@ func (s *Server) setupAdminFrontendRoutes() {
 		adminGroup.GET("/dashboard", s.handleAdminDashboard)
 		adminGroup.GET("/analytics", s.handleAdminAnalytics)
 		adminGroup.GET("/users", s.handleAdminUsers)
-			adminGroup.GET("/users/create", s.renderCreateUser)
-			adminGroup.GET("/users/list", s.renderUserList)
-			adminGroup.GET("/users/edit/:id", s.renderEditUser)
-			adminGroup.GET("/users/roles", s.renderManageRoles)
-			adminGroup.GET("/users/export", s.renderExportUsers)
+		adminGroup.GET("/users/create", s.renderCreateUser)
+		adminGroup.GET("/users/list", s.renderUserList)
+		adminGroup.GET("/users/edit/:id", s.renderEditUser)
+		adminGroup.GET("/users/roles", s.renderManageRoles)
+		adminGroup.GET("/users/export", s.renderExportUsers)
 		adminGroup.GET("/content", s.handleAdminContent)
-			adminGroup.GET("/content/create", s.renderCreateArticle)
-			adminGroup.GET("/content/edit/:id", s.renderEditArticle)
-			adminGroup.GET("/content/articles", s.renderManageArticles)
-			adminGroup.GET("/content/trash", s.renderRecycleBin)
-			adminGroup.GET("/content/categories", s.renderManageCategories)
-			adminGroup.GET("/content/tags", s.renderManageTags)
-			adminGroup.GET("/content/media", s.renderMediaLibrary)
+		adminGroup.GET("/content/create", s.renderCreateArticle)
+		adminGroup.GET("/content/edit/:id", s.renderEditArticle)
+		adminGroup.GET("/content/articles", s.renderManageArticles)
+		adminGroup.GET("/content/trash", s.renderRecycleBin)
+		adminGroup.GET("/content/categories", s.renderManageCategories)
+		adminGroup.GET("/content/tags", s.renderManageTags)
+		adminGroup.GET("/content/media", s.renderMediaLibrary)
 		adminGroup.GET("/content-ingestion", s.handleAdminContentIngestion)
 		adminGroup.GET("/autolinking", s.handleAdminAutoLinking)
 		adminGroup.GET("/keyword-banks", s.handleAdminKeywordBanks)
 		adminGroup.GET("/comments", s.handleAdminComments)
-			adminGroup.GET("/comments/analytics", s.handleAdminCommentsAnalytics)
-			adminGroup.GET("/comments/settings", s.handleAdminCommentsSettings)
+		adminGroup.GET("/comments/analytics", s.handleAdminCommentsAnalytics)
+		adminGroup.GET("/comments/settings", s.handleAdminCommentsSettings)
 		adminGroup.GET("/settings", s.handleAdminSettings)
-			adminGroup.GET("/settings/general", s.handleAdminSettingsGeneral)
-			adminGroup.GET("/settings/performance", s.handleAdminSettingsPerformance)
-			adminGroup.GET("/settings/security", s.handleAdminSettingsSecurity)
-			adminGroup.GET("/settings/backup", s.handleAdminSettingsBackup)
-			adminGroup.GET("/settings/email", s.handleAdminSettingsEmail)
-			adminGroup.GET("/settings/api", s.handleAdminSettingsAPI)
+		adminGroup.GET("/settings/general", s.handleAdminSettingsGeneral)
+		adminGroup.GET("/settings/performance", s.handleAdminSettingsPerformance)
+		adminGroup.GET("/settings/security", s.handleAdminSettingsSecurity)
+		adminGroup.GET("/settings/backup", s.handleAdminSettingsBackup)
+		adminGroup.GET("/settings/email", s.handleAdminSettingsEmail)
+		adminGroup.GET("/settings/api", s.handleAdminSettingsAPI)
 		adminGroup.GET("/system", s.handleAdminSystem)
 		adminGroup.GET("/logs", s.handleAdminLogs)
 
@@ -2586,7 +2818,6 @@ func (s *Server) handleAdminSystem(c *gin.Context) {
 	s.renderAdminSystem(c)
 }
 
-
 func (s *Server) getCurrentAdminUser(c *gin.Context) gin.H {
 	// Mock admin user data for now
 	return gin.H{
@@ -2601,14 +2832,14 @@ func (s *Server) getCurrentAdminUser(c *gin.Context) gin.H {
 func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 	// Get active theme settings
 	themeConfig := s.getActiveThemeConfig()
-	
+
 	// Use theme branding or fallback to config
 	siteName := s.config.App.Name
 	siteDescription := "High-performance multilingual news website"
 	logoURL := "/static/images/logo.svg"
 	showSiteName := true
 	headerStyle := "sticky"
-	
+
 	if themeConfig != nil {
 		if branding, ok := themeConfig["branding"].(map[string]interface{}); ok {
 			if name, ok := branding["site_name"].(string); ok && name != "" {
@@ -2630,18 +2861,18 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 			}
 		}
 	}
-	
+
 	data := gin.H{
-		"SiteName":         siteName,
-		"SiteDescription":  siteDescription,
-		"LogoURL":          logoURL,
-		"ShowSiteName":     showSiteName,
-		"HeaderStyle":      headerStyle,
-		"ThemeConfig":      themeConfig,
-		"LanguageCode":     "en",
+		"SiteName":          siteName,
+		"SiteDescription":   siteDescription,
+		"LogoURL":           logoURL,
+		"ShowSiteName":      showSiteName,
+		"HeaderStyle":       headerStyle,
+		"ThemeConfig":       themeConfig,
+		"LanguageCode":      "en",
 		"LanguageDirection": "ltr",
-		"ThemeMode":        "auto",
-		"CurrentYear":      2024,
+		"ThemeMode":         "auto",
+		"CurrentYear":       2024,
 		"Navigation": []gin.H{
 			{"Name": "Home", "URL": "/", "Active": c.Request.URL.Path == "/"},
 			{"Name": "Latest", "URL": "/latest", "Active": c.Request.URL.Path == "/latest"},
@@ -2652,15 +2883,15 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 			{"Name": "Contact", "URL": "/contact", "Active": c.Request.URL.Path == "/contact"},
 		},
 		"IsAuthenticated": false,
-		"OGType":         "website",
-		"TwitterCard":    "summary_large_image",
+		"OGType":          "website",
+		"TwitterCard":     "summary_large_image",
 	}
-	
+
 	// Fetch breaking news articles (articles with "breaking" tag)
 	breakingNews := s.getBreakingNewsArticles()
 	data["BreakingNews"] = breakingNews
 	data["HasBreakingNews"] = len(breakingNews) > 0
-	
+
 	return data
 }
 
@@ -2669,37 +2900,37 @@ func (s *Server) getActiveThemeConfig() map[string]interface{} {
 	if s.db == nil {
 		return nil
 	}
-	
+
 	var configJSON []byte
 	err := s.db.QueryRow("SELECT config FROM themes WHERE is_active = true LIMIT 1").Scan(&configJSON)
 	if err != nil {
 		return nil
 	}
-	
+
 	var config map[string]interface{}
 	if err := json.Unmarshal(configJSON, &config); err != nil {
 		return nil
 	}
-	
+
 	return config
 }
 
 // getBreakingNewsArticles fetches articles tagged with "breaking-news" for the ticker
 func (s *Server) getBreakingNewsArticles() []gin.H {
 	var breakingNews []gin.H
-	
+
 	// Try to get the "breaking-news" tag
 	if s.tagService == nil || s.db == nil {
 		return breakingNews
 	}
-	
+
 	// Get the breaking news tag by slug
 	tag, err := s.tagService.GetBySlug("breaking-news")
 	if err != nil || tag == nil {
 		// Tag doesn't exist yet, return empty
 		return breakingNews
 	}
-	
+
 	// Query articles with the breaking-news tag (limit to 10 most recent)
 	query := `
 		SELECT a.id, a.title, a.slug, a.excerpt
@@ -2708,14 +2939,14 @@ func (s *Server) getBreakingNewsArticles() []gin.H {
 		WHERE at.tag_id = $1 AND a.status = 'published'
 		ORDER BY a.published_at DESC
 		LIMIT 10`
-	
+
 	rows, err := s.db.Query(query, tag.ID)
 	if err != nil {
 		log.Printf("Error fetching breaking news: %v", err)
 		return breakingNews
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var id uint64
 		var title, slug, excerpt string
@@ -2729,13 +2960,14 @@ func (s *Server) getBreakingNewsArticles() []gin.H {
 			"Excerpt": excerpt,
 		})
 	}
-	
+
 	return breakingNews
 }
+
 //
 
 func (s *Server) handleAdminContentCreate(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2751,12 +2983,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminContentCategories(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2772,12 +3004,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminContentTags(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2793,12 +3025,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminContentMedia(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2814,13 +3046,13 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 // Users management handlers
 func (s *Server) handleAdminUsersCreate(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2836,12 +3068,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminUsersRoles(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2857,12 +3089,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminUsersPermissions(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2878,12 +3110,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminUsersExport(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2899,13 +3131,13 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 // Settings management handlers
 func (s *Server) handleAdminSettingsGeneral(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2921,12 +3153,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminSettingsPerformance(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2942,12 +3174,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminSettingsSecurity(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2963,12 +3195,12 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
 
 func (s *Server) handleAdminSettingsBackup(c *gin.Context) {
-html := `<!DOCTYPE html>
+	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2984,11 +3216,9 @@ html := `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-c.Header("Content-Type", "text/html; charset=utf-8")
-c.String(http.StatusOK, html)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, html)
 }
-
-
 
 // calculateReadTime estimates reading time based on content length
 func calculateReadTime(content string) int {
@@ -3006,14 +3236,14 @@ func (s *Server) getCategoryByID(categoryID uint64) (gin.H, error) {
 	if s.db == nil {
 		return gin.H{"Name": "General", "Slug": "general"}, nil
 	}
-	
+
 	var name, slug string
 	query := "SELECT name, slug FROM categories WHERE id = $1"
 	err := s.db.DB.QueryRow(query, categoryID).Scan(&name, &slug)
 	if err != nil {
 		return gin.H{"Name": "General", "Slug": "general"}, err
 	}
-	
+
 	return gin.H{
 		"Name": name,
 		"Slug": slug,
@@ -3025,17 +3255,17 @@ func (s *Server) buildResponsiveImageData(imageID uint64, altText string) *servi
 	if s.mediaService == nil || imageID == 0 {
 		return nil
 	}
-	
+
 	variants, err := s.mediaService.GetImageVariants(imageID)
 	if err != nil || len(variants) == 0 {
 		return nil
 	}
-	
+
 	data := &services.ResponsiveImageData{
 		AltText:     altText,
 		HasVariants: true,
 	}
-	
+
 	// Organize variants by size and format
 	for _, v := range variants {
 		switch v.Size {
@@ -3071,12 +3301,12 @@ func (s *Server) buildResponsiveImageData(imageID uint64, altText string) *servi
 			}
 		}
 	}
-	
+
 	// Check if we have at least some variants
 	if data.SmallWebP == "" && data.SmallJPEG == "" && data.MediumWebP == "" && data.MediumJPEG == "" {
 		data.HasVariants = false
 	}
-	
+
 	return data
 }
 
@@ -3085,20 +3315,20 @@ func (s *Server) getArticleTags(articleID uint64) ([]gin.H, error) {
 	if s.db == nil {
 		return []gin.H{}, nil
 	}
-	
+
 	query := `
 		SELECT t.name, t.slug 
 		FROM tags t 
 		JOIN article_tags at ON t.id = at.tag_id 
 		WHERE at.article_id = $1
 	`
-	
+
 	rows, err := s.db.DB.Query(query, articleID)
 	if err != nil {
 		return []gin.H{}, err
 	}
 	defer rows.Close()
-	
+
 	var tags []gin.H
 	for rows.Next() {
 		var name, slug string
@@ -3110,7 +3340,7 @@ func (s *Server) getArticleTags(articleID uint64) ([]gin.H, error) {
 			"Slug": slug,
 		})
 	}
-	
+
 	return tags, nil
 }
 
@@ -3119,7 +3349,7 @@ func (s *Server) getCategoryArticleCount(categoryID uint64) int {
 	if s.db == nil {
 		return 0
 	}
-	
+
 	var count int
 	query := "SELECT COUNT(*) FROM articles WHERE category_id = $1 AND status = 'published'"
 	err := s.db.DB.QueryRow(query, categoryID).Scan(&count)
@@ -3127,7 +3357,7 @@ func (s *Server) getCategoryArticleCount(categoryID uint64) int {
 		log.Printf("Error getting article count for category %d: %v", categoryID, err)
 		return 0
 	}
-	
+
 	return count
 }
 
@@ -3136,7 +3366,7 @@ func (s *Server) getTagArticleCount(tagID uint64) int {
 	if s.db == nil {
 		return 0
 	}
-	
+
 	var count int
 	query := `
 		SELECT COUNT(DISTINCT a.id) 
@@ -3149,7 +3379,7 @@ func (s *Server) getTagArticleCount(tagID uint64) int {
 		log.Printf("Error getting article count for tag %d: %v", tagID, err)
 		return 0
 	}
-	
+
 	return count
 }
 
@@ -3158,10 +3388,10 @@ func formatTimeAgo(t *time.Time) string {
 	if t == nil {
 		return "Unknown"
 	}
-	
+
 	now := time.Now()
 	diff := now.Sub(*t)
-	
+
 	if diff < time.Minute {
 		return "Just now"
 	} else if diff < time.Hour {
@@ -3188,3 +3418,685 @@ func formatTimeAgo(t *time.Time) string {
 }
 
 // Article engagement handlers are now handled by the API router in article_handlers.go
+
+// ============================================================================
+// MULTILINGUAL HANDLERS
+// ============================================================================
+
+// handleMultilingualHomepage handles the homepage for each language
+func (s *Server) handleMultilingualHomepage(c *gin.Context) {
+	// Extract language from URL path
+	lang := c.Request.URL.Path[1:3] // Get "en", "de", etc.
+	if len(lang) != 2 {
+		lang = "en"
+	}
+
+	// Create template data with multilingual support
+	data := s.createBaseTemplateData(c)
+	data["Title"] = s.config.App.Name
+	data["PageType"] = "homepage"
+
+	// Add multilingual data
+	s.addMultilingualData(data, lang, "/")
+
+	// Get articles for this language
+	if s.articleService != nil {
+		filters := services.ArticleFilters{
+			Status:       "published",
+			LanguageCode: lang,
+		}
+		articles, _, err := s.articleService.List(c.Request.Context(), 10, 0, filters, "published_at", "DESC")
+		if err == nil {
+			articleData := make([]gin.H, len(articles))
+			for i, article := range articles {
+				categoryName := "General"
+				if article.CategoryID > 0 {
+					if categoryData, err := s.getCategoryByID(article.CategoryID); err == nil {
+						if name, ok := categoryData["Name"].(string); ok {
+							categoryName = name
+						}
+					}
+				}
+
+				var imageData *services.ResponsiveImageData
+				if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 && s.mediaService != nil {
+					imageData = s.buildResponsiveImageData(*article.FeaturedImageID, article.Title)
+				}
+
+				articleData[i] = gin.H{
+					"ID":            article.ID,
+					"Title":         article.Title,
+					"Slug":          article.Slug,
+					"Excerpt":       article.Excerpt,
+					"Author":        "Author",
+					"TimeAgo":       formatTimeAgo(article.PublishedAt),
+					"ViewCount":     article.ViewCount,
+					"Category":      categoryName,
+					"FeaturedImage": article.FeaturedImage,
+					"ImageData":     imageData,
+					"URL":           fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+				}
+			}
+			data["Articles"] = articleData
+		} else {
+			data["Articles"] = []gin.H{}
+		}
+	} else {
+		data["Articles"] = []gin.H{}
+	}
+
+	// Get categories
+	if s.categoryService != nil {
+		categories, err := s.categoryService.GetAll()
+		if err == nil {
+			categoryData := make([]gin.H, len(categories))
+			for i, cat := range categories {
+				categoryData[i] = gin.H{
+					"ID":          cat.ID,
+					"Name":        cat.Name,
+					"Slug":        cat.Slug,
+					"Description": cat.Description,
+					"URL":         fmt.Sprintf("/%s/category/%s", lang, cat.Slug),
+					"Count":       s.getCategoryArticleCount(cat.ID),
+				}
+			}
+			data["Categories"] = categoryData
+		}
+	}
+
+	// Render template
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("homepage", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Homepage - "+lang)
+}
+
+// handleMultilingualArticle handles article pages for each language
+func (s *Server) handleMultilingualArticle(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+	slug := c.Param("slug")
+
+	if s.articleService == nil {
+		c.String(http.StatusNotFound, "Article not found")
+		return
+	}
+
+	article, err := s.articleService.GetBySlug(c.Request.Context(), slug)
+	if err != nil {
+		data := s.createBaseTemplateData(c)
+		data["Title"] = "Article Not Found"
+		s.addMultilingualData(data, lang, "/article/"+slug)
+
+		if s.templateEngine != nil {
+			if html, err := s.templateEngine.Render("404", data); err == nil {
+				c.Header("Content-Type", "text/html; charset=utf-8")
+				c.String(http.StatusNotFound, html)
+				return
+			}
+		}
+		c.String(http.StatusNotFound, "Article not found: "+slug)
+		return
+	}
+
+	// Build article data
+	articleData := gin.H{
+		"ID":              article.ID,
+		"Title":           article.Title,
+		"Slug":            article.Slug,
+		"Content":         article.Content,
+		"Excerpt":         article.Excerpt,
+		"PublishedAt":     article.PublishedAt,
+		"ViewCount":       article.ViewCount,
+		"LikeCount":       article.LikeCount,
+		"DislikeCount":    article.DislikeCount,
+		"ReadTime":        calculateReadTime(article.Content),
+		"MetaTitle":       article.MetaTitle,
+		"MetaDescription": article.MetaDescription,
+	}
+
+	// Get featured image
+	if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 {
+		if s.mediaService != nil {
+			imageData := s.buildResponsiveImageData(*article.FeaturedImageID, article.Title)
+			if imageData != nil {
+				articleData["ImageData"] = imageData
+			}
+		}
+	}
+
+	// Get category
+	if article.CategoryID > 0 {
+		categoryData, err := s.getCategoryByID(article.CategoryID)
+		if err == nil {
+			articleData["Category"] = categoryData
+		}
+	}
+
+	// Get tags
+	tags, err := s.getArticleTags(article.ID)
+	if err == nil {
+		articleData["Tags"] = tags
+	}
+
+	// Increment view count
+	if s.db != nil {
+		go func() {
+			s.db.DB.Exec("UPDATE articles SET view_count = view_count + 1 WHERE id = $1", article.ID)
+		}()
+	}
+
+	data := s.createBaseTemplateData(c)
+	data["Title"] = article.Title
+	data["PageType"] = "article"
+	data["Article"] = articleData
+	s.addMultilingualData(data, lang, "/article/"+slug)
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("article", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, article.Title)
+}
+
+// handleMultilingualCategory handles category pages for each language
+func (s *Server) handleMultilingualCategory(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+	slug := c.Param("slug")
+
+	data := s.createBaseTemplateData(c)
+	data["PageType"] = "category"
+	s.addMultilingualData(data, lang, "/category/"+slug)
+
+	if s.categoryService != nil {
+		category, err := s.categoryService.GetBySlug(slug)
+		if err == nil {
+			data["Title"] = category.Name
+			data["Category"] = gin.H{
+				"ID":          category.ID,
+				"Name":        category.Name,
+				"Slug":        category.Slug,
+				"Description": category.Description,
+			}
+
+			// Get articles in this category
+			if s.articleService != nil {
+				categoryID := category.ID
+				filters := services.ArticleFilters{
+					Status:     "published",
+					CategoryID: &categoryID,
+				}
+				articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
+
+				articleData := make([]gin.H, len(articles))
+				for i, article := range articles {
+					articleData[i] = gin.H{
+						"ID":        article.ID,
+						"Title":     article.Title,
+						"Slug":      article.Slug,
+						"Excerpt":   article.Excerpt,
+						"TimeAgo":   formatTimeAgo(article.PublishedAt),
+						"ViewCount": article.ViewCount,
+						"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+					}
+				}
+				data["Articles"] = articleData
+			}
+		}
+	}
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("category", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Category: "+slug)
+}
+
+// handleMultilingualCategories handles the categories listing page
+func (s *Server) handleMultilingualCategories(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Categories"
+	data["PageType"] = "categories"
+	s.addMultilingualData(data, lang, "/categories")
+
+	if s.categoryService != nil {
+		categories, err := s.categoryService.GetAll()
+		if err == nil {
+			categoryData := make([]gin.H, len(categories))
+			for i, cat := range categories {
+				categoryData[i] = gin.H{
+					"ID":          cat.ID,
+					"Name":        cat.Name,
+					"Slug":        cat.Slug,
+					"Description": cat.Description,
+					"URL":         fmt.Sprintf("/%s/category/%s", lang, cat.Slug),
+					"Count":       s.getCategoryArticleCount(cat.ID),
+				}
+			}
+			data["Categories"] = categoryData
+		}
+	}
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("categories", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Categories")
+}
+
+// handleMultilingualTag handles tag pages for each language
+func (s *Server) handleMultilingualTag(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+	slug := c.Param("slug")
+
+	data := s.createBaseTemplateData(c)
+	data["PageType"] = "tag"
+	s.addMultilingualData(data, lang, "/tag/"+slug)
+
+	if s.tagService != nil {
+		tag, err := s.tagService.GetBySlug(slug)
+		if err == nil {
+			data["Title"] = tag.Name
+			data["Tag"] = gin.H{
+				"ID":          tag.ID,
+				"Name":        tag.Name,
+				"Slug":        tag.Slug,
+				"Description": tag.Description,
+			}
+
+			// Get articles with this tag
+			if s.articleService != nil {
+				tagID := tag.ID
+				filters := services.ArticleFilters{
+					Status: "published",
+					TagID:  &tagID,
+				}
+				articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
+
+				articleData := make([]gin.H, len(articles))
+				for i, article := range articles {
+					articleData[i] = gin.H{
+						"ID":        article.ID,
+						"Title":     article.Title,
+						"Slug":      article.Slug,
+						"Excerpt":   article.Excerpt,
+						"TimeAgo":   formatTimeAgo(article.PublishedAt),
+						"ViewCount": article.ViewCount,
+						"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+					}
+				}
+				data["Articles"] = articleData
+			}
+		}
+	}
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("tag", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Tag: "+slug)
+}
+
+// handleMultilingualTags handles the tags listing page
+func (s *Server) handleMultilingualTags(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Tags"
+	data["PageType"] = "tags"
+	s.addMultilingualData(data, lang, "/tags")
+
+	if s.tagService != nil {
+		tags, err := s.tagService.GetAll()
+		if err == nil {
+			tagData := make([]gin.H, len(tags))
+			for i, tag := range tags {
+				tagData[i] = gin.H{
+					"ID":          tag.ID,
+					"Name":        tag.Name,
+					"Slug":        tag.Slug,
+					"Description": tag.Description,
+					"URL":         fmt.Sprintf("/%s/tag/%s", lang, tag.Slug),
+					"Count":       s.getTagArticleCount(tag.ID),
+				}
+			}
+			data["Tags"] = tagData
+		}
+	}
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("tags", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Tags")
+}
+
+// handleMultilingualLatest handles the latest articles page
+func (s *Server) handleMultilingualLatest(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Latest Articles"
+	data["PageType"] = "latest"
+	s.addMultilingualData(data, lang, "/latest")
+
+	if s.articleService != nil {
+		filters := services.ArticleFilters{Status: "published"}
+		articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
+
+		articleData := make([]gin.H, len(articles))
+		for i, article := range articles {
+			articleData[i] = gin.H{
+				"ID":        article.ID,
+				"Title":     article.Title,
+				"Slug":      article.Slug,
+				"Excerpt":   article.Excerpt,
+				"TimeAgo":   formatTimeAgo(article.PublishedAt),
+				"ViewCount": article.ViewCount,
+				"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+			}
+		}
+		data["Articles"] = articleData
+	}
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("latest", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Latest Articles")
+}
+
+// handleMultilingualTrending handles the trending articles page
+func (s *Server) handleMultilingualTrending(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Trending Articles"
+	data["PageType"] = "trending"
+	s.addMultilingualData(data, lang, "/trending")
+
+	if s.articleService != nil {
+		articles, _ := s.articleService.GetTrending(c.Request.Context(), 20, 24)
+
+		articleData := make([]gin.H, len(articles))
+		for i, article := range articles {
+			articleData[i] = gin.H{
+				"ID":        article.ID,
+				"Title":     article.Title,
+				"Slug":      article.Slug,
+				"Excerpt":   article.Excerpt,
+				"TimeAgo":   formatTimeAgo(article.PublishedAt),
+				"ViewCount": article.ViewCount,
+				"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+			}
+		}
+		data["Articles"] = articleData
+	}
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("trending", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Trending Articles")
+}
+
+// handleMultilingualSearch handles the search page
+func (s *Server) handleMultilingualSearch(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+	query := c.Query("q")
+
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Search"
+	data["PageType"] = "search"
+	data["SearchQuery"] = query
+	s.addMultilingualData(data, lang, "/search")
+
+	if query != "" && s.enterpriseSearchService != nil {
+		results, _ := s.enterpriseSearchService.Search(c.Request.Context(), query, 20, 0)
+		data["SearchResults"] = results
+	}
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("search", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Search: "+query)
+}
+
+// handleMultilingualAbout handles the about page
+func (s *Server) handleMultilingualAbout(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "About Us"
+	data["PageType"] = "about"
+	s.addMultilingualData(data, lang, "/about")
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("about", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "About Us")
+}
+
+// handleMultilingualContact handles the contact page
+func (s *Server) handleMultilingualContact(c *gin.Context) {
+	lang := c.Request.URL.Path[1:3]
+
+	data := s.createBaseTemplateData(c)
+	data["Title"] = "Contact Us"
+	data["PageType"] = "contact"
+	s.addMultilingualData(data, lang, "/contact")
+
+	if s.templateEngine != nil {
+		if html, err := s.templateEngine.Render("contact", data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+	}
+
+	c.String(http.StatusOK, "Contact Us")
+}
+
+// ============================================================================
+// MULTILINGUAL SITEMAP HANDLERS
+// ============================================================================
+
+// handleSitemapIndex handles the main sitemap index
+func (s *Server) handleSitemapIndex(c *gin.Context) {
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://a.10top.shop"
+	}
+
+	languages := []string{"en", "de", "fr", "es", "ar"}
+
+	xml := `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`
+
+	for _, lang := range languages {
+		xml += fmt.Sprintf(`
+  <sitemap>
+    <loc>%s/sitemap-%s.xml</loc>
+    <lastmod>%s</lastmod>
+  </sitemap>`, baseURL, lang, time.Now().Format("2006-01-02"))
+	}
+
+	xml += `
+</sitemapindex>`
+
+	c.Header("Content-Type", "application/xml; charset=utf-8")
+	c.String(http.StatusOK, xml)
+}
+
+// handleLanguageSitemap handles language-specific sitemaps
+func (s *Server) handleLanguageSitemap(c *gin.Context) {
+	// Extract language from URL (e.g., /sitemap-en.xml -> en)
+	path := c.Request.URL.Path
+	lang := strings.TrimPrefix(path, "/sitemap-")
+	lang = strings.TrimSuffix(lang, ".xml")
+
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://a.10top.shop"
+	}
+
+	languages := []string{"en", "de", "fr", "es", "ar"}
+
+	xml := `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">`
+
+	// Add homepage
+	xml += fmt.Sprintf(`
+  <url>
+    <loc>%s/%s/</loc>
+    <lastmod>%s</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>`, baseURL, lang, time.Now().Format("2006-01-02"))
+
+	// Add hreflang for all languages
+	for _, l := range languages {
+		xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/"/>`, l, baseURL, l)
+	}
+	xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/"/>
+  </url>`, baseURL)
+
+	// Add articles
+	if s.articleService != nil {
+		filters := services.ArticleFilters{Status: "published"}
+		articles, _, _ := s.articleService.List(c.Request.Context(), 1000, 0, filters, "published_at", "DESC")
+
+		for _, article := range articles {
+			lastMod := time.Now().Format("2006-01-02")
+			if article.UpdatedAt != nil {
+				lastMod = article.UpdatedAt.Format("2006-01-02")
+			}
+
+			xml += fmt.Sprintf(`
+  <url>
+    <loc>%s/%s/article/%s</loc>
+    <lastmod>%s</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>`, baseURL, lang, article.Slug, lastMod)
+
+			// Add hreflang for all languages
+			for _, l := range languages {
+				xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/article/%s"/>`, l, baseURL, l, article.Slug)
+			}
+			xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/article/%s"/>
+  </url>`, baseURL, article.Slug)
+		}
+	}
+
+	// Add categories
+	if s.categoryService != nil {
+		categories, _ := s.categoryService.GetAll()
+		for _, cat := range categories {
+			xml += fmt.Sprintf(`
+  <url>
+    <loc>%s/%s/category/%s</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>`, baseURL, lang, cat.Slug)
+
+			for _, l := range languages {
+				xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/category/%s"/>`, l, baseURL, l, cat.Slug)
+			}
+			xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/category/%s"/>
+  </url>`, baseURL, cat.Slug)
+		}
+	}
+
+	// Add tags
+	if s.tagService != nil {
+		tags, _ := s.tagService.GetAll()
+		for _, tag := range tags {
+			xml += fmt.Sprintf(`
+  <url>
+    <loc>%s/%s/tag/%s</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>`, baseURL, lang, tag.Slug)
+
+			for _, l := range languages {
+				xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/tag/%s"/>`, l, baseURL, l, tag.Slug)
+			}
+			xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/tag/%s"/>
+  </url>`, baseURL, tag.Slug)
+		}
+	}
+
+	// Add static pages
+	staticPages := []string{"latest", "trending", "categories", "tags", "about", "contact"}
+	for _, page := range staticPages {
+		xml += fmt.Sprintf(`
+  <url>
+    <loc>%s/%s/%s</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>`, baseURL, lang, page)
+
+		for _, l := range languages {
+			xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/%s"/>`, l, baseURL, l, page)
+		}
+		xml += fmt.Sprintf(`
+    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/%s"/>
+  </url>`, baseURL, page)
+	}
+
+	xml += `
+</urlset>`
+
+	c.Header("Content-Type", "application/xml; charset=utf-8")
+	c.String(http.StatusOK, xml)
+}
