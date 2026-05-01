@@ -3886,7 +3886,14 @@ func (s *Server) handleMultilingualSearch(c *gin.Context) {
 	s.addMultilingualData(data, lang, "/search")
 
 	if query != "" && s.enterpriseSearchService != nil {
-		results, _ := s.enterpriseSearchService.Search(c.Request.Context(), query, 20, 0)
+		searchReq := services.SearchRequest{
+			Query: query,
+			Pagination: &services.SearchPagination{
+				Limit:  20,
+				Offset: 0,
+			},
+		}
+		results, _ := s.enterpriseSearchService.Search(c.Request.Context(), searchReq)
 		data["SearchResults"] = results
 	}
 
@@ -3939,164 +3946,4 @@ func (s *Server) handleMultilingualContact(c *gin.Context) {
 	}
 
 	c.String(http.StatusOK, "Contact Us")
-}
-
-// ============================================================================
-// MULTILINGUAL SITEMAP HANDLERS
-// ============================================================================
-
-// handleSitemapIndex handles the main sitemap index
-func (s *Server) handleSitemapIndex(c *gin.Context) {
-	baseURL := s.config.App.BaseURL
-	if baseURL == "" {
-		baseURL = "https://a.10top.shop"
-	}
-
-	languages := []string{"en", "de", "fr", "es", "ar"}
-
-	xml := `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`
-
-	for _, lang := range languages {
-		xml += fmt.Sprintf(`
-  <sitemap>
-    <loc>%s/sitemap-%s.xml</loc>
-    <lastmod>%s</lastmod>
-  </sitemap>`, baseURL, lang, time.Now().Format("2006-01-02"))
-	}
-
-	xml += `
-</sitemapindex>`
-
-	c.Header("Content-Type", "application/xml; charset=utf-8")
-	c.String(http.StatusOK, xml)
-}
-
-// handleLanguageSitemap handles language-specific sitemaps
-func (s *Server) handleLanguageSitemap(c *gin.Context) {
-	// Extract language from URL (e.g., /sitemap-en.xml -> en)
-	path := c.Request.URL.Path
-	lang := strings.TrimPrefix(path, "/sitemap-")
-	lang = strings.TrimSuffix(lang, ".xml")
-
-	baseURL := s.config.App.BaseURL
-	if baseURL == "" {
-		baseURL = "https://a.10top.shop"
-	}
-
-	languages := []string{"en", "de", "fr", "es", "ar"}
-
-	xml := `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">`
-
-	// Add homepage
-	xml += fmt.Sprintf(`
-  <url>
-    <loc>%s/%s/</loc>
-    <lastmod>%s</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>`, baseURL, lang, time.Now().Format("2006-01-02"))
-
-	// Add hreflang for all languages
-	for _, l := range languages {
-		xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/"/>`, l, baseURL, l)
-	}
-	xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/"/>
-  </url>`, baseURL)
-
-	// Add articles
-	if s.articleService != nil {
-		filters := services.ArticleFilters{Status: "published"}
-		articles, _, _ := s.articleService.List(c.Request.Context(), 1000, 0, filters, "published_at", "DESC")
-
-		for _, article := range articles {
-			lastMod := time.Now().Format("2006-01-02")
-			if article.UpdatedAt != nil {
-				lastMod = article.UpdatedAt.Format("2006-01-02")
-			}
-
-			xml += fmt.Sprintf(`
-  <url>
-    <loc>%s/%s/article/%s</loc>
-    <lastmod>%s</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>`, baseURL, lang, article.Slug, lastMod)
-
-			// Add hreflang for all languages
-			for _, l := range languages {
-				xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/article/%s"/>`, l, baseURL, l, article.Slug)
-			}
-			xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/article/%s"/>
-  </url>`, baseURL, article.Slug)
-		}
-	}
-
-	// Add categories
-	if s.categoryService != nil {
-		categories, _ := s.categoryService.GetAll()
-		for _, cat := range categories {
-			xml += fmt.Sprintf(`
-  <url>
-    <loc>%s/%s/category/%s</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>`, baseURL, lang, cat.Slug)
-
-			for _, l := range languages {
-				xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/category/%s"/>`, l, baseURL, l, cat.Slug)
-			}
-			xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/category/%s"/>
-  </url>`, baseURL, cat.Slug)
-		}
-	}
-
-	// Add tags
-	if s.tagService != nil {
-		tags, _ := s.tagService.GetAll()
-		for _, tag := range tags {
-			xml += fmt.Sprintf(`
-  <url>
-    <loc>%s/%s/tag/%s</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>`, baseURL, lang, tag.Slug)
-
-			for _, l := range languages {
-				xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/tag/%s"/>`, l, baseURL, l, tag.Slug)
-			}
-			xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/tag/%s"/>
-  </url>`, baseURL, tag.Slug)
-		}
-	}
-
-	// Add static pages
-	staticPages := []string{"latest", "trending", "categories", "tags", "about", "contact"}
-	for _, page := range staticPages {
-		xml += fmt.Sprintf(`
-  <url>
-    <loc>%s/%s/%s</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>`, baseURL, lang, page)
-
-		for _, l := range languages {
-			xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/%s"/>`, l, baseURL, l, page)
-		}
-		xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/%s"/>
-  </url>`, baseURL, page)
-	}
-
-	xml += `
-</urlset>`
-
-	c.Header("Content-Type", "application/xml; charset=utf-8")
-	c.String(http.StatusOK, xml)
 }

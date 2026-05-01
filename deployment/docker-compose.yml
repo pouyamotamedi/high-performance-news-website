@@ -7,8 +7,10 @@ services:
       POSTGRES_USER: ${DB_USER:-newsapp}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ${PROJECT_NAME:-news}_postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${DB_PORT:-5432}:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-newsapp} -d ${DB_NAME:-newsdb}"]
@@ -16,14 +18,16 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - app_network
+      - ${PROJECT_NAME:-news}_network
 
   redis:
-    image: ghcr.io/dragonflydb/dragonfly:latest
+    image: redis:7-alpine
     container_name: ${PROJECT_NAME:-news}_redis
-    command: dragonfly --logtostderr --maxmemory=512mb --cache_mode=true
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
-      - redis_data:/data
+      - ${PROJECT_NAME:-news}_redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -31,7 +35,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - app_network
+      - ${PROJECT_NAME:-news}_network
 
   app:
     build:
@@ -39,30 +43,26 @@ services:
       dockerfile: deployment/Dockerfile
     container_name: ${PROJECT_NAME:-news}_app
     environment:
-      # Viper uses NEWS_ prefix
       - NEWS_SERVER_MODE=release
       - NEWS_APP_ENVIRONMENT=production
       - NEWS_APP_BASE_URL=https://${DOMAIN}
-      # Database config
       - NEWS_DATABASE_HOST=postgres
       - NEWS_DATABASE_PORT=5432
       - NEWS_DATABASE_DBNAME=${DB_NAME:-newsdb}
       - NEWS_DATABASE_USER=${DB_USER:-newsapp}
       - NEWS_DATABASE_PASSWORD=${DB_PASSWORD}
       - NEWS_DATABASE_SSLMODE=disable
-      # Cache config (DragonflyDB)
       - NEWS_CACHE_HOST=redis
       - NEWS_CACHE_PORT=6379
-      # JWT config
       - NEWS_JWT_SECRET=${JWT_SECRET}
-      # Admin credentials
       - NEWS_ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
       - NEWS_ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin123!}
-      # Search disabled for now
       - NEWS_SEARCH_ENABLED=false
     volumes:
-      - uploads_data:/app/uploads
-      - logs_data:/app/logs
+      - ${PROJECT_NAME:-news}_uploads:/app/uploads
+      - ${PROJECT_NAME:-news}_logs:/app/logs
+    ports:
+      - "${APP_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,32 +76,14 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - app_network
-
-  nginx:
-    image: nginx:alpine
-    container_name: ${PROJECT_NAME:-news}_nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx-site.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot_www:/var/www/certbot:ro
-    depends_on:
-      - app
-    restart: unless-stopped
-    networks:
-      - app_network
+      - ${PROJECT_NAME:-news}_network
 
 volumes:
-  postgres_data:
-  redis_data:
-  uploads_data:
-  logs_data:
-  certbot_www:
+  ${PROJECT_NAME:-news}_postgres_data:
+  ${PROJECT_NAME:-news}_redis_data:
+  ${PROJECT_NAME:-news}_uploads:
+  ${PROJECT_NAME:-news}_logs:
 
 networks:
-  app_network:
+  ${PROJECT_NAME:-news}_network:
     driver: bridge
