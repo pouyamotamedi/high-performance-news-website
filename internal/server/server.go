@@ -3632,6 +3632,96 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 		}
 	}
 
+	// Get trending articles
+	if s.articleService != nil {
+		trendingArticles, err := s.articleService.GetTrending(c.Request.Context(), 5, 24)
+		if err == nil && len(trendingArticles) > 0 {
+			trendingData := make([]gin.H, len(trendingArticles))
+			for i, article := range trendingArticles {
+				trendingData[i] = gin.H{
+					"ID":        article.ID,
+					"Title":     article.Title,
+					"Slug":      article.Slug,
+					"ViewCount": article.ViewCount,
+					"TimeAgo":   formatTimeAgo(article.PublishedAt),
+					"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+				}
+			}
+			data["TrendingArticles"] = trendingData
+		} else {
+			// Fallback: use most viewed articles
+			filters := services.ArticleFilters{Status: "published"}
+			popularArticles, _, err := s.articleService.List(c.Request.Context(), 5, 0, filters, "view_count", "DESC")
+			if err == nil && len(popularArticles) > 0 {
+				trendingData := make([]gin.H, len(popularArticles))
+				for i, article := range popularArticles {
+					trendingData[i] = gin.H{
+						"ID":        article.ID,
+						"Title":     article.Title,
+						"Slug":      article.Slug,
+						"ViewCount": article.ViewCount,
+						"TimeAgo":   formatTimeAgo(article.PublishedAt),
+						"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+					}
+				}
+				data["TrendingArticles"] = trendingData
+			} else {
+				data["TrendingArticles"] = []gin.H{}
+			}
+		}
+	} else {
+		data["TrendingArticles"] = []gin.H{}
+	}
+
+	// Get popular tags
+	if s.tagService != nil {
+		tags, err := s.tagService.GetAll()
+		if err == nil {
+			type TagWithCount struct {
+				Name  string
+				Slug  string
+				Count int
+			}
+			tagList := make([]TagWithCount, 0)
+			for _, tag := range tags {
+				articleCount := s.getTagArticleCount(tag.ID)
+				if articleCount > 0 {
+					tagList = append(tagList, TagWithCount{
+						Name:  tag.Name,
+						Slug:  tag.Slug,
+						Count: articleCount,
+					})
+				}
+			}
+			// Sort by count
+			for i := 0; i < len(tagList)-1; i++ {
+				for j := i + 1; j < len(tagList); j++ {
+					if tagList[j].Count > tagList[i].Count {
+						tagList[i], tagList[j] = tagList[j], tagList[i]
+					}
+				}
+			}
+			// Limit to 8
+			if len(tagList) > 8 {
+				tagList = tagList[:8]
+			}
+			tagData := make([]gin.H, len(tagList))
+			for i, tag := range tagList {
+				tagData[i] = gin.H{
+					"Name":  tag.Name,
+					"Slug":  tag.Slug,
+					"Count": tag.Count,
+					"URL":   fmt.Sprintf("/%s/tag/%s", lang, tag.Slug),
+				}
+			}
+			data["PopularTags"] = tagData
+		} else {
+			data["PopularTags"] = []gin.H{}
+		}
+	} else {
+		data["PopularTags"] = []gin.H{}
+	}
+
 	// Render template
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("homepage", data); err == nil {

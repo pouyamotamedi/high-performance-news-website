@@ -1,8 +1,8 @@
 {{define "header"}}
-<header class="site-header{{if eq .HeaderStyle "sticky"}} header-sticky{{else if eq .HeaderStyle "fixed"}} header-fixed{{end}}" role="banner">
+<header class="site-header{{if eq .HeaderStyle "sticky"}} header-sticky{{else if eq .HeaderStyle "fixed"}} header-fixed{{end}}" role="banner" style="position:relative;z-index:100;">
     <div class="header-container">
         <!-- Mobile menu button -->
-        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="{{t .LanguageCode "menu"}}" aria-expanded="false">
             <span class="hamburger-line" style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
             <span class="hamburger-line" style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
             <span class="hamburger-line" style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
@@ -10,7 +10,7 @@
         
         <!-- Logo -->
         <div class="site-logo">
-            <a href="/" class="logo-link">
+            <a href="{{if .LanguageCode}}/{{.LanguageCode}}/{{else}}/{{end}}" class="logo-link">
                 {{if .LogoURL}}
                 <img src="{{.LogoURL}}" alt="{{.SiteName}}" class="logo-image">
                 {{end}}
@@ -21,7 +21,7 @@
         </div>
         
         <!-- Main navigation (desktop only) -->
-        <nav class="main-navigation" role="navigation" aria-label="Main navigation">
+        <nav class="main-navigation" role="navigation" aria-label="{{t .LanguageCode "menu"}}">
             <ul class="nav-menu">
                 {{range .Navigation}}
                 <li class="nav-item {{if .Active}}active{{end}}">
@@ -35,9 +35,9 @@
         </nav>
         
         <!-- Header actions -->
-        <div class="header-actions">
+        <div class="header-actions" style="display:flex;align-items:center;gap:12px;">
             <!-- Search toggle -->
-            <button class="search-toggle" id="search-toggle-btn" aria-label="Toggle search">
+            <button class="search-toggle" id="search-toggle-btn" aria-label="{{t .LanguageCode "search"}}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
                     <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
@@ -46,18 +46,25 @@
             
             <!-- Language switcher (desktop only) -->
             {{if .AvailableLanguages}}
-            <div class="language-switcher desktop-only" style="position:relative;">
-                <button class="language-toggle" id="lang-toggle-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:4px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-weight:500;">
-                    {{if eq .LanguageCode "ar"}}العربية{{else if eq .LanguageCode "de"}}DE{{else if eq .LanguageCode "fr"}}FR{{else if eq .LanguageCode "es"}}ES{{else}}EN{{end}}
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div class="language-switcher desktop-only" style="position:relative;z-index:1001;">
+                <button class="language-toggle" id="lang-toggle-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;color:#1e293b;transition:all 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <span>{{if eq .LanguageCode "ar"}}العربية{{else if eq .LanguageCode "de"}}Deutsch{{else if eq .LanguageCode "fr"}}Français{{else if eq .LanguageCode "es"}}Español{{else}}English{{end}}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" id="lang-arrow">
                         <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
-                <div id="lang-dropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);min-width:150px;z-index:1000;">
+                <div id="lang-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 10px 40px -5px rgba(0,0,0,0.2);min-width:180px;z-index:9999;overflow:hidden;">
+                    <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+                        <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">{{t .LanguageCode "menu"}}</span>
+                    </div>
                     {{range .AvailableLanguages}}
-                    <a href="{{.URL}}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;color:#1e293b;text-decoration:none;border-bottom:1px solid #f1f5f9;{{if eq .Code $.LanguageCode}}background:#f0f9ff;font-weight:600;{{end}}" hreflang="{{.Code}}">
+                    <a href="{{.URL}}" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;color:#1e293b;text-decoration:none;font-size:14px;transition:background 0.15s;{{if eq .Code $.LanguageCode}}background:#eff6ff;font-weight:600;color:#2563eb;{{end}}" hreflang="{{.Code}}" onmouseover="this.style.background='{{if eq .Code $.LanguageCode}}#dbeafe{{else}}#f8fafc{{end}}'" onmouseout="this.style.background='{{if eq .Code $.LanguageCode}}#eff6ff{{else}}#fff{{end}}'">
                         <span>{{.NativeName}}</span>
-                        <span style="color:#64748b;font-size:0.875rem;">{{.Name}}</span>
+                        {{if eq .Code $.LanguageCode}}<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
                     </a>
                     {{end}}
                 </div>
@@ -66,16 +73,30 @@
             (function() {
                 var langBtn = document.getElementById('lang-toggle-btn');
                 var langDropdown = document.getElementById('lang-dropdown');
+                var langArrow = document.getElementById('lang-arrow');
                 if (langBtn && langDropdown) {
-                    langBtn.onclick = function(e) {
+                    langBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
                         e.stopPropagation();
                         var isOpen = langDropdown.style.display === 'block';
                         langDropdown.style.display = isOpen ? 'none' : 'block';
                         langBtn.setAttribute('aria-expanded', !isOpen);
-                    };
-                    document.addEventListener('click', function() {
-                        langDropdown.style.display = 'none';
-                        langBtn.setAttribute('aria-expanded', 'false');
+                        langBtn.style.background = isOpen ? '#f8fafc' : '#fff';
+                        langBtn.style.borderColor = isOpen ? '#e2e8f0' : '#2563eb';
+                        if (langArrow) {
+                            langArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                        }
+                    });
+                    document.addEventListener('click', function(e) {
+                        if (!langBtn.contains(e.target) && !langDropdown.contains(e.target)) {
+                            langDropdown.style.display = 'none';
+                            langBtn.setAttribute('aria-expanded', 'false');
+                            langBtn.style.background = '#f8fafc';
+                            langBtn.style.borderColor = '#e2e8f0';
+                            if (langArrow) {
+                                langArrow.style.transform = 'rotate(0deg)';
+                            }
+                        }
                     });
                 }
             })();
@@ -84,8 +105,8 @@
             
             <!-- Login (desktop only) -->
             {{if not .IsAuthenticated}}
-            <a href="/login" class="login-link desktop-only">
-                {{if eq .LanguageCode "fa"}}ورود{{else if eq .LanguageCode "ar"}}تسجيل الدخول{{else}}Login{{end}}
+            <a href="/login" class="login-link desktop-only" style="padding:8px 16px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:500;font-size:14px;">
+                {{t .LanguageCode "login"}}
             </a>
             {{end}}
         </div>
@@ -96,7 +117,7 @@
         <div style="background:#fff;border-radius:12px;width:90%;max-width:500px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);overflow:hidden;">
             <!-- Search header with close button -->
             <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
-                <span style="font-weight:600;color:#1e293b;">{{if eq .LanguageCode "fa"}}جستجو{{else if eq .LanguageCode "ar"}}البحث{{else}}Search{{end}}</span>
+                <span style="font-weight:600;color:#1e293b;">{{t .LanguageCode "search"}}</span>
                 <button id="search-close-btn" type="button" style="width:36px;height:36px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <line x1="18" y1="6" x2="6" y2="18" stroke="#64748b" stroke-width="2"/>
@@ -105,8 +126,8 @@
                 </button>
             </div>
             <!-- Search form -->
-            <form action="/search" method="GET" style="display:flex;gap:0.5rem;padding:1.25rem;">
-                <input type="search" name="q" id="search-input" placeholder="{{if eq .LanguageCode "fa"}}عبارت جستجو...{{else if eq .LanguageCode "ar"}}ابحث هنا...{{else}}Type to search...{{end}}" autocomplete="off" style="flex:1;padding:0.875rem 1rem;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;outline:none;">
+            <form action="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/search" method="GET" style="display:flex;gap:0.5rem;padding:1.25rem;">
+                <input type="search" name="q" id="search-input" placeholder="{{t .LanguageCode "search_placeholder"}}" autocomplete="off" style="flex:1;padding:0.875rem 1rem;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;outline:none;">
                 <button type="submit" style="padding:0.875rem 1.25rem;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
@@ -120,7 +141,7 @@
     <!-- Mobile navigation overlay -->
     <div id="mobile-nav-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:9999;transform:translateX(-100%);transition:transform 0.3s ease;overflow-y:auto;">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid #e2e8f0;">
-            <span style="font-weight:600;font-size:1.125rem;color:#1e293b;">{{if eq .LanguageCode "fa"}}منو{{else if eq .LanguageCode "ar"}}القائمة{{else}}Menu{{end}}</span>
+            <span style="font-weight:600;font-size:1.125rem;color:#1e293b;">{{t .LanguageCode "menu"}}</span>
             <button id="mobile-close-btn" type="button" style="width:44px;height:44px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <line x1="18" y1="6" x2="6" y2="18" stroke="#1e293b" stroke-width="2"/>
@@ -135,16 +156,29 @@
                     <a href="{{.URL}}" style="display:block;padding:1rem 1.5rem;color:#1e293b;text-decoration:none;font-weight:500;">{{.Name}}</a>
                 </li>
                 {{end}}
+                <!-- Mobile language switcher -->
+                {{if .AvailableLanguages}}
+                <li style="border-bottom:1px solid #f1f5f9;padding:1rem 1.5rem;">
+                    <span style="display:block;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">{{t .LanguageCode "menu"}}</span>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        {{range .AvailableLanguages}}
+                        <a href="{{.URL}}" style="display:inline-flex;align-items:center;padding:8px 14px;border-radius:6px;text-decoration:none;font-size:14px;{{if eq .Code $.LanguageCode}}background:#2563eb;color:#fff;font-weight:600;{{else}}background:#f1f5f9;color:#1e293b;{{end}}" hreflang="{{.Code}}">
+                            {{.NativeName}}
+                        </a>
+                        {{end}}
+                    </div>
+                </li>
+                {{end}}
                 {{if not .IsAuthenticated}}
                 <li style="border-bottom:1px solid #f1f5f9;">
                     <a href="/login" style="display:block;padding:1rem 1.5rem;color:#2563eb;text-decoration:none;font-weight:600;">
-                        {{if eq .LanguageCode "fa"}}ورود{{else if eq .LanguageCode "ar"}}تسجيل الدخول{{else}}Login{{end}}
+                        {{t .LanguageCode "login"}}
                     </a>
                 </li>
                 {{else}}
                 <li style="border-bottom:1px solid #f1f5f9;">
                     <a href="/logout" style="display:block;padding:1rem 1.5rem;color:#ef4444;text-decoration:none;font-weight:500;">
-                        {{if eq .LanguageCode "fa"}}خروج{{else if eq .LanguageCode "ar"}}تسجيل الخروج{{else}}Logout{{end}}
+                        {{t .LanguageCode "logout"}}
                     </a>
                 </li>
                 {{end}}
@@ -158,17 +192,17 @@
 <section class="breaking-news-banner" role="region" aria-label="Breaking News">
     <div class="container">
         <div class="breaking-news-content">
-            <span class="breaking-label">🔴 {{if eq .LanguageCode "fa"}}فوری{{else if eq .LanguageCode "ar"}}عاجل{{else}}BREAKING{{end}}</span>
+            <span class="breaking-label">🔴 BREAKING</span>
             <div class="breaking-ticker" aria-live="polite">
                 <div class="breaking-ticker-content">
                     {{range .BreakingNews}}
-                    <a href="/article/{{.Slug}}" class="ticker-item ticker-link">{{.Title}}</a>
+                    <a href="{{if $.LanguageCode}}/{{$.LanguageCode}}{{end}}/article/{{.Slug}}" class="ticker-item ticker-link">{{.Title}}</a>
                     <span class="ticker-separator">•</span>
                     {{end}}
                 </div>
                 <div class="breaking-ticker-content" aria-hidden="true">
                     {{range .BreakingNews}}
-                    <a href="/article/{{.Slug}}" class="ticker-item ticker-link">{{.Title}}</a>
+                    <a href="{{if $.LanguageCode}}/{{$.LanguageCode}}{{end}}/article/{{.Slug}}" class="ticker-item ticker-link">{{.Title}}</a>
                     <span class="ticker-separator">•</span>
                     {{end}}
                 </div>

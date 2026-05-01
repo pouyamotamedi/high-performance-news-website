@@ -4,26 +4,12 @@
         <div class="footer-content">
             <!-- About section -->
             <div class="footer-section">
-                <h3 class="footer-title">
-                    {{if eq .LanguageCode "fa"}}
-                        درباره ما
-                    {{else if eq .LanguageCode "ar"}}
-                        معلومات عنا
-                    {{else}}
-                        About Us
-                    {{end}}
-                </h3>
+                <h3 class="footer-title">{{t .LanguageCode "about"}}</h3>
                 <p class="footer-description">
                     {{if .SiteDescription}}
                         {{.SiteDescription}}
                     {{else}}
-                        {{if eq .LanguageCode "fa"}}
-                            سایت خبری با کارایی بالا و پشتیبانی از چندین زبان
-                        {{else if eq .LanguageCode "ar"}}
-                            موقع إخباري عالي الأداء يدعم عدة لغات
-                        {{else}}
-                            High-performance multilingual news website
-                        {{end}}
+                        High-performance multilingual news website
                     {{end}}
                 </p>
                 
@@ -54,140 +40,36 @@
             
             <!-- Quick links -->
             <div class="footer-section">
-                <h3 class="footer-title">
-                    {{if eq .LanguageCode "fa"}}
-                        لینک‌های سریع
-                    {{else if eq .LanguageCode "ar"}}
-                        روابط سريعة
-                    {{else}}
-                        Quick Links
-                    {{end}}
-                </h3>
+                <h3 class="footer-title">Quick Links</h3>
                 <ul class="footer-links">
-                    <li><a href="/" class="footer-link">
-                        {{if eq .LanguageCode "fa"}}
-                            صفحه اصلی
-                        {{else if eq .LanguageCode "ar"}}
-                            الصفحة الرئيسية
-                        {{else}}
-                            Home
-                        {{end}}
-                    </a></li>
-                    <li><a href="/categories" class="footer-link">
-                        {{if eq .LanguageCode "fa"}}
-                            دسته‌بندی‌ها
-                        {{else if eq .LanguageCode "ar"}}
-                            الفئات
-                        {{else}}
-                            Categories
-                        {{end}}
-                    </a></li>
-                    <li><a href="/tags" class="footer-link">
-                        {{if eq .LanguageCode "fa"}}
-                            برچسب‌ها
-                        {{else if eq .LanguageCode "ar"}}
-                            العلامات
-                        {{else}}
-                            Tags
-                        {{end}}
-                    </a></li>
-                    <li><a href="/search" class="footer-link">
-                        {{if eq .LanguageCode "fa"}}
-                            جستجو
-                        {{else if eq .LanguageCode "ar"}}
-                            البحث
-                        {{else}}
-                            Search
-                        {{end}}
-                    </a></li>
+                    <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/" class="footer-link">{{t .LanguageCode "home"}}</a></li>
+                    <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/categories" class="footer-link">{{t .LanguageCode "categories"}}</a></li>
+                    <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/tags" class="footer-link">{{t .LanguageCode "tags"}}</a></li>
+                    <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/search" class="footer-link">{{t .LanguageCode "search"}}</a></li>
                 </ul>
             </div>
             
             <!-- Legal links -->
             <div class="footer-section">
-                <h3 class="footer-title">
-                    {{if eq .LanguageCode "fa"}}
-                        قوانین
-                    {{else if eq .LanguageCode "ar"}}
-                        القوانين
-                    {{else}}
-                        Legal
-                    {{end}}
-                </h3>
+                <h3 class="footer-title">Legal</h3>
                 <ul class="footer-links">
-                    <li><a href="/privacy" class="footer-link">
-                        {{if eq .LanguageCode "fa"}}
-                            حریم خصوصی
-                        {{else if eq .LanguageCode "ar"}}
-                            سياسة الخصوصية
-                        {{else}}
-                            Privacy Policy
-                        {{end}}
-                    </a></li>
-                    <li><a href="/terms" class="footer-link">
-                        {{if eq .LanguageCode "fa"}}
-                            شرایط استفاده
-                        {{else if eq .LanguageCode "ar"}}
-                            شروط الاستخدام
-                        {{else}}
-                            Terms of Service
-                        {{end}}
-                    </a></li>
-                    <li><a href="/contact" class="footer-link">
-                        {{if eq .LanguageCode "fa"}}
-                            تماس با ما
-                        {{else if eq .LanguageCode "ar"}}
-                            اتصل بنا
-                        {{else}}
-                            Contact Us
-                        {{end}}
-                    </a></li>
-                    <li><a href="/sitemap" class="footer-link">
-                        {{if eq .LanguageCode "fa"}}
-                            نقشه سایت
-                        {{else if eq .LanguageCode "ar"}}
-                            خريطة الموقع
-                        {{else}}
-                            Sitemap
-                        {{end}}
-                    </a></li>
+                    <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/privacy" class="footer-link">{{t .LanguageCode "privacy_policy"}}</a></li>
+                    <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/terms" class="footer-link">{{t .LanguageCode "terms"}}</a></li>
+                    <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/contact" class="footer-link">{{t .LanguageCode "contact"}}</a></li>
+                    <li><a href="/sitemap.xml" class="footer-link">Sitemap</a></li>
                 </ul>
             </div>
             
             <!-- Newsletter signup -->
             <div class="footer-section">
-                <h3 class="footer-title">
-                    {{if eq .LanguageCode "fa"}}
-                        خبرنامه
-                    {{else if eq .LanguageCode "ar"}}
-                        النشرة الإخبارية
-                    {{else}}
-                        Newsletter
-                    {{end}}
-                </h3>
-                <p class="footer-text">
-                    {{if eq .LanguageCode "fa"}}
-                        برای دریافت آخرین اخبار عضو شوید
-                    {{else if eq .LanguageCode "ar"}}
-                        اشترك لتلقي آخر الأخبار
-                    {{else}}
-                        Subscribe to get the latest news
-                    {{end}}
-                </p>
+                <h3 class="footer-title">{{t .LanguageCode "stay_updated"}}</h3>
+                <p class="footer-text">{{t .LanguageCode "newsletter_desc"}}</p>
                 <form class="newsletter-form" action="/newsletter/subscribe" method="POST">
                     <div class="newsletter-input-group">
                         <input type="email" name="email" class="newsletter-input" 
-                               placeholder="{{if eq .LanguageCode "fa"}}ایمیل شما{{else if eq .LanguageCode "ar"}}بريدك الإلكتروني{{else}}Your email{{end}}"
+                               placeholder="{{t .LanguageCode "search_placeholder"}}"
                                required>
-                        <button type="submit" class="newsletter-submit">
-                            {{if eq .LanguageCode "fa"}}
-                                عضویت
-                            {{else if eq .LanguageCode "ar"}}
-                                اشتراك
-                            {{else}}
-                                Subscribe
-                            {{end}}
-                        </button>
+                        <button type="submit" class="newsletter-submit">{{t .LanguageCode "subscribe"}}</button>
                     </div>
                 </form>
             </div>
@@ -197,25 +79,11 @@
         <div class="footer-bottom">
             <div class="footer-bottom-content">
                 <p class="copyright">
-                    {{if eq .LanguageCode "fa"}}
-                        © {{.CurrentYear}} {{.SiteName}}. تمامی حقوق محفوظ است.
-                    {{else if eq .LanguageCode "ar"}}
-                        © {{.CurrentYear}} {{.SiteName}}. جميع الحقوق محفوظة.
-                    {{else}}
-                        © {{.CurrentYear}} {{.SiteName}}. All rights reserved.
-                    {{end}}
+                    © {{.CurrentYear}} {{.SiteName}}. {{t .LanguageCode "all_rights"}}
                 </p>
                 
                 <div class="footer-meta">
-                    <span class="powered-by">
-                        {{if eq .LanguageCode "fa"}}
-                            طراحی شده با ❤️
-                        {{else if eq .LanguageCode "ar"}}
-                            مصمم بـ ❤️
-                        {{else}}
-                            Made with ❤️
-                        {{end}}
-                    </span>
+                    <span class="powered-by">Made with ❤️</span>
                 </div>
             </div>
         </div>

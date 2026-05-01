@@ -43,7 +43,7 @@
                         <div class="hero-meta">
                             <span class="hero-author">{{.Author}}</span>
                             <span class="hero-date">{{.TimeAgo}}</span>
-                            <span class="hero-views">{{.ViewCount}} views</span>
+                            <span class="hero-views">{{.ViewCount}} {{t $.LanguageCode "views"}}</span>
                         </div>
                     </div>
                     {{end}}
@@ -91,8 +91,8 @@
                     <!-- Latest News Section -->
                     <section class="news-section">
                         <header class="section-header">
-                            <h2 class="section-title">Latest News</h2>
-                            <a href="/latest" class="section-link">View All</a>
+                            <h2 class="section-title">{{t .LanguageCode "latest_news"}}</h2>
+                            <a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/latest" class="section-link">{{t .LanguageCode "view_all"}}</a>
                         </header>
                         <div class="articles-grid">
                             {{range $index, $article := .Articles}}
@@ -116,7 +116,7 @@
                                     <div class="article-meta">
                                         <span class="article-author">{{.Author}}</span>
                                         <span class="article-date">{{.TimeAgo}}</span>
-                                        <span class="article-views">{{.ViewCount}} views</span>
+                                        <span class="article-views">{{.ViewCount}} {{t $.LanguageCode "views"}}</span>
                                     </div>
                                 </div>
                             </article>
@@ -128,8 +128,8 @@
                     <!-- Categories Section -->
                     <section class="categories-section">
                         <header class="section-header">
-                            <h2 class="section-title">Explore Topics</h2>
-                            <a href="/categories" class="section-link">View All</a>
+                            <h2 class="section-title">{{t .LanguageCode "explore_topics"}}</h2>
+                            <a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/categories" class="section-link">{{t .LanguageCode "view_all"}}</a>
                         </header>
                         <div class="categories-minimal">
                             {{range .Categories}}
@@ -139,7 +139,7 @@
                                 {{end}}
                                 <div class="category-content">
                                     <h3 class="category-title">{{.Name}}</h3>
-                                    <span class="category-articles">{{.Count}} articles</span>
+                                    <span class="category-articles">{{.Count}} {{t $.LanguageCode "articles"}}</span>
                                 </div>
                             </a>
                             {{end}}
@@ -154,7 +154,7 @@
                                 <img src="/static/icons/phosphor/video-camera.svg" alt="" class="section-icon">
                                 Video News
                             </h2>
-                            <a href="/videos" class="section-link">View All</a>
+                            <a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/videos" class="section-link">{{t .LanguageCode "view_all"}}</a>
                         </header>
                         <div class="video-grid">
                             {{range $index, $video := .VideoArticles}}
@@ -179,10 +179,10 @@
                                 </div>
                                 <div class="video-content">
                                     <h3 class="video-title">
-                                        <a href="/article/{{.Slug}}" class="video-link">{{.Title}}</a>
+                                        <a href="{{if $.LanguageCode}}/{{$.LanguageCode}}{{end}}/article/{{.Slug}}" class="video-link">{{.Title}}</a>
                                     </h3>
                                     <div class="video-meta">
-                                        <span class="video-views">{{.ViewCount}} views</span>
+                                        <span class="video-views">{{.ViewCount}} {{t $.LanguageCode "views"}}</span>
                                         <span class="video-date">{{.TimeAgo}}</span>
                                     </div>
                                 </div>
@@ -201,7 +201,7 @@
                                 <img src="/static/icons/phosphor/chat-circle-text.svg" alt="" class="section-icon">
                                 Opinion & Analysis
                             </h2>
-                            <a href="/opinion" class="section-link">View All</a>
+                            <a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/opinion" class="section-link">{{t .LanguageCode "view_all"}}</a>
                         </header>
                         <div class="opinion-grid">
                             {{range $index, $opinion := .OpinionArticles}}
@@ -221,12 +221,12 @@
                                     </div>
                                 </div>
                                 <h3 class="opinion-title">
-                                    <a href="/article/{{.Slug}}" class="opinion-link">{{.Title}}</a>
+                                    <a href="{{if $.LanguageCode}}/{{$.LanguageCode}}{{end}}/article/{{.Slug}}" class="opinion-link">{{.Title}}</a>
                                 </h3>
                                 <p class="opinion-excerpt">{{.Excerpt}}</p>
                                 <div class="opinion-meta">
                                     <span class="opinion-date">{{.TimeAgo}}</span>
-                                    <span class="opinion-read-time">{{if .ReadingTime}}{{.ReadingTime}} min read{{end}}</span>
+                                    <span class="opinion-read-time">{{if .ReadingTime}}{{.ReadingTime}} {{t $.LanguageCode "min_read"}}{{end}}</span>
                                 </div>
                             </article>
                             {{end}}
@@ -243,7 +243,7 @@
                         <header class="sidebar-header">
                             <h3 class="sidebar-title">
                                 <img src="/static/icons/phosphor/fire.svg" alt="" class="section-icon">
-                                Trending Now
+                                {{t .LanguageCode "trending_now"}}
                             </h3>
                         </header>
                         <div class="trending-list">
@@ -255,7 +255,7 @@
                                         <a href="{{if .URL}}{{.URL}}{{else}}/article/{{.Slug}}{{end}}" class="trending-link">{{.Title}}</a>
                                     </h4>
                                     <div class="trending-meta">
-                                        <span class="trending-views">{{.ViewCount}} views</span>
+                                        <span class="trending-views">{{.ViewCount}} {{t $.LanguageCode "views"}}</span>
                                     </div>
                                 </div>
                             </article>
@@ -268,16 +268,16 @@
                         <header class="newsletter-header">
                             <h3 class="newsletter-title">
                                 <img src="/static/icons/phosphor/envelope.svg" alt="" class="section-icon">
-                                Stay Updated
+                                {{t .LanguageCode "stay_updated"}}
                             </h3>
-                            <p class="newsletter-description">Get the latest news delivered to your inbox</p>
+                            <p class="newsletter-description">{{t .LanguageCode "newsletter_desc"}}</p>
                         </header>
                         <form class="newsletter-form" action="/newsletter/subscribe" method="POST">
                             <div class="newsletter-input-group">
-                                <input type="email" name="email" class="newsletter-input" placeholder="Enter your email" required>
-                                <button type="submit" class="newsletter-button">Subscribe</button>
+                                <input type="email" name="email" class="newsletter-input" placeholder="{{t .LanguageCode "search_placeholder"}}" required>
+                                <button type="submit" class="newsletter-button">{{t .LanguageCode "subscribe"}}</button>
                             </div>
-                            <p class="newsletter-privacy">We respect your privacy. Unsubscribe anytime.</p>
+                            <p class="newsletter-privacy">{{t .LanguageCode "privacy_note"}}</p>
                         </form>
                     </section>
 
@@ -286,7 +286,7 @@
                         <header class="sidebar-header">
                             <h3 class="sidebar-title">
                                 <img src="/static/icons/phosphor/tag.svg" alt="" class="section-icon">
-                                Popular Tags
+                                {{t .LanguageCode "popular_tags"}}
                             </h3>
                         </header>
                         <div class="tags-cloud">
@@ -304,7 +304,7 @@
                         <header class="sidebar-header">
                             <h3 class="sidebar-title">
                                 <img src="/static/icons/phosphor/users.svg" alt="" class="section-icon">
-                                Follow Us
+                                {{t .LanguageCode "follow_us"}}
                             </h3>
                         </header>
                         <div class="social-links">

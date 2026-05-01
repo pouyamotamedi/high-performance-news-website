@@ -541,6 +541,10 @@ func (te *TemplateEngine) createFuncMap() template.FuncMap {
 		"generateCanonicalURL": te.generateCanonicalURL,
 		"generateOGTags": te.generateOGTags,
 		"generateTwitterTags": te.generateTwitterTags,
+		// Translation function for multilingual support
+		"t": func(lang string, key string) string {
+			return Translate(lang, key)
+		},
 	}
 }
 
