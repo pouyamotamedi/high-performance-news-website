@@ -1369,8 +1369,7 @@ func (s *Server) setupMultilingualRoutes() {
 		log.Printf("Route group registered: /%s/*", lang)
 	}
 
-	// Multilingual sitemaps
-	s.router.GET("/sitemap.xml", s.handleSitemapIndex)
+	// Multilingual sitemaps (language-specific only, main sitemap.xml is in setupGoogleNewsRoutes)
 	for _, lang := range supportedLanguages {
 		s.router.GET("/sitemap-"+lang+".xml", s.handleLanguageSitemap)
 	}
