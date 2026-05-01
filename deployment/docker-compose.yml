@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${DB_USER:-newsapp}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - ${PROJECT_NAME:-news}_postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "${DB_PORT:-5432}:5432"
@@ -18,14 +18,14 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - ${PROJECT_NAME:-news}_network
+      - app_network
 
   redis:
     image: redis:7-alpine
     container_name: ${PROJECT_NAME:-news}_redis
     command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
-      - ${PROJECT_NAME:-news}_redis_data:/data
+      - redis_data:/data
     ports:
       - "${REDIS_PORT:-6379}:6379"
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - ${PROJECT_NAME:-news}_network
+      - app_network
 
   app:
     build:
@@ -59,8 +59,8 @@ services:
       - NEWS_ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin123!}
       - NEWS_SEARCH_ENABLED=false
     volumes:
-      - ${PROJECT_NAME:-news}_uploads:/app/uploads
-      - ${PROJECT_NAME:-news}_logs:/app/logs
+      - uploads:/app/uploads
+      - logs:/app/logs
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:
@@ -76,14 +76,14 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - ${PROJECT_NAME:-news}_network
+      - app_network
 
 volumes:
-  ${PROJECT_NAME:-news}_postgres_data:
-  ${PROJECT_NAME:-news}_redis_data:
-  ${PROJECT_NAME:-news}_uploads:
-  ${PROJECT_NAME:-news}_logs:
+  postgres_data:
+  redis_data:
+  uploads:
+  logs:
 
 networks:
-  ${PROJECT_NAME:-news}_network:
+  app_network:
     driver: bridge
