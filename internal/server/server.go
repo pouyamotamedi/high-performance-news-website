@@ -3724,11 +3724,16 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 
 	// Render template
 	if s.templateEngine != nil {
-		if html, err := s.templateEngine.Render("homepage", data); err == nil {
+		html, err := s.templateEngine.Render("homepage", data)
+		if err != nil {
+			log.Printf("ERROR: Template render failed for homepage: %v", err)
+		} else {
 			c.Header("Content-Type", "text/html; charset=utf-8")
 			c.String(http.StatusOK, html)
 			return
 		}
+	} else {
+		log.Printf("ERROR: templateEngine is nil")
 	}
 
 	c.String(http.StatusOK, "Homepage - "+lang)

@@ -84,11 +84,13 @@ func (te *TemplateEngine) LoadTemplates(templatesDir string) error {
 	for _, page := range pages {
 		pageName := strings.TrimSuffix(filepath.Base(page), ".html")
 		
-		// Combine all template files
-		allFiles := append([]string{page}, layouts...)
-		allFiles = append(allFiles, components...)
+		// Combine all template files - layouts and components first, then page
+		// This ensures base templates are defined before they're referenced
+		allFiles := append(layouts, components...)
+		allFiles = append(allFiles, page)
 		
-		tmpl, err := template.New(pageName).Funcs(te.funcMap).ParseFiles(allFiles...)
+		// Create template with the page name as the base
+		tmpl, err := template.New(filepath.Base(page)).Funcs(te.funcMap).ParseFiles(allFiles...)
 		if err != nil {
 			return fmt.Errorf("failed to parse template %s: %w", pageName, err)
 		}
