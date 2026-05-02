@@ -53,11 +53,11 @@ type PageData struct {
 // ArticleForTemplate wraps models.Article with additional fields needed by templates
 type ArticleForTemplate struct {
 	*models.Article
-	Category     *models.Category      // Single category for template compatibility
-	Author       *AuthorData           // Author data for template
-	CommentCount int                   // Number of comments
-	ReadTime     int                   // Estimated read time in minutes
-	ImageData    *ResponsiveImageData  // Responsive image data for featured image
+	Category     *models.Category     // Single category for template compatibility
+	Author       *AuthorData          // Author data for template
+	CommentCount int                  // Number of comments
+	ReadTime     int                  // Estimated read time in minutes
+	ImageData    *ResponsiveImageData // Responsive image data for featured image
 }
 
 // AuthorData represents author information for templates
@@ -85,73 +85,73 @@ type TemplateData struct {
 	IsAuthenticated   bool
 	OGType            string
 	TwitterCard       string
-	
+
 	// Header/branding fields (required by header.html)
-	HeaderStyle       string
-	LogoURL           string
-	ShowSiteName      bool
-	ThemeConfig       map[string]interface{}
-	
+	HeaderStyle  string
+	LogoURL      string
+	ShowSiteName bool
+	ThemeConfig  map[string]interface{}
+
 	// SEO fields
-	Title           string
-	SEOTitle        string
-	SEODescription  string
-	SEOKeywords     []string
-	Description     string
-	CanonicalURL    string
-	AlternateURLs   map[string]string
-	
+	Title          string
+	SEOTitle       string
+	SEODescription string
+	SEOKeywords    []string
+	Description    string
+	CanonicalURL   string
+	AlternateURLs  map[string]string
+
 	// Open Graph fields
 	OGTitle       string
 	OGDescription string
 	OGURL         string
 	OGImage       string
-	
+
 	// Twitter fields
 	TwitterTitle       string
 	TwitterDescription string
 	TwitterImage       string
-	
+
 	// Structured data
 	StructuredData   string
 	PreloadResources []PreloadResource
-	
+
 	// Hero image for preload tag
 	HeroImage string
-	
+
 	// Analytics
 	GoogleAnalyticsID string
-	
+
 	// Page-specific fields
 	PageType string
 	Article  *ArticleForTemplate
 	Articles []ArticleTemplateData
 	Category *models.Category
 	Tag      *models.Tag
-	
+
 	// Related content
-	RelatedArticles   []ArticleTemplateData
-	TrendingArticles  []ArticleTemplateData
-	PopularArticles   []ArticleTemplateData
-	CategoryArticles  []ArticleTemplateData
-	Categories        []CategoryTemplateData
-	PopularTags       []TagTemplateData
-	
+	RelatedArticles  []ArticleTemplateData
+	TrendingArticles []ArticleTemplateData
+	PopularArticles  []ArticleTemplateData
+	CategoryArticles []ArticleTemplateData
+	Categories       []CategoryTemplateData
+	PopularTags      []TagTemplateData
+
 	// Pagination
 	Pagination PaginationData
-	
+
 	// Breadcrumbs
-	Breadcrumbs *BreadcrumbData
-	BreadcrumbSchema string  // JSON-LD schema for breadcrumbs
-	
+	Breadcrumbs      *BreadcrumbData
+	BreadcrumbSchema string // JSON-LD schema for breadcrumbs
+
 	// Static generation marker
-	IsStaticPage    bool
-	GeneratedAt     time.Time
-	
+	IsStaticPage bool
+	GeneratedAt  time.Time
+
 	// Breaking news
 	HasBreakingNews bool
 	BreakingNews    []ArticleTemplateData
-	
+
 	// Article navigation
 	NextArticle *ArticleTemplateData
 }
@@ -212,20 +212,20 @@ type ArticleTemplateData struct {
 	Category      string
 	FeaturedImage string
 	// Responsive image data with all variants
-	ImageData     *ResponsiveImageData
-	PublishedAt   *time.Time
-	ReadTime      int
+	ImageData   *ResponsiveImageData
+	PublishedAt *time.Time
+	ReadTime    int
 }
 
 // CategoryTemplateData represents category data for templates
 type CategoryTemplateData struct {
-	ID          uint64
-	Name        string
-	Slug        string
-	Description string
-	ImageURL    string
+	ID           uint64
+	Name         string
+	Slug         string
+	Description  string
+	ImageURL     string
 	ImageAltText string
-	Count       int
+	Count        int
 }
 
 // TagTemplateData represents tag data for templates
@@ -320,17 +320,17 @@ func (sg *StaticGenerator) buildResponsiveImageData(imageID uint64, altText stri
 	if sg.mediaService == nil || imageID == 0 {
 		return nil
 	}
-	
+
 	variants, err := sg.mediaService.GetImageVariants(imageID)
 	if err != nil || len(variants) == 0 {
 		return nil
 	}
-	
+
 	data := &ResponsiveImageData{
 		AltText:     altText,
 		HasVariants: true,
 	}
-	
+
 	// Organize variants by size and format
 	for _, v := range variants {
 		switch v.Size {
@@ -366,32 +366,32 @@ func (sg *StaticGenerator) buildResponsiveImageData(imageID uint64, altText stri
 			}
 		}
 	}
-	
+
 	// Check if we have at least some variants
 	if data.SmallWebP == "" && data.SmallJPEG == "" && data.MediumWebP == "" && data.MediumJPEG == "" {
 		data.HasVariants = false
 	}
-	
+
 	return data
 }
 
 // createBaseTemplateData creates the base template data structure that matches dynamic templates
 func (sg *StaticGenerator) createBaseTemplateData(language string, currentPath string) TemplateData {
 	direction := getTextDirection(language)
-	
+
 	// Get breaking news articles
 	breakingNews := sg.getBreakingNewsArticles()
-	
+
 	// Get theme config from database if available
 	themeConfig := sg.getActiveThemeConfig()
-	
+
 	// Use theme branding or fallback to defaults
 	siteName := sg.siteName
 	siteDescription := "High-performance multilingual news website"
 	logoURL := "/static/images/logo.svg"
 	showSiteName := true
 	headerStyle := "sticky"
-	
+
 	if themeConfig != nil {
 		if branding, ok := themeConfig["branding"].(map[string]interface{}); ok {
 			if name, ok := branding["site_name"].(string); ok && name != "" {
@@ -413,7 +413,7 @@ func (sg *StaticGenerator) createBaseTemplateData(language string, currentPath s
 			}
 		}
 	}
-	
+
 	return TemplateData{
 		SiteName:          siteName,
 		SiteDescription:   siteDescription,
@@ -434,15 +434,15 @@ func (sg *StaticGenerator) createBaseTemplateData(language string, currentPath s
 			{Name: "About", URL: "/about", Active: currentPath == "/about"},
 			{Name: "Contact", URL: "/contact", Active: currentPath == "/contact"},
 		},
-		IsAuthenticated:      false,
-		OGType:               "website",
-		TwitterCard:          "summary_large_image",
-		IsStaticPage:         true,
-		GeneratedAt:          time.Now(),
-		AlternateURLs:        make(map[string]string),
-		PreloadResources:     []PreloadResource{},
-		HasBreakingNews:      len(breakingNews) > 0,
-		BreakingNews:         breakingNews,
+		IsAuthenticated:  false,
+		OGType:           "website",
+		TwitterCard:      "summary_large_image",
+		IsStaticPage:     true,
+		GeneratedAt:      time.Now(),
+		AlternateURLs:    make(map[string]string),
+		PreloadResources: []PreloadResource{},
+		HasBreakingNews:  len(breakingNews) > 0,
+		BreakingNews:     breakingNews,
 	}
 }
 
@@ -459,27 +459,27 @@ func (sg *StaticGenerator) getBreakingNewsArticles() []ArticleTemplateData {
 	if sg.tagRepo == nil || sg.articleRepo == nil {
 		return nil
 	}
-	
+
 	ctx := context.Background()
-	
+
 	// Get the "breaking-news" tag
 	tag, err := sg.tagRepo.GetBySlug("breaking-news", "en")
 	if err != nil || tag == nil {
 		return nil
 	}
-	
+
 	// Get articles with this tag (limit to 10 most recent)
 	articles, err := sg.articleRepo.GetByTag(ctx, tag.ID, 10, 0)
 	if err != nil || len(articles) == 0 {
 		return nil
 	}
-	
+
 	// Convert to template data
 	result := make([]ArticleTemplateData, len(articles))
 	for i, article := range articles {
 		result[i] = sg.convertArticleToTemplateData(article)
 	}
-	
+
 	return result
 }
 
@@ -488,20 +488,20 @@ func (sg *StaticGenerator) convertArticleToTemplateData(article models.Article) 
 	// Author name would need to be fetched separately or passed in
 	// For now, use a placeholder
 	authorName := "Author"
-	
+
 	// Build responsive image data if article has a featured image
 	var imageData *ResponsiveImageData
 	if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 {
 		imageData = sg.buildResponsiveImageData(*article.FeaturedImageID, article.Title)
 	}
-	
+
 	// Calculate read time (roughly 200 words per minute)
 	wordCount := len(strings.Fields(article.Content))
 	readTime := wordCount / 200
 	if readTime < 1 {
 		readTime = 1
 	}
-	
+
 	return ArticleTemplateData{
 		ID:            article.ID,
 		Title:         article.Title,
@@ -524,10 +524,10 @@ func formatTimeAgoStatic(t *time.Time) string {
 	if t == nil {
 		return "Recently"
 	}
-	
+
 	now := time.Now()
 	diff := now.Sub(*t)
-	
+
 	switch {
 	case diff < time.Minute:
 		return "Just now"
@@ -602,35 +602,35 @@ func (sg *StaticGenerator) GenerateHomepage(ctx context.Context, language string
 	data.SEOKeywords = []string{"news", "latest", "trending", "updates"}
 	data.CanonicalURL = sg.baseURL + "/"
 	data.OGType = "website"
-	
+
 	// Convert articles to template format
 	articleData := make([]ArticleTemplateData, len(latestArticles))
 	for i, article := range latestArticles {
 		articleData[i] = sg.convertArticleToTemplateData(article)
 	}
 	data.Articles = articleData
-	
+
 	// Convert trending articles
 	trendingData := make([]ArticleTemplateData, len(trendingArticles))
 	for i, article := range trendingArticles {
 		trendingData[i] = sg.convertArticleToTemplateData(article)
 	}
 	data.TrendingArticles = trendingData
-	
+
 	// Convert categories
 	categoryData := make([]CategoryTemplateData, len(categories))
 	for i, cat := range categories {
 		categoryData[i] = CategoryTemplateData{
-			ID:          cat.ID,
-			Name:        cat.Name,
-			Slug:        cat.Slug,
-			Description: cat.Description,
-			ImageURL:    cat.GetImageURL(),
+			ID:           cat.ID,
+			Name:         cat.Name,
+			Slug:         cat.Slug,
+			Description:  cat.Description,
+			ImageURL:     cat.GetImageURL(),
 			ImageAltText: cat.GetImageAltText(),
 		}
 	}
 	data.Categories = categoryData
-	
+
 	// Add structured data
 	data.StructuredData = sg.generateHomepageSchema(latestArticles)
 
@@ -692,27 +692,27 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 	// Create base template data matching dynamic templates
 	articlePath := "/article/" + article.Slug
 	data := sg.createBaseTemplateData(language, articlePath)
-	
+
 	// Set article-specific SEO data
 	data.Title = article.Title
 	data.PageType = "article"
-	
+
 	if article.SEOData.MetaTitle != "" {
 		data.SEOTitle = article.SEOData.MetaTitle
 	} else {
 		data.SEOTitle = article.Title + " - " + sg.siteName
 	}
-	
+
 	if article.SEOData.MetaDescription != "" {
 		data.SEODescription = article.SEOData.MetaDescription
 	} else {
 		data.SEODescription = article.Excerpt
 	}
-	
+
 	data.SEOKeywords = article.SEOData.Keywords
 	data.CanonicalURL = sg.baseURL + "/article/" + article.Slug
 	data.OGType = "article"
-	
+
 	// Open Graph data
 	data.OGTitle = data.SEOTitle
 	data.OGDescription = data.SEODescription
@@ -723,11 +723,11 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 		// Set HeroImage for preload tag in base template
 		data.HeroImage = article.FeaturedImage
 	}
-	
+
 	// Twitter data
 	data.TwitterTitle = data.SEOTitle
 	data.TwitterDescription = data.SEODescription
-	
+
 	// Calculate read time (roughly 200 words per minute)
 	wordCount := len(strings.Fields(article.Content))
 	readTime := wordCount / 200
@@ -739,7 +739,7 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 	var articleImageData *ResponsiveImageData
 	if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 {
 		articleImageData = sg.buildResponsiveImageData(*article.FeaturedImageID, article.Title)
-		
+
 		// If FeaturedImage URL is not set, try to get it from the image record
 		if article.FeaturedImage == "" && sg.mediaService != nil {
 			if img, err := sg.mediaService.GetImageByID(*article.FeaturedImageID); err == nil && img != nil {
@@ -765,14 +765,14 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 		ReadTime:     readTime,
 		ImageData:    articleImageData,
 	}
-	
+
 	// Convert related articles
 	relatedData := make([]ArticleTemplateData, len(relatedArticles))
 	for i, rel := range relatedArticles {
 		relatedData[i] = sg.convertArticleToTemplateData(rel)
 	}
 	data.RelatedArticles = relatedData
-	
+
 	// Get popular articles for sidebar
 	var popularArticles []models.Article
 	if sg.articleRepo != nil {
@@ -786,7 +786,7 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 		popularData[i] = sg.convertArticleToTemplateData(pop)
 	}
 	data.PopularArticles = popularData
-	
+
 	// Get category articles for sidebar (articles from same category)
 	var categoryArticles []models.Article
 	if sg.articleRepo != nil && article.CategoryID > 0 {
@@ -805,17 +805,17 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 		categoryData[i] = sg.convertArticleToTemplateData(cat)
 	}
 	data.CategoryArticles = categoryData
-	
+
 	// Add structured data
 	data.StructuredData = sg.generateArticleSchema(article)
-	
+
 	// Generate breadcrumbs HTML
 	breadcrumbHTML := sg.generateArticleBreadcrumbs(article)
 	data.Breadcrumbs = &BreadcrumbData{HTML: breadcrumbHTML}
-	
+
 	// Generate BreadcrumbList JSON-LD schema
 	data.BreadcrumbSchema = sg.generateBreadcrumbSchema(article)
-	
+
 	// Get next article for navigation
 	if sg.articleRepo != nil {
 		nextArticles, err := sg.articleRepo.GetLatestArticles(ctx, 2)
@@ -860,14 +860,14 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 func (sg *StaticGenerator) generateArticleBreadcrumbs(article *models.Article) string {
 	var breadcrumbs []string
 	breadcrumbs = append(breadcrumbs, fmt.Sprintf(`<a href="/">Home</a>`))
-	
+
 	if len(article.Categories) > 0 {
 		cat := article.Categories[0]
 		breadcrumbs = append(breadcrumbs, fmt.Sprintf(`<a href="/category/%s">%s</a>`, cat.Slug, cat.Name))
 	}
-	
+
 	breadcrumbs = append(breadcrumbs, fmt.Sprintf(`<span>%s</span>`, article.Title))
-	
+
 	return `<nav class="breadcrumb" aria-label="Breadcrumb">` + strings.Join(breadcrumbs, ` <span class="separator">/</span> `) + `</nav>`
 }
 
@@ -879,18 +879,18 @@ func (sg *StaticGenerator) generateBreadcrumbSchema(article *models.Article) str
 		Name     string `json:"name"`
 		Item     string `json:"item"`
 	}
-	
+
 	type BreadcrumbList struct {
 		Context         string     `json:"@context"`
 		Type            string     `json:"@type"`
 		ItemListElement []ListItem `json:"itemListElement"`
 	}
-	
+
 	items := []ListItem{
 		{Type: "ListItem", Position: 1, Name: "Home", Item: sg.baseURL},
 	}
 	position := 2
-	
+
 	// Add category if available
 	if len(article.Categories) > 0 {
 		cat := article.Categories[0]
@@ -902,7 +902,7 @@ func (sg *StaticGenerator) generateBreadcrumbSchema(article *models.Article) str
 		})
 		position++
 	}
-	
+
 	// Add current article
 	items = append(items, ListItem{
 		Type:     "ListItem",
@@ -910,19 +910,19 @@ func (sg *StaticGenerator) generateBreadcrumbSchema(article *models.Article) str
 		Name:     article.Title,
 		Item:     fmt.Sprintf("%s/article/%s", sg.baseURL, article.Slug),
 	})
-	
+
 	schema := BreadcrumbList{
 		Context:         "https://schema.org",
 		Type:            "BreadcrumbList",
 		ItemListElement: items,
 	}
-	
+
 	jsonBytes, err := json.Marshal(schema)
 	if err != nil {
 		log.Printf("Warning: failed to marshal breadcrumb schema: %v", err)
 		return ""
 	}
-	
+
 	return string(jsonBytes)
 }
 
@@ -959,7 +959,7 @@ func (sg *StaticGenerator) GenerateCategoryPage(ctx context.Context, category *m
 	categoryPath := "/category/" + category.Slug
 	language := "en" // Default language
 	data := sg.createBaseTemplateData(language, categoryPath)
-	
+
 	// Set category-specific data
 	data.Title = category.Name
 	data.PageType = "category"
@@ -967,22 +967,22 @@ func (sg *StaticGenerator) GenerateCategoryPage(ctx context.Context, category *m
 	data.SEODescription = category.Description
 	data.SEOKeywords = []string{category.Name, "category", "articles"}
 	data.CanonicalURL = sg.baseURL + "/category/" + category.Slug
-	
+
 	if page > 1 {
 		data.SEOTitle = fmt.Sprintf("%s - Page %d - Category - %s", category.Name, page, sg.siteName)
 		data.CanonicalURL = fmt.Sprintf("%s/category/%s/page-%d", sg.baseURL, category.Slug, page)
 	}
-	
+
 	data.Category = category
 	data.Pagination = pagination
-	
+
 	// Convert articles to template format
 	articleData := make([]ArticleTemplateData, len(articles))
 	for i, article := range articles {
 		articleData[i] = sg.convertArticleToTemplateData(article)
 	}
 	data.Articles = articleData
-	
+
 	// Add structured data
 	data.StructuredData = sg.generateCategorySchema(category, articles)
 
@@ -1050,7 +1050,7 @@ func (sg *StaticGenerator) GenerateTagPage(ctx context.Context, tag *models.Tag,
 	tagPath := "/tag/" + tag.Slug
 	language := "en" // Default language
 	data := sg.createBaseTemplateData(language, tagPath)
-	
+
 	// Set tag-specific data
 	data.Title = tag.Name
 	data.PageType = "tag"
@@ -1058,22 +1058,22 @@ func (sg *StaticGenerator) GenerateTagPage(ctx context.Context, tag *models.Tag,
 	data.SEODescription = tag.Description
 	data.SEOKeywords = append([]string{tag.Name, "tag", "articles"}, tag.Keywords...)
 	data.CanonicalURL = sg.baseURL + "/tag/" + tag.Slug
-	
+
 	if page > 1 {
 		data.SEOTitle = fmt.Sprintf("%s - Page %d - Tag - %s", tag.Name, page, sg.siteName)
 		data.CanonicalURL = fmt.Sprintf("%s/tag/%s/page-%d", sg.baseURL, tag.Slug, page)
 	}
-	
+
 	data.Tag = tag
 	data.Pagination = pagination
-	
+
 	// Convert articles to template format
 	articleData := make([]ArticleTemplateData, len(articles))
 	for i, article := range articles {
 		articleData[i] = sg.convertArticleToTemplateData(article)
 	}
 	data.Articles = articleData
-	
+
 	// Add structured data
 	data.StructuredData = sg.generateTagSchema(tag, articles)
 
@@ -1157,12 +1157,12 @@ type templateSet struct {
 func (ts *templateSet) ExecuteTemplate(buf *bytes.Buffer, name string, data interface{}) error {
 	// Remove .html suffix if present to get the template name
 	templateName := strings.TrimSuffix(name, ".html")
-	
+
 	tmpl, exists := ts.templates[templateName]
 	if !exists {
 		return fmt.Errorf("template %s not found", templateName)
 	}
-	
+
 	// Try to execute with .html suffix first (matches {{define "article.html"}})
 	if err := tmpl.ExecuteTemplate(buf, name, data); err != nil {
 		// If that fails, try without suffix
@@ -1366,17 +1366,17 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			if imageData == nil || !imageData.HasVariants {
 				return template.HTML("")
 			}
-			
+
 			var html strings.Builder
-			
+
 			// Wrapper div for LQIP effect (only for lazy loaded images)
 			if lazyLoad && imageData.LQIP != "" {
 				html.WriteString(`<div class="responsive-image-wrapper" style="position: relative; overflow: hidden;">`)
 				html.WriteString(fmt.Sprintf(`<div class="lqip-placeholder" style="position: absolute; inset: 0; background-image: url('%s'); background-size: cover; filter: blur(20px); transform: scale(1.1); transition: opacity 0.3s;"></div>`, imageData.LQIP))
 			}
-			
+
 			html.WriteString("<picture>")
-			
+
 			// WebP sources (modern browsers)
 			webpSrcset := []string{}
 			if imageData.SmallWebP != "" {
@@ -1391,7 +1391,7 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			if len(webpSrcset) > 0 {
 				html.WriteString(fmt.Sprintf(`<source type="image/webp" srcset="%s" sizes="(max-width: 300px) 300px, (max-width: 600px) 600px, (max-width: 1200px) 1200px, 100vw">`, strings.Join(webpSrcset, ", ")))
 			}
-			
+
 			// JPEG sources (fallback)
 			jpegSrcset := []string{}
 			if imageData.SmallJPEG != "" {
@@ -1406,20 +1406,20 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			if len(jpegSrcset) > 0 {
 				html.WriteString(fmt.Sprintf(`<source type="image/jpeg" srcset="%s" sizes="(max-width: 300px) 300px, (max-width: 600px) 600px, (max-width: 1200px) 1200px, 100vw">`, strings.Join(jpegSrcset, ", ")))
 			}
-			
+
 			// Fallback img element
 			fallbackSrc := imageData.MediumJPEG
 			if fallbackSrc == "" {
 				fallbackSrc = imageData.LargeJPEG
 			}
-			
+
 			imgAttrs := []string{
 				fmt.Sprintf(`src="%s"`, fallbackSrc),
 				fmt.Sprintf(`alt="%s"`, imageData.AltText),
 				`decoding="async"`,
 				`sizes="(max-width: 300px) 300px, (max-width: 600px) 600px, (max-width: 1200px) 1200px, 100vw"`,
 			}
-			
+
 			if imageData.Width > 0 {
 				imgAttrs = append(imgAttrs, fmt.Sprintf(`width="%d"`, imageData.Width))
 			}
@@ -1429,7 +1429,7 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			if cssClass != "" {
 				imgAttrs = append(imgAttrs, fmt.Sprintf(`class="%s"`, cssClass))
 			}
-			
+
 			if lazyLoad {
 				imgAttrs = append(imgAttrs, `loading="lazy"`)
 				if imageData.LQIP != "" {
@@ -1439,15 +1439,15 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			} else {
 				imgAttrs = append(imgAttrs, `loading="eager"`, `fetchpriority="high"`)
 			}
-			
+
 			html.WriteString(fmt.Sprintf("<img %s>", strings.Join(imgAttrs, " ")))
 			html.WriteString("</picture>")
-			
+
 			// Close wrapper div
 			if lazyLoad && imageData.LQIP != "" {
 				html.WriteString("</div>")
 			}
-			
+
 			return template.HTML(html.String())
 		},
 		// Simple responsive image without LQIP wrapper (for thumbnails/cards)
@@ -1455,10 +1455,10 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			if imageData == nil || !imageData.HasVariants {
 				return template.HTML("")
 			}
-			
+
 			var html strings.Builder
 			html.WriteString("<picture>")
-			
+
 			// WebP sources
 			webpSrcset := []string{}
 			if imageData.ThumbnailWebP != "" {
@@ -1473,7 +1473,7 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			if len(webpSrcset) > 0 {
 				html.WriteString(fmt.Sprintf(`<source type="image/webp" srcset="%s" sizes="(max-width: 150px) 150px, (max-width: 300px) 300px, 600px">`, strings.Join(webpSrcset, ", ")))
 			}
-			
+
 			// JPEG sources
 			jpegSrcset := []string{}
 			if imageData.ThumbnailJPEG != "" {
@@ -1488,22 +1488,22 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			if len(jpegSrcset) > 0 {
 				html.WriteString(fmt.Sprintf(`<source type="image/jpeg" srcset="%s" sizes="(max-width: 150px) 150px, (max-width: 300px) 300px, 600px">`, strings.Join(jpegSrcset, ", ")))
 			}
-			
+
 			// Fallback img
 			fallbackSrc := imageData.SmallJPEG
 			if fallbackSrc == "" {
 				fallbackSrc = imageData.MediumJPEG
 			}
-			
+
 			loadingAttr := "lazy"
 			if !lazyLoad {
 				loadingAttr = "eager"
 			}
-			
-			html.WriteString(fmt.Sprintf(`<img src="%s" alt="%s" class="%s" loading="%s" decoding="async">`, 
+
+			html.WriteString(fmt.Sprintf(`<img src="%s" alt="%s" class="%s" loading="%s" decoding="async">`,
 				fallbackSrc, imageData.AltText, cssClass, loadingAttr))
 			html.WriteString("</picture>")
-			
+
 			return template.HTML(html.String())
 		},
 		// containsSlice checks if a slice contains a specific item
@@ -1536,13 +1536,13 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 			// Extract file extension
 			ext := filepath.Ext(src)
 			basePath := strings.TrimSuffix(src, ext)
-			
+
 			// Determine output format
 			outputExt := ext
 			if format != "" {
 				outputExt = "." + format
 			}
-			
+
 			// Generate variant URL: /uploads/images/article-w640.webp
 			return fmt.Sprintf("%s-w%s%s", basePath, width, outputExt)
 		},
@@ -1561,6 +1561,10 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 				dict[key] = values[i+1]
 			}
 			return dict
+		},
+		// Translation function for multilingual support
+		"t": func(lang string, key string) string {
+			return translateText(lang, key)
 		},
 	}
 
@@ -1594,26 +1598,26 @@ func loadTemplates(templatesDir string) (*templateSet, error) {
 	// Create a separate template for each page with layouts and components
 	for _, page := range pages {
 		pageName := strings.TrimSuffix(filepath.Base(page), ".html")
-		
+
 		// Skip admin templates
 		if strings.Contains(page, "admin") {
 			continue
 		}
-		
+
 		// IMPORTANT: Use the filename WITH .html extension as the template name
 		// because that's what {{define "article.html"}} uses in the template files
 		pageFileName := filepath.Base(page) // e.g., "article.html"
-		
+
 		// Combine all template files: page first, then layouts, then components
 		allFiles := append([]string{page}, layouts...)
 		allFiles = append(allFiles, components...)
-		
+
 		// Create template with the EXACT name used in {{define "..."}}
 		tmpl, err := template.New(pageFileName).Funcs(funcMap).ParseFiles(allFiles...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse template %s: %w", pageName, err)
 		}
-		
+
 		// Store with the name without extension for lookup
 		ts.templates[pageName] = tmpl
 	}
@@ -1633,6 +1637,96 @@ func getTextDirection(language string) string {
 		return "rtl"
 	}
 	return "ltr"
+}
+
+// translateText returns the translation for a key in the specified language
+// Falls back to English if translation not found
+func translateText(lang, key string) string {
+	translations := map[string]map[string]string{
+		"en": {
+			"home": "Home", "latest": "Latest", "trending": "Trending", "categories": "Categories",
+			"tags": "Tags", "about": "About", "contact": "Contact", "search": "Search",
+			"login": "Login", "logout": "Logout", "menu": "Menu", "latest_news": "Latest News",
+			"view_all": "View All", "explore_topics": "Explore Topics", "trending_now": "Trending Now",
+			"popular_tags": "Popular Tags", "stay_updated": "Stay Updated",
+			"newsletter_desc": "Get the latest news delivered to your inbox", "subscribe": "Subscribe",
+			"privacy_note": "We respect your privacy. Unsubscribe anytime.", "follow_us": "Follow Us",
+			"read_more": "Read More", "share": "Share", "comments": "Comments", "related": "Related Articles",
+			"views": "views", "min_read": "min read", "published": "Published", "updated": "Updated", "by": "By",
+			"search_placeholder": "Type to search...", "search_results": "Search Results", "no_results": "No results found",
+			"all_rights": "All rights reserved", "privacy_policy": "Privacy Policy", "terms": "Terms of Service",
+			"loading": "Loading...", "error": "Error", "back": "Back", "next": "Next", "previous": "Previous", "articles": "articles",
+		},
+		"de": {
+			"home": "Startseite", "latest": "Neueste", "trending": "Beliebt", "categories": "Kategorien",
+			"tags": "Schlagwörter", "about": "Über uns", "contact": "Kontakt", "search": "Suche",
+			"login": "Anmelden", "logout": "Abmelden", "menu": "Menü", "latest_news": "Neueste Nachrichten",
+			"view_all": "Alle anzeigen", "explore_topics": "Themen erkunden", "trending_now": "Jetzt im Trend",
+			"popular_tags": "Beliebte Tags", "stay_updated": "Bleiben Sie informiert",
+			"newsletter_desc": "Erhalten Sie die neuesten Nachrichten in Ihrem Posteingang", "subscribe": "Abonnieren",
+			"privacy_note": "Wir respektieren Ihre Privatsphäre. Jederzeit abmelden.", "follow_us": "Folgen Sie uns",
+			"read_more": "Weiterlesen", "share": "Teilen", "comments": "Kommentare", "related": "Ähnliche Artikel",
+			"views": "Aufrufe", "min_read": "Min. Lesezeit", "published": "Veröffentlicht", "updated": "Aktualisiert", "by": "Von",
+			"search_placeholder": "Suchen...", "search_results": "Suchergebnisse", "no_results": "Keine Ergebnisse gefunden",
+			"all_rights": "Alle Rechte vorbehalten", "privacy_policy": "Datenschutz", "terms": "Nutzungsbedingungen",
+			"loading": "Laden...", "error": "Fehler", "back": "Zurück", "next": "Weiter", "previous": "Zurück", "articles": "Artikel",
+		},
+		"fr": {
+			"home": "Accueil", "latest": "Récent", "trending": "Tendances", "categories": "Catégories",
+			"tags": "Étiquettes", "about": "À propos", "contact": "Contact", "search": "Recherche",
+			"login": "Connexion", "logout": "Déconnexion", "menu": "Menu", "latest_news": "Dernières actualités",
+			"view_all": "Voir tout", "explore_topics": "Explorer les sujets", "trending_now": "Tendances actuelles",
+			"popular_tags": "Tags populaires", "stay_updated": "Restez informé",
+			"newsletter_desc": "Recevez les dernières nouvelles dans votre boîte mail", "subscribe": "S'abonner",
+			"privacy_note": "Nous respectons votre vie privée. Désabonnez-vous à tout moment.", "follow_us": "Suivez-nous",
+			"read_more": "Lire la suite", "share": "Partager", "comments": "Commentaires", "related": "Articles similaires",
+			"views": "vues", "min_read": "min de lecture", "published": "Publié", "updated": "Mis à jour", "by": "Par",
+			"search_placeholder": "Rechercher...", "search_results": "Résultats de recherche", "no_results": "Aucun résultat trouvé",
+			"all_rights": "Tous droits réservés", "privacy_policy": "Politique de confidentialité", "terms": "Conditions d'utilisation",
+			"loading": "Chargement...", "error": "Erreur", "back": "Retour", "next": "Suivant", "previous": "Précédent", "articles": "articles",
+		},
+		"es": {
+			"home": "Inicio", "latest": "Reciente", "trending": "Tendencias", "categories": "Categorías",
+			"tags": "Etiquetas", "about": "Acerca de", "contact": "Contacto", "search": "Buscar",
+			"login": "Iniciar sesión", "logout": "Cerrar sesión", "menu": "Menú", "latest_news": "Últimas noticias",
+			"view_all": "Ver todo", "explore_topics": "Explorar temas", "trending_now": "Tendencias ahora",
+			"popular_tags": "Tags populares", "stay_updated": "Mantente informado",
+			"newsletter_desc": "Recibe las últimas noticias en tu correo", "subscribe": "Suscribirse",
+			"privacy_note": "Respetamos tu privacidad. Cancela cuando quieras.", "follow_us": "Síguenos",
+			"read_more": "Leer más", "share": "Compartir", "comments": "Comentarios", "related": "Artículos relacionados",
+			"views": "vistas", "min_read": "min de lectura", "published": "Publicado", "updated": "Actualizado", "by": "Por",
+			"search_placeholder": "Buscar...", "search_results": "Resultados de búsqueda", "no_results": "No se encontraron resultados",
+			"all_rights": "Todos los derechos reservados", "privacy_policy": "Política de privacidad", "terms": "Términos de servicio",
+			"loading": "Cargando...", "error": "Error", "back": "Atrás", "next": "Siguiente", "previous": "Anterior", "articles": "artículos",
+		},
+		"ar": {
+			"home": "الرئيسية", "latest": "الأحدث", "trending": "الأكثر رواجاً", "categories": "التصنيفات",
+			"tags": "الوسوم", "about": "من نحن", "contact": "اتصل بنا", "search": "بحث",
+			"login": "تسجيل الدخول", "logout": "تسجيل الخروج", "menu": "القائمة", "latest_news": "آخر الأخبار",
+			"view_all": "عرض الكل", "explore_topics": "استكشف المواضيع", "trending_now": "الأكثر رواجاً الآن",
+			"popular_tags": "الوسوم الشائعة", "stay_updated": "ابق على اطلاع",
+			"newsletter_desc": "احصل على آخر الأخبار في بريدك الإلكتروني", "subscribe": "اشترك",
+			"privacy_note": "نحترم خصوصيتك. يمكنك إلغاء الاشتراك في أي وقت.", "follow_us": "تابعنا",
+			"read_more": "اقرأ المزيد", "share": "مشاركة", "comments": "التعليقات", "related": "مقالات ذات صلة",
+			"views": "مشاهدة", "min_read": "دقيقة قراءة", "published": "نُشر في", "updated": "تم التحديث", "by": "بواسطة",
+			"search_placeholder": "ابحث هنا...", "search_results": "نتائج البحث", "no_results": "لم يتم العثور على نتائج",
+			"all_rights": "جميع الحقوق محفوظة", "privacy_policy": "سياسة الخصوصية", "terms": "شروط الخدمة",
+			"loading": "جاري التحميل...", "error": "خطأ", "back": "رجوع", "next": "التالي", "previous": "السابق", "articles": "مقالات",
+		},
+	}
+
+	if langTranslations, ok := translations[lang]; ok {
+		if text, ok := langTranslations[key]; ok {
+			return text
+		}
+	}
+	// Fallback to English
+	if engTranslations, ok := translations["en"]; ok {
+		if text, ok := engTranslations[key]; ok {
+			return text
+		}
+	}
+	return key
 }
 
 func (sg *StaticGenerator) getRelatedArticles(ctx context.Context, article *models.Article) ([]models.Article, error) {
@@ -1696,28 +1790,28 @@ func (sg *StaticGenerator) generateArticleSchema(article *models.Article) string
 	if article.SEOData.SchemaType != "" {
 		schemaType = article.SEOData.SchemaType
 	}
-	
+
 	articleURL := sg.baseURL + "/article/" + article.Slug
-	
+
 	schema := map[string]interface{}{
-		"@context":      "https://schema.org",
-		"@type":         schemaType,
-		"headline":      article.Title,
-		"url":           articleURL,
-		"datePublished": article.PublishedAt,
-		"dateModified":  article.UpdatedAt,
-		"description":   article.Excerpt,
-		"articleBody":   article.Content,
-		"wordCount":     len(strings.Fields(article.Content)),
+		"@context":            "https://schema.org",
+		"@type":               schemaType,
+		"headline":            article.Title,
+		"url":                 articleURL,
+		"datePublished":       article.PublishedAt,
+		"dateModified":        article.UpdatedAt,
+		"description":         article.Excerpt,
+		"articleBody":         article.Content,
+		"wordCount":           len(strings.Fields(article.Content)),
 		"isAccessibleForFree": true,
 	}
-	
+
 	// Add mainEntityOfPage (required for Google News)
 	schema["mainEntityOfPage"] = map[string]interface{}{
 		"@type": "WebPage",
 		"@id":   articleURL,
 	}
-	
+
 	// Add author information (required for Google News)
 	schema["author"] = map[string]interface{}{
 		"@type": "Person",
@@ -1748,12 +1842,12 @@ func (sg *StaticGenerator) generateArticleSchema(article *models.Article) string
 		}
 		schema["keywords"] = strings.Join(unique, ", ")
 	}
-	
+
 	// Add articleSection (category) if available
 	if len(article.Categories) > 0 {
 		schema["articleSection"] = article.Categories[0].Name
 	}
-	
+
 	// Add publisher information with logo (required for Google News)
 	schema["publisher"] = map[string]interface{}{
 		"@type": "Organization",
@@ -1766,7 +1860,7 @@ func (sg *StaticGenerator) generateArticleSchema(article *models.Article) string
 			"height": 60,
 		},
 	}
-	
+
 	// Add featured image with full URL (required for Google News)
 	if article.FeaturedImage != "" {
 		imageURL := article.FeaturedImage
@@ -1855,7 +1949,7 @@ func (sg *StaticGenerator) warmHomepageCache(language string) {
 
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("homepage:%s", language)
-	
+
 	// Pre-load homepage data into cache
 	if sg.articleRepo != nil {
 		// Cache latest articles
@@ -1864,7 +1958,7 @@ func (sg *StaticGenerator) warmHomepageCache(language string) {
 				sg.cacheService.Set(ctx, fmt.Sprintf("latest_articles:%s", language), data, 15*time.Minute)
 			}
 		}
-		
+
 		// Cache trending articles
 		if trending, err := sg.articleRepo.GetTrendingArticles(ctx, 10, 24); err == nil {
 			if data, err := json.Marshal(trending); err == nil {
@@ -1872,7 +1966,7 @@ func (sg *StaticGenerator) warmHomepageCache(language string) {
 			}
 		}
 	}
-	
+
 	log.Printf("Warmed cache for homepage: %s", cacheKey)
 }
 
@@ -1883,19 +1977,19 @@ func (sg *StaticGenerator) warmArticleCache(article *models.Article) {
 
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("article:%s", article.Slug)
-	
+
 	// Cache article data
 	if data, err := json.Marshal(article); err == nil {
 		sg.cacheService.Set(ctx, cacheKey, data, 24*time.Hour)
 	}
-	
+
 	// Cache related articles
 	if related, err := sg.getRelatedArticles(ctx, article); err == nil {
 		if data, err := json.Marshal(related); err == nil {
 			sg.cacheService.Set(ctx, fmt.Sprintf("related_articles:%d", article.ID), data, 1*time.Hour)
 		}
 	}
-	
+
 	log.Printf("Warmed cache for article: %s", cacheKey)
 }
 
@@ -1906,12 +2000,12 @@ func (sg *StaticGenerator) warmCategoryCache(category *models.Category, page int
 
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("category:%s:page:%d", category.Slug, page)
-	
+
 	// Cache category data
 	if data, err := json.Marshal(category); err == nil {
 		sg.cacheService.Set(ctx, fmt.Sprintf("category:%d", category.ID), data, 30*time.Minute)
 	}
-	
+
 	log.Printf("Warmed cache for category: %s (page %d)", cacheKey, page)
 }
 
@@ -1922,12 +2016,12 @@ func (sg *StaticGenerator) warmTagCache(tag *models.Tag, page int) {
 
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("tag:%s:page:%d", tag.Slug, page)
-	
+
 	// Cache tag data
 	if data, err := json.Marshal(tag); err == nil {
 		sg.cacheService.Set(ctx, fmt.Sprintf("tag:%d", tag.ID), data, 30*time.Minute)
 	}
-	
+
 	log.Printf("Warmed cache for tag: %s (page %d)", cacheKey, page)
 }
 
@@ -1937,7 +2031,7 @@ func (sg *StaticGenerator) invalidateRelatedCaches(article *models.Article) {
 	}
 
 	ctx := context.Background()
-	
+
 	// Invalidate article-specific caches
 	cacheKeys := []string{
 		fmt.Sprintf("article:%s", article.Slug),
@@ -1948,7 +2042,7 @@ func (sg *StaticGenerator) invalidateRelatedCaches(article *models.Article) {
 	// Invalidate homepage caches for all languages
 	languages := []string{"fa", "en", "ar"}
 	for _, lang := range languages {
-		cacheKeys = append(cacheKeys, 
+		cacheKeys = append(cacheKeys,
 			fmt.Sprintf("homepage:%s", lang),
 			fmt.Sprintf("latest_articles:%s", lang),
 			fmt.Sprintf("trending_articles:%s", lang),
@@ -1956,14 +2050,14 @@ func (sg *StaticGenerator) invalidateRelatedCaches(article *models.Article) {
 	}
 
 	// Invalidate category caches
-	cacheKeys = append(cacheKeys, 
+	cacheKeys = append(cacheKeys,
 		fmt.Sprintf("category:%d", article.CategoryID),
 		fmt.Sprintf("category_articles:%d", article.CategoryID),
 	)
 
 	// Invalidate tag caches
 	for _, tag := range article.Tags {
-		cacheKeys = append(cacheKeys, 
+		cacheKeys = append(cacheKeys,
 			fmt.Sprintf("tag:%d", tag.ID),
 			fmt.Sprintf("tag_articles:%d", tag.ID),
 		)
@@ -1981,7 +2075,7 @@ func (sg *StaticGenerator) invalidateRelatedCaches(article *models.Article) {
 		"homepage:*",
 		fmt.Sprintf("category:%d:*", article.CategoryID),
 	}
-	
+
 	for _, tag := range article.Tags {
 		patterns = append(patterns, fmt.Sprintf("tag:%d:*", tag.ID))
 	}
