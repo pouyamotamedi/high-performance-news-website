@@ -196,13 +196,13 @@
             <div class="breaking-ticker" aria-live="polite">
                 <div class="breaking-ticker-content">
                     {{range .BreakingNews}}
-                    <a href="{{if $.LanguageCode}}/{{$.LanguageCode}}{{end}}/article/{{.Slug}}" class="ticker-item ticker-link">{{.Title}}</a>
+                    <a href="/{{$.LanguageCode}}/article/{{.Slug | urlquery}}" class="ticker-item ticker-link">{{.Title}}</a>
                     <span class="ticker-separator">•</span>
                     {{end}}
                 </div>
                 <div class="breaking-ticker-content" aria-hidden="true">
                     {{range .BreakingNews}}
-                    <a href="{{if $.LanguageCode}}/{{$.LanguageCode}}{{end}}/article/{{.Slug}}" class="ticker-item ticker-link">{{.Title}}</a>
+                    <a href="/{{$.LanguageCode}}/article/{{.Slug | urlquery}}" class="ticker-item ticker-link">{{.Title}}</a>
                     <span class="ticker-separator">•</span>
                     {{end}}
                 </div>
