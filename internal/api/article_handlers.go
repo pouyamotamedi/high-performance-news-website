@@ -19,18 +19,20 @@ import (
 
 // CreateArticleRequest represents a request to create an article
 type CreateArticleRequest struct {
-	Title           string             `json:"title" validate:"required,max=255"`
-	Slug            string             `json:"slug" validate:"max=255"`
-	Content         string             `json:"content"`                     // Not required for drafts
-	Excerpt         string             `json:"excerpt" validate:"max=500"`
-	CategoryID      uint64             `json:"category_id"`                 // Backward compatibility
-	CategoryIDs     []uint64           `json:"category_ids"`                // Multiple categories support
-	Tags            []string           `json:"tags"`                    // Changed to []string to match frontend
-	Status          string             `json:"status" validate:"required,oneof=draft published archived scheduled deleted"`
-	FeaturedImageID *string            `json:"featured_image_id"`       // Featured image from media library (as string to avoid JS precision loss)
-	AutoLinking     bool               `json:"auto_linking"`            // Enable/disable auto-linking for this article
-	ScheduledAt     *string            `json:"scheduled_at"`            // For scheduled publishing
-	SEOData         SEODataRequest     `json:"seo_data"`               // Enhanced SEO data
+	Title              string             `json:"title" validate:"required,max=255"`
+	Slug               string             `json:"slug" validate:"max=255"`
+	Content            string             `json:"content"`                     // Not required for drafts
+	Excerpt            string             `json:"excerpt" validate:"max=500"`
+	CategoryID         uint64             `json:"category_id"`                 // Backward compatibility
+	CategoryIDs        []uint64           `json:"category_ids"`                // Multiple categories support
+	Tags               []string           `json:"tags"`                        // Changed to []string to match frontend
+	Status             string             `json:"status" validate:"required,oneof=draft published archived scheduled deleted"`
+	FeaturedImageID    *string            `json:"featured_image_id"`           // Featured image from media library (as string to avoid JS precision loss)
+	AutoLinking        bool               `json:"auto_linking"`                // Enable/disable auto-linking for this article
+	ScheduledAt        *string            `json:"scheduled_at"`                // For scheduled publishing
+	LanguageCode       string             `json:"language_code"`               // Language code (en, de, fr, es, ar)
+	TranslationGroupID *uint64            `json:"translation_group_id"`        // Group ID for translations
+	SEOData            SEODataRequest     `json:"seo_data"`                    // Enhanced SEO data
 }
 
 // SEODataRequest represents SEO data from the frontend
@@ -42,17 +44,19 @@ type SEODataRequest struct {
 
 // UpdateArticleRequest represents a request to update an article
 type UpdateArticleRequest struct {
-	Title           *string            `json:"title,omitempty" validate:"omitempty,max=255"`
-	Slug            *string            `json:"slug,omitempty" validate:"omitempty,max=255"`
-	Content         *string            `json:"content,omitempty"`
-	Excerpt         *string            `json:"excerpt,omitempty" validate:"omitempty,max=500"`
-	CategoryID      *uint64            `json:"category_id,omitempty"`      // Backward compatibility
-	CategoryIDs     []uint64           `json:"category_ids,omitempty"`     // Multiple categories support
-	Tags            []string           `json:"tags,omitempty"`
-	Status          *string            `json:"status,omitempty" validate:"omitempty,oneof=draft published archived scheduled"`
-	FeaturedImageID *string            `json:"featured_image_id,omitempty"`
-	ScheduledAt     *string            `json:"scheduled_at,omitempty"`
-	SEOData         *SEODataRequest    `json:"seo_data,omitempty"`
+	Title              *string            `json:"title,omitempty" validate:"omitempty,max=255"`
+	Slug               *string            `json:"slug,omitempty" validate:"omitempty,max=255"`
+	Content            *string            `json:"content,omitempty"`
+	Excerpt            *string            `json:"excerpt,omitempty" validate:"omitempty,max=500"`
+	CategoryID         *uint64            `json:"category_id,omitempty"`      // Backward compatibility
+	CategoryIDs        []uint64           `json:"category_ids,omitempty"`     // Multiple categories support
+	Tags               []string           `json:"tags,omitempty"`
+	Status             *string            `json:"status,omitempty" validate:"omitempty,oneof=draft published archived scheduled"`
+	FeaturedImageID    *string            `json:"featured_image_id,omitempty"`
+	ScheduledAt        *string            `json:"scheduled_at,omitempty"`
+	LanguageCode       *string            `json:"language_code,omitempty"`    // Language code (en, de, fr, es, ar)
+	TranslationGroupID *uint64            `json:"translation_group_id,omitempty"` // Group ID for translations
+	SEOData            *SEODataRequest    `json:"seo_data,omitempty"`
 }
 
 // BulkCreateArticleRequest represents a bulk article creation request
@@ -137,19 +141,25 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 	}
 	
 	article := &models.Article{
-		Title:           req.Title,
-		Slug:            slug,
-		Content:         req.Content,
-		Excerpt:         req.Excerpt,
-		AuthorID:        currentUser.ID,
-		CategoryID:      primaryCategoryID, // Keep for backward compatibility
-		Status:          req.Status,
-		AutoLinking:     req.AutoLinking, // Use the value from the request
+		Title:              req.Title,
+		Slug:               slug,
+		Content:            req.Content,
+		Excerpt:            req.Excerpt,
+		AuthorID:           currentUser.ID,
+		CategoryID:         primaryCategoryID, // Keep for backward compatibility
+		Status:             req.Status,
+		AutoLinking:        req.AutoLinking, // Use the value from the request
 		// Map SEO fields to individual columns
-		MetaTitle:       req.SEOData.MetaTitle,
-		MetaDescription: req.SEOData.MetaDescription,
-		SchemaType:      "NewsArticle", // Default schema type
-		LanguageCode:    "fa",          // Default language (from DB default)
+		MetaTitle:          req.SEOData.MetaTitle,
+		MetaDescription:    req.SEOData.MetaDescription,
+		SchemaType:         "NewsArticle", // Default schema type
+		LanguageCode:       req.LanguageCode,
+		TranslationGroupID: req.TranslationGroupID,
+	}
+	
+	// Set default language code if not provided
+	if article.LanguageCode == "" {
+		article.LanguageCode = "en" // Default to English
 	}
 	
 	log.Printf("Article auto-linking set to: %t", article.AutoLinking)
@@ -312,14 +322,16 @@ func (h *APIHandler) UpdateArticle(c *gin.Context) {
 
 	// Create the service's UpdateArticleRequest type
 	serviceReq := &services.UpdateArticleRequest{
-		Title:       req.Title,
-		Slug:        req.Slug,
-		Content:     req.Content,
-		Excerpt:     req.Excerpt,
-		CategoryID:  req.CategoryID,
-		CategoryIDs: req.CategoryIDs,
-		Status:      req.Status,
-		Tags:        req.Tags,
+		Title:              req.Title,
+		Slug:               req.Slug,
+		Content:            req.Content,
+		Excerpt:            req.Excerpt,
+		CategoryID:         req.CategoryID,
+		CategoryIDs:        req.CategoryIDs,
+		Status:             req.Status,
+		Tags:               req.Tags,
+		LanguageCode:       req.LanguageCode,
+		TranslationGroupID: req.TranslationGroupID,
 	}
 
 	// Handle SEO data conversion

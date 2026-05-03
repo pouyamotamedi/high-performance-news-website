@@ -102,7 +102,7 @@ func ValidateArticle(article *Article) error {
 
 	// Language code validation
 	if strings.TrimSpace(article.LanguageCode) == "" {
-		article.LanguageCode = "fa" // Default to Persian
+		article.LanguageCode = "en" // Default to English
 	}
 	if len(article.LanguageCode) != 2 {
 		errors = append(errors, "language_code must be exactly 2 characters")
@@ -270,7 +270,7 @@ func (a *Article) PrepareForDB() {
 		a.SchemaType = "NewsArticle"
 	}
 	if a.LanguageCode == "" {
-		a.LanguageCode = "fa" // Default to Persian
+		a.LanguageCode = "en" // Default to English
 	}
 	// Auto-linking is enabled by default (true)
 	// This field allows per-article override to disable auto-linking

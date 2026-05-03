@@ -295,6 +295,16 @@ func (s *ArticleService) Update(ctx context.Context, id uint64, req interface{},
 		article.AutoLinking = *updateReq.AutoLinking
 	}
 
+	// Handle language code update
+	if updateReq.LanguageCode != nil && *updateReq.LanguageCode != "" {
+		article.LanguageCode = *updateReq.LanguageCode
+	}
+
+	// Handle translation group ID update
+	if updateReq.TranslationGroupID != nil {
+		article.TranslationGroupID = updateReq.TranslationGroupID
+	}
+
 	// Handle featured image update
 	if updateReq.FeaturedImageID != nil {
 		if *updateReq.FeaturedImageID == 0 {
@@ -801,17 +811,19 @@ func (s *ArticleService) RecordView(ctx context.Context, articleID uint64, ipAdd
 
 // UpdateArticleRequest represents an update request (temporary type for compilation)
 type UpdateArticleRequest struct {
-	Title           *string         `json:"title,omitempty"`
-	Slug            *string         `json:"slug,omitempty"`
-	Content         *string         `json:"content,omitempty"`
-	Excerpt         *string         `json:"excerpt,omitempty"`
-	CategoryID      *uint64         `json:"category_id,omitempty"`  // Backward compatibility
-	CategoryIDs     []uint64        `json:"category_ids,omitempty"` // Multiple categories support
-	Status          *string         `json:"status,omitempty"`
-	Tags            []string        `json:"tags,omitempty"`
-	FeaturedImageID *uint64         `json:"featured_image_id,omitempty"`
-	SEOData         *models.SEOData `json:"seo_data,omitempty"`
-	AutoLinking     *bool           `json:"auto_linking,omitempty"`
+	Title              *string         `json:"title,omitempty"`
+	Slug               *string         `json:"slug,omitempty"`
+	Content            *string         `json:"content,omitempty"`
+	Excerpt            *string         `json:"excerpt,omitempty"`
+	CategoryID         *uint64         `json:"category_id,omitempty"`  // Backward compatibility
+	CategoryIDs        []uint64        `json:"category_ids,omitempty"` // Multiple categories support
+	Status             *string         `json:"status,omitempty"`
+	Tags               []string        `json:"tags,omitempty"`
+	FeaturedImageID    *uint64         `json:"featured_image_id,omitempty"`
+	SEOData            *models.SEOData `json:"seo_data,omitempty"`
+	AutoLinking        *bool           `json:"auto_linking,omitempty"`
+	LanguageCode       *string         `json:"language_code,omitempty"`
+	TranslationGroupID *uint64         `json:"translation_group_id,omitempty"`
 }
 
 // GetTotalCount returns the total number of articles

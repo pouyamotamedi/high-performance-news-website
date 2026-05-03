@@ -69,7 +69,7 @@ func ValidateCategory(category *Category) error {
 
 	// Language code validation
 	if strings.TrimSpace(category.LanguageCode) == "" {
-		category.LanguageCode = "fa" // Default to Persian
+		category.LanguageCode = "en" // Default to English
 	}
 	if len(category.LanguageCode) != 2 {
 		errors = append(errors, "language_code must be exactly 2 characters")
@@ -94,7 +94,7 @@ func (c *Category) PrepareForDB() {
 		c.Slug = GenerateSlug(c.Name)
 	}
 	if c.LanguageCode == "" {
-		c.LanguageCode = "fa" // Default to Persian
+		c.LanguageCode = "en" // Default to English
 	}
 }
 

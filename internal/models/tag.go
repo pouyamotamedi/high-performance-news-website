@@ -83,7 +83,7 @@ func ValidateTag(tag *Tag) error {
 
 	// Language code validation
 	if strings.TrimSpace(tag.LanguageCode) == "" {
-		tag.LanguageCode = "fa" // Default to Persian
+		tag.LanguageCode = "en" // Default to English
 	}
 	if len(tag.LanguageCode) != 2 {
 		errors = append(errors, "language_code must be exactly 2 characters")
@@ -185,7 +185,7 @@ func (t *Tag) PrepareForDB() {
 	}
 	
 	if t.LanguageCode == "" {
-		t.LanguageCode = "fa" // Default to Persian
+		t.LanguageCode = "en" // Default to English
 	}
 	
 	// Clean and normalize keywords

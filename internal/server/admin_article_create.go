@@ -137,6 +137,30 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                         </div>
                     </div>
 
+                    <!-- Language Selection -->
+                    <div class="dashboard-card" style="margin: 0;">
+                        <div class="card-title">🌐 Language</div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Article Language</label>
+                            <select id="languageCode" name="language_code" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                                <option value="en">🇬🇧 English</option>
+                                <option value="de">🇩🇪 Deutsch</option>
+                                <option value="fr">🇫🇷 Français</option>
+                                <option value="es">🇪🇸 Español</option>
+                                <option value="ar">🇸🇦 العربية</option>
+                            </select>
+                        </div>
+                        <div style="margin-top: 0.75rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Translation Group</label>
+                            <select id="translationGroupId" name="translation_group_id" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                                <option value="">New article (no translation group)</option>
+                            </select>
+                            <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem;">
+                                💡 Select an existing article to create a translation
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Author -->
                     <div class="dashboard-card" style="margin: 0;">
                         <div class="card-title">👤 Author</div>
@@ -707,6 +731,8 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                     featured_image_id: featuredImageId || null,
                     auto_linking: autoLinkingValue,
                     tags: selectedTags,
+                    language_code: document.getElementById('languageCode').value || 'en',
+                    translation_group_id: document.getElementById('translationGroupId').value ? parseInt(document.getElementById('translationGroupId').value) : null,
                     seo_data: {
                         meta_title: document.getElementById('metaTitle').value,
                         meta_description: document.getElementById('metaDescription').value,
