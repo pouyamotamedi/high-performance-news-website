@@ -179,7 +179,7 @@
                                 </div>
                                 <div class="video-content">
                                     <h3 class="video-title">
-                                        <a href="{{if $.LanguageCode}}/{{$.LanguageCode}}{{end}}/article/{{.Slug}}" class="video-link">{{.Title}}</a>
+                                        <a href="/{{$.LanguageCode}}/article/{{.Slug | urlquery}}" class="video-link">{{.Title}}</a>
                                     </h3>
                                     <div class="video-meta">
                                         <span class="video-views">{{.ViewCount}} {{t $.LanguageCode "views"}}</span>
@@ -221,7 +221,7 @@
                                     </div>
                                 </div>
                                 <h3 class="opinion-title">
-                                    <a href="{{if $.LanguageCode}}/{{$.LanguageCode}}{{end}}/article/{{.Slug}}" class="opinion-link">{{.Title}}</a>
+                                    <a href="/{{$.LanguageCode}}/article/{{.Slug | urlquery}}" class="opinion-link">{{.Title}}</a>
                                 </h3>
                                 <p class="opinion-excerpt">{{.Excerpt}}</p>
                                 <div class="opinion-meta">
