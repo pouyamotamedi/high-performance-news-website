@@ -8,14 +8,14 @@
             <span style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
         </button>
         
-        <!-- Logo -->
+        <!-- Logo and Site Name -->
         <div class="site-logo">
-            <a href="{{if .LanguageCode}}/{{.LanguageCode}}/{{else}}/{{end}}" style="display:flex;align-items:center;text-decoration:none;color:#1e293b;font-weight:700;font-size:1.25rem;gap:8px;">
+            <a href="{{if .LanguageCode}}/{{.LanguageCode}}/{{else}}/{{end}}" style="display:flex;align-items:center;text-decoration:none;color:#1e293b;font-weight:700;font-size:1.25rem;gap:10px;">
                 {{if .LogoURL}}
-                <img src="{{.LogoURL}}" alt="{{.SiteName}}" class="logo-img" style="height:32px;width:auto;" onerror="this.style.display='none';document.getElementById('site-name-text').style.display='inline'">
-                <span id="site-name-text" style="display:none">{{.SiteName}}</span>
-                {{else}}
-                <span>{{.SiteName}}</span>
+                <img src="{{.LogoURL}}" alt="{{.SiteName}}" class="logo-img" style="height:36px;max-height:36px;width:auto;max-width:150px;object-fit:contain;" onerror="this.style.display='none'">
+                {{end}}
+                {{if or (not .LogoURL) .ShowSiteName}}
+                <span style="font-weight:700;font-size:1.25rem;color:#1e293b;">{{.SiteName}}</span>
                 {{end}}
             </a>
         </div>
