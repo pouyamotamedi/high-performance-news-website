@@ -529,6 +529,7 @@ func (s *Server) setupRoutes() {
 	// Health route is handled by the monitoring handler
 
 	s.router.Static("/static", "./web/static")
+	s.router.Static("/uploads", "./uploads")
 
 	// Root redirect to default language
 	s.router.GET("/", func(c *gin.Context) {
@@ -3054,18 +3055,26 @@ func (s *Server) getNavigationForLanguage(lang string) []gin.H {
 // getActiveThemeConfig fetches the active theme configuration from the database
 func (s *Server) getActiveThemeConfig() map[string]interface{} {
 	if s.db == nil {
+		log.Println("DEBUG getActiveThemeConfig: db is nil")
 		return nil
 	}
 
 	var configJSON []byte
 	err := s.db.QueryRow("SELECT config FROM themes WHERE is_active = true LIMIT 1").Scan(&configJSON)
 	if err != nil {
+		log.Printf("DEBUG getActiveThemeConfig: query error: %v", err)
 		return nil
 	}
 
 	var config map[string]interface{}
 	if err := json.Unmarshal(configJSON, &config); err != nil {
+		log.Printf("DEBUG getActiveThemeConfig: unmarshal error: %v", err)
 		return nil
+	}
+
+	// Log branding info
+	if branding, ok := config["branding"].(map[string]interface{}); ok {
+		log.Printf("DEBUG getActiveThemeConfig: branding found - site_name=%v, logo_url=%v", branding["site_name"], branding["logo_url"])
 	}
 
 	return config
