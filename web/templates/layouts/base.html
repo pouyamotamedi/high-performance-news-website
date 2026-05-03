@@ -27,8 +27,8 @@
     {{end}}
     
     <!-- Language alternates -->
-    {{range $lang, $url := .AlternateURLs}}
-    <link rel="alternate" hreflang="{{$lang}}" href="{{$url}}">
+    {{range .AlternateURLs}}
+    <link rel="alternate" hreflang="{{.lang}}" href="{{.url}}">
     {{end}}
     
     <!-- RSS Feed Links -->

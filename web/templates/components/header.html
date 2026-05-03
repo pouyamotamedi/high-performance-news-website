@@ -37,34 +37,26 @@
         <!-- Header actions -->
         <div class="header-actions" style="display:flex;align-items:center;gap:12px;">
             <!-- Search toggle -->
-            <button class="search-toggle" id="search-toggle-btn" aria-label="{{t .LanguageCode "search"}}">
+            <button class="search-toggle" id="search-toggle-btn" aria-label="{{t .LanguageCode "search"}}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;border-radius:8px;transition:background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
                     <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
                 </svg>
             </button>
             
-            <!-- Language switcher (desktop only) -->
+            <!-- Language switcher with flags -->
             {{if .AvailableLanguages}}
-            <div class="language-switcher desktop-only" style="position:relative;z-index:1001;">
-                <button class="language-toggle" id="lang-toggle-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;color:#1e293b;transition:all 0.2s;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    <span>{{if eq .LanguageCode "ar"}}العربية{{else if eq .LanguageCode "de"}}Deutsch{{else if eq .LanguageCode "fr"}}Français{{else if eq .LanguageCode "es"}}Español{{else}}English{{end}}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" id="lang-arrow">
-                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <div class="language-switcher" style="position:relative;">
+                <button class="language-toggle" id="lang-toggle-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:20px;transition:all 0.2s;min-width:50px;justify-content:center;">
+                    <span>{{if eq .LanguageCode "ar"}}🇸🇦{{else if eq .LanguageCode "de"}}🇩🇪{{else if eq .LanguageCode "fr"}}🇫🇷{{else if eq .LanguageCode "es"}}🇪🇸{{else}}🇬🇧{{end}}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" id="lang-arrow" style="transition:transform 0.2s;">
+                        <path d="M6 9l6 6 6-6" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
-                <div id="lang-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 10px 40px -5px rgba(0,0,0,0.2);min-width:180px;z-index:9999;overflow:hidden;">
-                    <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
-                        <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">{{t .LanguageCode "menu"}}</span>
-                    </div>
+                <div id="lang-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 10px 40px -5px rgba(0,0,0,0.15);min-width:60px;z-index:9999;overflow:hidden;padding:8px;">
                     {{range .AvailableLanguages}}
-                    <a href="{{.URL}}" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;color:#1e293b;text-decoration:none;font-size:14px;transition:background 0.15s;{{if eq .Code $.LanguageCode}}background:#eff6ff;font-weight:600;color:#2563eb;{{end}}" hreflang="{{.Code}}" onmouseover="this.style.background='{{if eq .Code $.LanguageCode}}#dbeafe{{else}}#f8fafc{{end}}'" onmouseout="this.style.background='{{if eq .Code $.LanguageCode}}#eff6ff{{else}}#fff{{end}}'">
-                        <span>{{.NativeName}}</span>
-                        {{if eq .Code $.LanguageCode}}<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+                    <a href="{{.URL}}" style="display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;text-decoration:none;font-size:24px;transition:background 0.15s;{{if eq .Code $.LanguageCode}}background:#eff6ff;{{end}}" hreflang="{{.Code}}" title="{{.NativeName}}" onmouseover="this.style.background='{{if eq .Code $.LanguageCode}}#dbeafe{{else}}#f8fafc{{end}}'" onmouseout="this.style.background='{{if eq .Code $.LanguageCode}}#eff6ff{{else}}transparent{{end}}'">
+                        {{if eq .Code "ar"}}🇸🇦{{else if eq .Code "de"}}🇩🇪{{else if eq .Code "fr"}}🇫🇷{{else if eq .Code "es"}}🇪🇸{{else}}🇬🇧{{end}}
                     </a>
                     {{end}}
                 </div>
@@ -81,7 +73,6 @@
                         var isOpen = langDropdown.style.display === 'block';
                         langDropdown.style.display = isOpen ? 'none' : 'block';
                         langBtn.setAttribute('aria-expanded', !isOpen);
-                        langBtn.style.background = isOpen ? '#f8fafc' : '#fff';
                         langBtn.style.borderColor = isOpen ? '#e2e8f0' : '#2563eb';
                         if (langArrow) {
                             langArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
@@ -91,7 +82,6 @@
                         if (!langBtn.contains(e.target) && !langDropdown.contains(e.target)) {
                             langDropdown.style.display = 'none';
                             langBtn.setAttribute('aria-expanded', 'false');
-                            langBtn.style.background = '#f8fafc';
                             langBtn.style.borderColor = '#e2e8f0';
                             if (langArrow) {
                                 langArrow.style.transform = 'rotate(0deg)';
@@ -101,13 +91,6 @@
                 }
             })();
             </script>
-            {{end}}
-            
-            <!-- Login (desktop only) -->
-            {{if not .IsAuthenticated}}
-            <a href="/login" class="login-link desktop-only" style="padding:8px 16px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:500;font-size:14px;">
-                {{t .LanguageCode "login"}}
-            </a>
             {{end}}
         </div>
     </div>
@@ -156,30 +139,17 @@
                     <a href="{{.URL}}" style="display:block;padding:1rem 1.5rem;color:#1e293b;text-decoration:none;font-weight:500;">{{.Name}}</a>
                 </li>
                 {{end}}
-                <!-- Mobile language switcher -->
+                <!-- Mobile language switcher with flags -->
                 {{if .AvailableLanguages}}
                 <li style="border-bottom:1px solid #f1f5f9;padding:1rem 1.5rem;">
-                    <span style="display:block;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">{{t .LanguageCode "menu"}}</span>
-                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <span style="display:block;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">{{t .LanguageCode "select_language"}}</span>
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;">
                         {{range .AvailableLanguages}}
-                        <a href="{{.URL}}" style="display:inline-flex;align-items:center;padding:8px 14px;border-radius:6px;text-decoration:none;font-size:14px;{{if eq .Code $.LanguageCode}}background:#2563eb;color:#fff;font-weight:600;{{else}}background:#f1f5f9;color:#1e293b;{{end}}" hreflang="{{.Code}}">
-                            {{.NativeName}}
+                        <a href="{{.URL}}" style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;text-decoration:none;font-size:28px;{{if eq .Code $.LanguageCode}}background:#2563eb;box-shadow:0 2px 8px rgba(37,99,235,0.3);{{else}}background:#f1f5f9;{{end}}" hreflang="{{.Code}}" title="{{.NativeName}}">
+                            {{if eq .Code "ar"}}🇸🇦{{else if eq .Code "de"}}🇩🇪{{else if eq .Code "fr"}}🇫🇷{{else if eq .Code "es"}}🇪🇸{{else}}🇬🇧{{end}}
                         </a>
                         {{end}}
                     </div>
-                </li>
-                {{end}}
-                {{if not .IsAuthenticated}}
-                <li style="border-bottom:1px solid #f1f5f9;">
-                    <a href="/login" style="display:block;padding:1rem 1.5rem;color:#2563eb;text-decoration:none;font-weight:600;">
-                        {{t .LanguageCode "login"}}
-                    </a>
-                </li>
-                {{else}}
-                <li style="border-bottom:1px solid #f1f5f9;">
-                    <a href="/logout" style="display:block;padding:1rem 1.5rem;color:#ef4444;text-decoration:none;font-weight:500;">
-                        {{t .LanguageCode "logout"}}
-                    </a>
                 </li>
                 {{end}}
             </ul>

@@ -15,6 +15,7 @@ var Translations = map[string]map[string]string{
 		"login":          "Login",
 		"logout":         "Logout",
 		"menu":           "Menu",
+		"select_language": "Select Language",
 
 		// Homepage sections
 		"latest_news":    "Latest News",
@@ -70,6 +71,7 @@ var Translations = map[string]map[string]string{
 		"login":          "Anmelden",
 		"logout":         "Abmelden",
 		"menu":           "Menü",
+		"select_language": "Sprache wählen",
 
 		// Homepage sections
 		"latest_news":    "Neueste Nachrichten",
@@ -125,6 +127,7 @@ var Translations = map[string]map[string]string{
 		"login":          "Connexion",
 		"logout":         "Déconnexion",
 		"menu":           "Menu",
+		"select_language": "Choisir la langue",
 
 		// Homepage sections
 		"latest_news":    "Dernières actualités",
@@ -180,6 +183,7 @@ var Translations = map[string]map[string]string{
 		"login":          "Iniciar sesión",
 		"logout":         "Cerrar sesión",
 		"menu":           "Menú",
+		"select_language": "Seleccionar idioma",
 
 		// Homepage sections
 		"latest_news":    "Últimas noticias",
@@ -235,6 +239,7 @@ var Translations = map[string]map[string]string{
 		"login":          "تسجيل الدخول",
 		"logout":         "تسجيل الخروج",
 		"menu":           "القائمة",
+		"select_language": "اختر اللغة",
 
 		// Homepage sections
 		"latest_news":    "آخر الأخبار",
