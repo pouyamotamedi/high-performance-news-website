@@ -1554,6 +1554,8 @@ func (s *Server) addMultilingualData(data map[string]interface{}, lang, currentP
 	data["CanonicalURL"] = s.generateCanonicalURL(lang, currentPath)
 	data["IsRTL"] = lang == "ar"
 	data["BaseURL"] = s.config.App.BaseURL
+	// Update navigation with translated items for this language
+	data["Navigation"] = s.getNavigationForLanguage(lang)
 }
 
 // setupProductionFrontendRoutes sets up frontend routes for production mode
@@ -2964,7 +2966,8 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 	// Use theme branding or fallback to config
 	siteName := s.config.App.Name
 	siteDescription := "High-performance multilingual news website"
-	logoURL := "/static/images/logo.svg"
+	logoURL := ""
+	faviconURL := "/static/favicon.ico"
 	showSiteName := true
 	headerStyle := "sticky"
 
@@ -2978,6 +2981,9 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 			}
 			if logo, ok := branding["logo_url"].(string); ok && logo != "" {
 				logoURL = logo
+			}
+			if favicon, ok := branding["favicon_url"].(string); ok && favicon != "" {
+				faviconURL = favicon
 			}
 			if show, ok := branding["show_site_name"].(bool); ok {
 				showSiteName = show
@@ -2994,6 +3000,7 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 		"SiteName":          siteName,
 		"SiteDescription":   siteDescription,
 		"LogoURL":           logoURL,
+		"FaviconURL":        faviconURL,
 		"ShowSiteName":      showSiteName,
 		"HeaderStyle":       headerStyle,
 		"ThemeConfig":       themeConfig,
@@ -3001,18 +3008,10 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 		"LanguageDirection": "ltr",
 		"ThemeMode":         "auto",
 		"CurrentYear":       2024,
-		"Navigation": []gin.H{
-			{"Name": "Home", "URL": "/", "Active": c.Request.URL.Path == "/"},
-			{"Name": "Latest", "URL": "/latest", "Active": c.Request.URL.Path == "/latest"},
-			{"Name": "Trending", "URL": "/trending", "Active": c.Request.URL.Path == "/trending"},
-			{"Name": "Categories", "URL": "/categories", "Active": c.Request.URL.Path == "/categories"},
-			{"Name": "Tags", "URL": "/tags", "Active": c.Request.URL.Path == "/tags"},
-			{"Name": "About", "URL": "/about", "Active": c.Request.URL.Path == "/about"},
-			{"Name": "Contact", "URL": "/contact", "Active": c.Request.URL.Path == "/contact"},
-		},
-		"IsAuthenticated": false,
-		"OGType":          "website",
-		"TwitterCard":     "summary_large_image",
+		"Navigation":        s.getNavigationForLanguage("en"),
+		"IsAuthenticated":   false,
+		"OGType":            "website",
+		"TwitterCard":       "summary_large_image",
 	}
 
 	// Fetch breaking news articles (articles with "breaking" tag)
@@ -3021,6 +3020,35 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 	data["HasBreakingNews"] = len(breakingNews) > 0
 
 	return data
+}
+
+// getNavigationForLanguage returns navigation items translated for the given language
+func (s *Server) getNavigationForLanguage(lang string) []gin.H {
+	// Translation maps for navigation items
+	navTranslations := map[string]map[string]string{
+		"en": {"home": "Home", "latest": "Latest", "trending": "Trending", "categories": "Categories", "tags": "Tags", "about": "About", "contact": "Contact"},
+		"de": {"home": "Startseite", "latest": "Neueste", "trending": "Beliebt", "categories": "Kategorien", "tags": "Schlagwörter", "about": "Über uns", "contact": "Kontakt"},
+		"fr": {"home": "Accueil", "latest": "Récent", "trending": "Tendances", "categories": "Catégories", "tags": "Étiquettes", "about": "À propos", "contact": "Contact"},
+		"es": {"home": "Inicio", "latest": "Reciente", "trending": "Tendencias", "categories": "Categorías", "tags": "Etiquetas", "about": "Acerca de", "contact": "Contacto"},
+		"ar": {"home": "الرئيسية", "latest": "الأحدث", "trending": "الأكثر رواجاً", "categories": "التصنيفات", "tags": "الوسوم", "about": "من نحن", "contact": "اتصل بنا"},
+	}
+
+	trans := navTranslations[lang]
+	if trans == nil {
+		trans = navTranslations["en"]
+	}
+
+	prefix := "/" + lang
+
+	return []gin.H{
+		{"Name": trans["home"], "URL": prefix + "/", "Active": false},
+		{"Name": trans["latest"], "URL": prefix + "/latest", "Active": false},
+		{"Name": trans["trending"], "URL": prefix + "/trending", "Active": false},
+		{"Name": trans["categories"], "URL": prefix + "/categories", "Active": false},
+		{"Name": trans["tags"], "URL": prefix + "/tags", "Active": false},
+		{"Name": trans["about"], "URL": prefix + "/about", "Active": false},
+		{"Name": trans["contact"], "URL": prefix + "/contact", "Active": false},
+	}
 }
 
 // getActiveThemeConfig fetches the active theme configuration from the database

@@ -64,7 +64,11 @@
     <link rel="manifest" href="/static/manifest.json">
     
     <!-- Favicon -->
+    {{if .FaviconURL}}
+    <link rel="icon" type="image/x-icon" href="{{.FaviconURL}}">
+    {{else}}
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    {{end}}
     <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
     
