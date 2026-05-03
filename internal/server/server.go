@@ -3561,7 +3561,21 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 
 	// Create template data with multilingual support
 	data := s.createBaseTemplateData(c)
-	data["Title"] = s.config.App.Name
+	
+	// Set page title based on language
+	homeTitles := map[string]string{
+		"en": "Home",
+		"de": "Startseite",
+		"fr": "Accueil",
+		"es": "Inicio",
+		"ar": "الرئيسية",
+	}
+	homeTitle := homeTitles[lang]
+	if homeTitle == "" {
+		homeTitle = "Home"
+	}
+	data["Title"] = homeTitle + " | " + s.config.App.Name
+	data["SEOTitle"] = homeTitle + " | " + s.config.App.Name
 	data["PageType"] = "homepage"
 
 	// Add multilingual data

@@ -1,32 +1,29 @@
 {{define "header"}}
-<header class="site-header{{if eq .HeaderStyle "sticky"}} header-sticky{{else if eq .HeaderStyle "fixed"}} header-fixed{{end}}" role="banner" style="position:relative;z-index:100;">
-    <div class="header-container">
+<header class="site-header{{if eq .HeaderStyle "sticky"}} header-sticky{{else if eq .HeaderStyle "fixed"}} header-fixed{{end}}" role="banner" style="position:sticky;top:0;z-index:1000;background:#fff;border-bottom:1px solid #e2e8f0;">
+    <div class="header-container" style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;max-width:1280px;margin:0 auto;">
         <!-- Mobile menu button -->
-        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="{{t .LanguageCode "menu"}}" aria-expanded="false">
-            <span class="hamburger-line" style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
-            <span class="hamburger-line" style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
-            <span class="hamburger-line" style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="{{t .LanguageCode "menu"}}" aria-expanded="false" style="display:none;flex-direction:column;justify-content:center;align-items:center;width:44px;height:44px;background:transparent;border:none;cursor:pointer;padding:0;">
+            <span style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
+            <span style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
+            <span style="display:block;width:22px;height:2px;background:#1e293b;margin:3px 0;"></span>
         </button>
         
         <!-- Logo -->
         <div class="site-logo">
-            <a href="{{if .LanguageCode}}/{{.LanguageCode}}/{{else}}/{{end}}" class="logo-link">
+            <a href="{{if .LanguageCode}}/{{.LanguageCode}}/{{else}}/{{end}}" style="display:flex;align-items:center;text-decoration:none;color:#1e293b;font-weight:700;font-size:1.25rem;gap:8px;">
                 {{if .LogoURL}}
-                <img src="{{.LogoURL}}" alt="{{.SiteName}}" class="logo-image">
+                <img src="{{.LogoURL}}" alt="{{.SiteName}}" style="height:32px;width:auto;">
                 {{end}}
-                {{if .ShowSiteName}}
-                <span class="logo-text desktop-only">{{.SiteName}}</span>
-                {{end}}
+                <span>{{.SiteName}}</span>
             </a>
         </div>
         
         <!-- Main navigation (desktop only) -->
-        <nav class="main-navigation" role="navigation" aria-label="{{t .LanguageCode "menu"}}">
-            <ul class="nav-menu">
+        <nav class="main-navigation" role="navigation" aria-label="{{t .LanguageCode "menu"}}" style="display:flex;">
+            <ul style="display:flex;list-style:none;gap:8px;margin:0;padding:0;">
                 {{range .Navigation}}
-                <li class="nav-item {{if .Active}}active{{end}}">
-                    <a href="{{.URL}}" class="nav-link">
-                        {{if .Icon}}<i class="nav-icon {{.Icon}}"></i>{{end}}
+                <li>
+                    <a href="{{.URL}}" style="display:flex;align-items:center;padding:8px 16px;text-decoration:none;color:#64748b;font-weight:500;border-radius:6px;min-height:40px;transition:all 0.2s;" onmouseover="this.style.color='#2563eb';this.style.background='#f8fafc'" onmouseout="this.style.color='#64748b';this.style.background='transparent'">
                         {{.Name}}
                     </a>
                 </li>
@@ -35,27 +32,27 @@
         </nav>
         
         <!-- Header actions -->
-        <div class="header-actions" style="display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
             <!-- Search toggle -->
-            <button class="search-toggle" id="search-toggle-btn" aria-label="{{t .LanguageCode "search"}}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;border-radius:8px;transition:background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
-                    <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+            <button id="search-toggle-btn" aria-label="{{t .LanguageCode "search"}}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;border-radius:8px;color:#64748b;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
             </button>
             
-            <!-- Language switcher with flags -->
+            <!-- Language switcher with flags - FIXED DROPDOWN -->
             {{if .AvailableLanguages}}
-            <div class="language-switcher" style="position:relative;">
-                <button class="language-toggle" id="lang-toggle-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:20px;transition:all 0.2s;min-width:50px;justify-content:center;">
-                    <span>{{if eq .LanguageCode "ar"}}🇸🇦{{else if eq .LanguageCode "de"}}🇩🇪{{else if eq .LanguageCode "fr"}}🇫🇷{{else if eq .LanguageCode "es"}}🇪🇸{{else}}🇬🇧{{end}}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" id="lang-arrow" style="transition:transform 0.2s;">
-                        <path d="M6 9l6 6 6-6" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <div style="position:relative;">
+                <button id="lang-toggle-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:4px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:18px;">
+                    {{if eq .LanguageCode "ar"}}🇸🇦{{else if eq .LanguageCode "de"}}🇩🇪{{else if eq .LanguageCode "fr"}}🇫🇷{{else if eq .LanguageCode "es"}}🇪🇸{{else}}🇬🇧{{end}}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" id="lang-arrow" style="transition:transform 0.2s;">
+                        <path d="M6 9l6 6 6-6"/>
                     </svg>
                 </button>
-                <div id="lang-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 10px 40px -5px rgba(0,0,0,0.15);min-width:60px;z-index:9999;overflow:hidden;padding:8px;">
+                <!-- Dropdown menu - positioned absolute, outside normal flow -->
+                <div id="lang-dropdown" style="display:none;position:fixed;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:6px;z-index:10000;">
                     {{range .AvailableLanguages}}
-                    <a href="{{.URL}}" style="display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;text-decoration:none;font-size:24px;transition:background 0.15s;{{if eq .Code $.LanguageCode}}background:#eff6ff;{{end}}" hreflang="{{.Code}}" title="{{.NativeName}}" onmouseover="this.style.background='{{if eq .Code $.LanguageCode}}#dbeafe{{else}}#f8fafc{{end}}'" onmouseout="this.style.background='{{if eq .Code $.LanguageCode}}#eff6ff{{else}}transparent{{end}}'">
+                    <a href="{{.URL}}" style="display:block;padding:8px 12px;border-radius:6px;text-decoration:none;font-size:20px;text-align:center;{{if eq .Code $.LanguageCode}}background:#eff6ff;{{end}}" hreflang="{{.Code}}" title="{{.NativeName}}" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='{{if eq .Code $.LanguageCode}}#eff6ff{{else}}transparent{{end}}'">
                         {{if eq .Code "ar"}}🇸🇦{{else if eq .Code "de"}}🇩🇪{{else if eq .Code "fr"}}🇫🇷{{else if eq .Code "es"}}🇪🇸{{else}}🇬🇧{{end}}
                     </a>
                     {{end}}
@@ -66,26 +63,42 @@
                 var langBtn = document.getElementById('lang-toggle-btn');
                 var langDropdown = document.getElementById('lang-dropdown');
                 var langArrow = document.getElementById('lang-arrow');
+                
+                function positionDropdown() {
+                    if (!langBtn || !langDropdown) return;
+                    var rect = langBtn.getBoundingClientRect();
+                    langDropdown.style.top = (rect.bottom + 8) + 'px';
+                    langDropdown.style.right = (window.innerWidth - rect.right) + 'px';
+                }
+                
                 if (langBtn && langDropdown) {
                     langBtn.addEventListener('click', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
                         var isOpen = langDropdown.style.display === 'block';
-                        langDropdown.style.display = isOpen ? 'none' : 'block';
-                        langBtn.setAttribute('aria-expanded', !isOpen);
-                        langBtn.style.borderColor = isOpen ? '#e2e8f0' : '#2563eb';
-                        if (langArrow) {
-                            langArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                        if (!isOpen) {
+                            positionDropdown();
+                            langDropdown.style.display = 'block';
+                            langBtn.style.borderColor = '#2563eb';
+                            if (langArrow) langArrow.style.transform = 'rotate(180deg)';
+                        } else {
+                            langDropdown.style.display = 'none';
+                            langBtn.style.borderColor = '#e2e8f0';
+                            if (langArrow) langArrow.style.transform = 'rotate(0deg)';
                         }
                     });
+                    
                     document.addEventListener('click', function(e) {
                         if (!langBtn.contains(e.target) && !langDropdown.contains(e.target)) {
                             langDropdown.style.display = 'none';
-                            langBtn.setAttribute('aria-expanded', 'false');
                             langBtn.style.borderColor = '#e2e8f0';
-                            if (langArrow) {
-                                langArrow.style.transform = 'rotate(0deg)';
-                            }
+                            if (langArrow) langArrow.style.transform = 'rotate(0deg)';
+                        }
+                    });
+                    
+                    window.addEventListener('scroll', function() {
+                        if (langDropdown.style.display === 'block') {
+                            positionDropdown();
                         }
                     });
                 }
@@ -96,25 +109,21 @@
     </div>
     
     <!-- Search overlay -->
-    <div id="search-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding-top:80px;">
-        <div style="background:#fff;border-radius:12px;width:90%;max-width:500px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);overflow:hidden;">
-            <!-- Search header with close button -->
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+    <div id="search-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding-top:100px;">
+        <div style="background:#fff;border-radius:12px;width:90%;max-width:500px;box-shadow:0 20px 25px rgba(0,0,0,0.2);overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
                 <span style="font-weight:600;color:#1e293b;">{{t .LanguageCode "search"}}</span>
                 <button id="search-close-btn" type="button" style="width:36px;height:36px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="18" y1="6" x2="6" y2="18" stroke="#64748b" stroke-width="2"/>
-                        <line x1="6" y1="6" x2="18" y2="18" stroke="#64748b" stroke-width="2"/>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
                 </button>
             </div>
-            <!-- Search form -->
-            <form action="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/search" method="GET" style="display:flex;gap:0.5rem;padding:1.25rem;">
-                <input type="search" name="q" id="search-input" placeholder="{{t .LanguageCode "search_placeholder"}}" autocomplete="off" style="flex:1;padding:0.875rem 1rem;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;outline:none;">
-                <button type="submit" style="padding:0.875rem 1.25rem;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
-                        <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+            <form action="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/search" method="GET" style="display:flex;gap:8px;padding:20px;">
+                <input type="search" name="q" id="search-input" placeholder="{{t .LanguageCode "search_placeholder"}}" autocomplete="off" style="flex:1;padding:14px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:16px;outline:none;">
+                <button type="submit" style="padding:14px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                     </svg>
                 </button>
             </form>
@@ -123,29 +132,27 @@
     
     <!-- Mobile navigation overlay -->
     <div id="mobile-nav-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:9999;transform:translateX(-100%);transition:transform 0.3s ease;overflow-y:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid #e2e8f0;">
-            <span style="font-weight:600;font-size:1.125rem;color:#1e293b;">{{t .LanguageCode "menu"}}</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #e2e8f0;">
+            <span style="font-weight:600;font-size:18px;color:#1e293b;">{{t .LanguageCode "menu"}}</span>
             <button id="mobile-close-btn" type="button" style="width:44px;height:44px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <line x1="18" y1="6" x2="6" y2="18" stroke="#1e293b" stroke-width="2"/>
-                    <line x1="6" y1="6" x2="18" y2="18" stroke="#1e293b" stroke-width="2"/>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
             </button>
         </div>
-        <nav style="padding:0.5rem 0;">
+        <nav style="padding:8px 0;">
             <ul style="list-style:none;padding:0;margin:0;">
                 {{range .Navigation}}
                 <li style="border-bottom:1px solid #f1f5f9;">
-                    <a href="{{.URL}}" style="display:block;padding:1rem 1.5rem;color:#1e293b;text-decoration:none;font-weight:500;">{{.Name}}</a>
+                    <a href="{{.URL}}" style="display:block;padding:16px 24px;color:#1e293b;text-decoration:none;font-weight:500;">{{.Name}}</a>
                 </li>
                 {{end}}
-                <!-- Mobile language switcher with flags -->
                 {{if .AvailableLanguages}}
-                <li style="border-bottom:1px solid #f1f5f9;padding:1rem 1.5rem;">
-                    <span style="display:block;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">{{t .LanguageCode "select_language"}}</span>
-                    <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                <li style="padding:16px 24px;border-bottom:1px solid #f1f5f9;">
+                    <span style="display:block;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;margin-bottom:12px;">{{t .LanguageCode "select_language"}}</span>
+                    <div style="display:flex;gap:12px;">
                         {{range .AvailableLanguages}}
-                        <a href="{{.URL}}" style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;text-decoration:none;font-size:28px;{{if eq .Code $.LanguageCode}}background:#2563eb;box-shadow:0 2px 8px rgba(37,99,235,0.3);{{else}}background:#f1f5f9;{{end}}" hreflang="{{.Code}}" title="{{.NativeName}}">
+                        <a href="{{.URL}}" style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:10px;text-decoration:none;font-size:24px;{{if eq .Code $.LanguageCode}}background:#2563eb;{{else}}background:#f1f5f9;{{end}}" hreflang="{{.Code}}" title="{{.NativeName}}">
                             {{if eq .Code "ar"}}🇸🇦{{else if eq .Code "de"}}🇩🇪{{else if eq .Code "fr"}}🇫🇷{{else if eq .Code "es"}}🇪🇸{{else}}🇬🇧{{end}}
                         </a>
                         {{end}}
@@ -157,34 +164,24 @@
     </div>
 </header>
 
-<!-- Breaking News Ticker - Shows below header when there are breaking news articles -->
 {{if .HasBreakingNews}}
-<section class="breaking-news-banner" role="region" aria-label="Breaking News">
-    <div class="container">
-        <div class="breaking-news-content">
-            <span class="breaking-label">🔴 BREAKING</span>
-            <div class="breaking-ticker" aria-live="polite">
-                <div class="breaking-ticker-content">
-                    {{range .BreakingNews}}
-                    <a href="/{{$.LanguageCode}}/article/{{.Slug | urlquery}}" class="ticker-item ticker-link">{{.Title}}</a>
-                    <span class="ticker-separator">•</span>
-                    {{end}}
-                </div>
-                <div class="breaking-ticker-content" aria-hidden="true">
-                    {{range .BreakingNews}}
-                    <a href="/{{$.LanguageCode}}/article/{{.Slug | urlquery}}" class="ticker-item ticker-link">{{.Title}}</a>
-                    <span class="ticker-separator">•</span>
-                    {{end}}
-                </div>
+<section style="background:#dc2626;color:#fff;padding:8px 0;font-size:14px;font-weight:500;">
+    <div style="max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:16px;">
+        <span style="background:#fff;color:#dc2626;padding:2px 8px;border-radius:4px;font-weight:700;white-space:nowrap;">🔴 BREAKING</span>
+        <div style="overflow:hidden;flex:1;">
+            <div style="display:flex;animation:ticker 30s linear infinite;">
+                {{range .BreakingNews}}
+                <a href="/{{$.LanguageCode}}/article/{{.Slug | urlquery}}" style="color:#fff;text-decoration:none;white-space:nowrap;padding-right:32px;">{{.Title}}</a>
+                {{end}}
             </div>
         </div>
     </div>
 </section>
+<style>@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}</style>
 {{end}}
 
 <script>
 (function() {
-    // Elements
     var menuToggle = document.getElementById('mobile-menu-toggle');
     var menuClose = document.getElementById('mobile-close-btn');
     var mobileOverlay = document.getElementById('mobile-nav-overlay');
@@ -193,86 +190,65 @@
     var searchOverlay = document.getElementById('search-overlay');
     var searchInput = document.getElementById('search-input');
     
-    // Open mobile menu
-    function openMobileMenu() {
-        if (mobileOverlay) {
-            mobileOverlay.style.transform = 'translateX(0)';
-            document.body.style.overflow = 'hidden';
-        }
-    }
-    
-    // Close mobile menu
-    function closeMobileMenu() {
-        if (mobileOverlay) {
-            mobileOverlay.style.transform = 'translateX(-100%)';
-            document.body.style.overflow = '';
-        }
-    }
-    
-    // Open search
-    function openSearch() {
-        if (searchOverlay) {
-            searchOverlay.style.display = 'flex';
-            if (searchInput) searchInput.focus();
-        }
-    }
-    
-    // Close search
-    function closeSearch() {
-        if (searchOverlay) {
-            searchOverlay.style.display = 'none';
-        }
-    }
-    
-    // Event listeners
     if (menuToggle) {
         menuToggle.onclick = function(e) {
             e.preventDefault();
-            e.stopPropagation();
-            openMobileMenu();
+            if (mobileOverlay) {
+                mobileOverlay.style.transform = 'translateX(0)';
+                document.body.style.overflow = 'hidden';
+            }
         };
     }
     
     if (menuClose) {
         menuClose.onclick = function(e) {
             e.preventDefault();
-            e.stopPropagation();
-            closeMobileMenu();
+            if (mobileOverlay) {
+                mobileOverlay.style.transform = 'translateX(-100%)';
+                document.body.style.overflow = '';
+            }
         };
     }
     
     if (searchToggle) {
         searchToggle.onclick = function(e) {
             e.preventDefault();
-            e.stopPropagation();
-            openSearch();
+            if (searchOverlay) {
+                searchOverlay.style.display = 'flex';
+                if (searchInput) searchInput.focus();
+            }
         };
     }
     
     if (searchClose) {
         searchClose.onclick = function(e) {
             e.preventDefault();
-            e.stopPropagation();
-            closeSearch();
+            if (searchOverlay) searchOverlay.style.display = 'none';
         };
     }
     
-    // Close search when clicking backdrop
     if (searchOverlay) {
         searchOverlay.onclick = function(e) {
-            if (e.target === searchOverlay) {
-                closeSearch();
-            }
+            if (e.target === searchOverlay) searchOverlay.style.display = 'none';
         };
     }
     
-    // Escape key closes both
     document.onkeydown = function(e) {
         if (e.key === 'Escape') {
-            closeMobileMenu();
-            closeSearch();
+            if (mobileOverlay) {
+                mobileOverlay.style.transform = 'translateX(-100%)';
+                document.body.style.overflow = '';
+            }
+            if (searchOverlay) searchOverlay.style.display = 'none';
         }
     };
 })();
 </script>
+
+<style>
+@media (max-width: 1023px) {
+    .main-navigation { display: none !important; }
+    #mobile-menu-toggle { display: flex !important; }
+}
+</style>
 {{end}}
