@@ -12,9 +12,9 @@
         <div class="site-logo">
             <a href="{{if .LanguageCode}}/{{.LanguageCode}}/{{else}}/{{end}}" style="display:flex;align-items:center;text-decoration:none;color:#1e293b;font-weight:700;font-size:1.25rem;gap:8px;">
                 {{if .LogoURL}}
-                <img src="{{.LogoURL}}" alt="{{.SiteName}}" style="height:32px;width:auto;" onerror="this.style.display='none'">
-                {{end}}
-                {{if .ShowSiteName}}
+                <img src="{{.LogoURL}}" alt="{{.SiteName}}" class="logo-img" style="height:32px;width:auto;" onerror="this.style.display='none';document.getElementById('site-name-text').style.display='inline'">
+                <span id="site-name-text" style="display:none">{{.SiteName}}</span>
+                {{else}}
                 <span>{{.SiteName}}</span>
                 {{end}}
             </a>

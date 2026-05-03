@@ -6,13 +6,44 @@
 <link rel="stylesheet" href="/static/css/homepage.css">
 <link rel="stylesheet" href="/static/css/professional-news.css">
 <link rel="stylesheet" href="/static/css/breaking-ticker.css">
+<style>
+/* Force all containers to match header width - 1280px max */
+.homepage,
+.homepage .container,
+.homepage .hero-section,
+.homepage .hero-section .container,
+.homepage .main-content,
+.homepage .main-content .container,
+.homepage .hero-grid,
+.homepage .content-grid,
+.homepage .articles-grid,
+.homepage .categories-minimal {
+    max-width: 1280px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+}
+.homepage {
+    width: 100% !important;
+    overflow-x: hidden !important;
+}
+.homepage .hero-section {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.homepage .hero-section .container,
+.homepage .main-content .container {
+    padding: 0 1rem !important;
+}
+</style>
 {{end}}
 
 {{define "content"}}
 <div class="homepage">
     <!-- Hero Section -->
     <section class="hero-section">
-        <div class="container">
+        <div class="container" style="max-width:1280px;margin:0 auto;padding:0 1rem;">
             <div class="hero-grid">
                 <!-- Main Featured Article -->
                 <article class="hero-main">

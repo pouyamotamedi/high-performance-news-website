@@ -333,7 +333,7 @@ func New(cfg *config.Config) (*Server, error) {
 		//imageHandlers = &api.ImageHandlers{}
 		// Create image processor for handling uploads and variants
 		imageProcessorConfig := services.ImageProcessorConfig{
-			StorageBasePath: "web/static/uploads",
+			StorageBasePath: "uploads",
 			MaxWorkers:      4,
 			QueueSize:       100,
 		}
@@ -377,7 +377,7 @@ func New(cfg *config.Config) (*Server, error) {
 		imageHandlers = api.NewImageHandlers(
 			imageProcessor,
 			mediaService,
-			"web/static/uploads/images",
+			"uploads",
 			10*1024*1024, // 10MB max file size
 		)
 		fmt.Printf("DEBUG: ImageHandlers created successfully\n")
@@ -3599,6 +3599,10 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 	// Create template data with multilingual support
 	data := s.createBaseTemplateData(c)
 	
+	// Get site name and description from theme (already set in createBaseTemplateData)
+	siteName := data["SiteName"].(string)
+	siteDescription := data["SiteDescription"].(string)
+	
 	// Set page title based on language
 	homeTitles := map[string]string{
 		"en": "Home",
@@ -3611,8 +3615,10 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 	if homeTitle == "" {
 		homeTitle = "Home"
 	}
-	data["Title"] = homeTitle + " | " + s.config.App.Name
-	data["SEOTitle"] = homeTitle + " | " + s.config.App.Name
+	data["Title"] = homeTitle + " | " + siteName
+	data["SEOTitle"] = homeTitle + " | " + siteName
+	data["Description"] = siteDescription
+	data["SEODescription"] = siteDescription
 	data["PageType"] = "homepage"
 
 	// Add multilingual data
