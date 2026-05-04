@@ -202,6 +202,34 @@ func (s *ArticleService) GetBySlug(ctx context.Context, slug string) (*models.Ar
 	return article, nil
 }
 
+// GetAvailableTranslations returns all available translations for an article
+// This is used for generating correct hreflang tags
+func (s *ArticleService) GetAvailableTranslations(ctx context.Context, articleID uint64) ([]models.Article, error) {
+	// First get the article to find its translation_group_id
+	article, err := s.repo.GetByID(ctx, articleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get article: %w", err)
+	}
+	
+	// If no translation group, return just this article
+	if article.TranslationGroupID == nil {
+		return []models.Article{*article}, nil
+	}
+	
+	// Get all articles in the same translation group
+	return s.repo.GetByTranslationGroup(ctx, *article.TranslationGroupID)
+}
+
+// GetAvailableTranslationsBySlug returns all available translations for an article by slug
+func (s *ArticleService) GetAvailableTranslationsBySlug(ctx context.Context, slug string) ([]models.Article, error) {
+	article, err := s.repo.GetBySlug(ctx, slug)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get article by slug: %w", err)
+	}
+	
+	return s.GetAvailableTranslations(ctx, article.ID)
+}
+
 // Update updates an existing article with permission checking
 func (s *ArticleService) Update(ctx context.Context, id uint64, req interface{}, currentUser *models.User) (*models.Article, error) {
 	// Get existing article

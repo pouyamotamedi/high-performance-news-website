@@ -81,35 +81,37 @@ type UserManagementResponse struct {
 
 // CategoryManagementResponse represents category management data
 type CategoryManagementResponse struct {
-	ID            uint64    `json:"id"`
-	Name          string    `json:"name"`
-	Slug          string    `json:"slug"`
-	Description   string    `json:"description"`
-	ParentID      *uint64   `json:"parent_id"`
-	ParentName    string    `json:"parent_name,omitempty"`
-	LanguageCode  string    `json:"language_code"`  
-	ImageURL      *string   `json:"image_url"`
-	ImageAltText  *string   `json:"image_alt_text"`
-	ArticlesCount int64     `json:"articles_count"`
-	IsActive      bool      `json:"is_active"`
-	SortOrder     int       `json:"sort_order"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID                 uint64    `json:"id"`
+	Name               string    `json:"name"`
+	Slug               string    `json:"slug"`
+	Description        string    `json:"description"`
+	ParentID           *uint64   `json:"parent_id"`
+	ParentName         string    `json:"parent_name,omitempty"`
+	LanguageCode       string    `json:"language_code"`  
+	TranslationGroupID *uint64   `json:"translation_group_id"`
+	ImageURL           *string   `json:"image_url"`
+	ImageAltText       *string   `json:"image_alt_text"`
+	ArticlesCount      int64     `json:"articles_count"`
+	IsActive           bool      `json:"is_active"`
+	SortOrder          int       `json:"sort_order"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // TagManagementResponse represents tag management data
 type TagManagementResponse struct {
-    ID            uint64    `json:"id"`
-    Name          string    `json:"name"`
-    Slug          string    `json:"slug"`
-    Description   string    `json:"description"`
-    Keywords      []string  `json:"keywords"`      
-    Color         string    `json:"color"`
-    LanguageCode  string    `json:"language_code"`
-    ArticlesCount int64     `json:"articles_count"`
-    IsActive      bool      `json:"is_active"`
-    CreatedAt     time.Time `json:"created_at"`
-    UpdatedAt     time.Time `json:"updated_at"`
+    ID                 uint64    `json:"id"`
+    Name               string    `json:"name"`
+    Slug               string    `json:"slug"`
+    Description        string    `json:"description"`
+    Keywords           []string  `json:"keywords"`      
+    Color              string    `json:"color"`
+    LanguageCode       string    `json:"language_code"`
+    TranslationGroupID *uint64   `json:"translation_group_id"`
+    ArticlesCount      int64     `json:"articles_count"`
+    IsActive           bool      `json:"is_active"`
+    CreatedAt          time.Time `json:"created_at"`
+    UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // MediaManagementResponse represents media file management data
@@ -496,19 +498,20 @@ func (cmh *ContentManagementHandlers) getCategoriesWithManagementInfo() ([]Categ
     var result []CategoryManagementResponse
     for _, cat := range categories {
 		result = append(result, CategoryManagementResponse{
-			ID:            cat.ID,
-			Name:          cat.Name,
-			Slug:          cat.Slug,
-			Description:   cat.Description,
-			ParentID:      cat.ParentID,        
-			LanguageCode:  cat.LanguageCode,
-			ImageURL:      cat.ImageURL,
-			ImageAltText:  cat.ImageAltText,
-			ArticlesCount: 0,
-			IsActive:      true,
-			SortOrder:     cat.SortOrder,
-			CreatedAt:     cat.CreatedAt,
-			UpdatedAt:     cat.UpdatedAt,
+			ID:                 cat.ID,
+			Name:               cat.Name,
+			Slug:               cat.Slug,
+			Description:        cat.Description,
+			ParentID:           cat.ParentID,        
+			LanguageCode:       cat.LanguageCode,
+			TranslationGroupID: cat.TranslationGroupID,
+			ImageURL:           cat.ImageURL,
+			ImageAltText:       cat.ImageAltText,
+			ArticlesCount:      0,
+			IsActive:           true,
+			SortOrder:          cat.SortOrder,
+			CreatedAt:          cat.CreatedAt,
+			UpdatedAt:          cat.UpdatedAt,
 		})
     }
     
@@ -526,17 +529,18 @@ func (cmh *ContentManagementHandlers) getTagsWithManagementInfo(filters map[stri
 	var result []TagManagementResponse
 	for _, tag := range tags {
 		result = append(result, TagManagementResponse{
-			ID:            tag.ID,
-			Name:          tag.Name,
-			Slug:          tag.Slug,
-			Description:   tag.Description,
-			Keywords:      tag.Keywords,      // Add this
-			Color:         tag.Color,
-			LanguageCode:  tag.LanguageCode,
-			ArticlesCount: 0,
-			IsActive:      true,
-			CreatedAt:     tag.CreatedAt,
-			UpdatedAt:     tag.UpdatedAt,
+			ID:                 tag.ID,
+			Name:               tag.Name,
+			Slug:               tag.Slug,
+			Description:        tag.Description,
+			Keywords:           tag.Keywords,
+			Color:              tag.Color,
+			LanguageCode:       tag.LanguageCode,
+			TranslationGroupID: tag.TranslationGroupID,
+			ArticlesCount:      0,
+			IsActive:           true,
+			CreatedAt:          tag.CreatedAt,
+			UpdatedAt:          tag.UpdatedAt,
 		})
 	}
 	
@@ -601,14 +605,15 @@ func (cmh *ContentManagementHandlers) CreateCategory(c *gin.Context) {
 	}
 
 	var req struct {
-		Name         string  `json:"name" binding:"required"`
-		Slug         string  `json:"slug" binding:"required"`
-		Description  string  `json:"description"`
-		ParentID     *uint64 `json:"parent_id"`
-		SortOrder    int     `json:"sort_order"`
-		LanguageCode string  `json:"language_code"`
-		ImageURL     *string `json:"image_url"`
-		ImageAltText *string `json:"image_alt_text"`
+		Name               string  `json:"name" binding:"required"`
+		Slug               string  `json:"slug" binding:"required"`
+		Description        string  `json:"description"`
+		ParentID           *uint64 `json:"parent_id"`
+		SortOrder          int     `json:"sort_order"`
+		LanguageCode       string  `json:"language_code"`
+		TranslationGroupID *uint64 `json:"translation_group_id"`
+		ImageURL           *string `json:"image_url"`
+		ImageAltText       *string `json:"image_alt_text"`
 	}
 
 
@@ -622,14 +627,15 @@ func (cmh *ContentManagementHandlers) CreateCategory(c *gin.Context) {
 	}
 
 	category := &models.Category{
-		Name:         req.Name,
-		Slug:         req.Slug,
-		Description:  req.Description,
-		ParentID:     req.ParentID,
-		SortOrder:    req.SortOrder,
-		LanguageCode: req.LanguageCode,
-		ImageURL:     req.ImageURL,
-		ImageAltText: req.ImageAltText,
+		Name:               req.Name,
+		Slug:               req.Slug,
+		Description:        req.Description,
+		ParentID:           req.ParentID,
+		SortOrder:          req.SortOrder,
+		LanguageCode:       req.LanguageCode,
+		TranslationGroupID: req.TranslationGroupID,
+		ImageURL:           req.ImageURL,
+		ImageAltText:       req.ImageAltText,
 	}
 
 
@@ -685,14 +691,15 @@ func (cmh *ContentManagementHandlers) UpdateCategory(c *gin.Context) {
 	}
 
 	var req struct {
-		Name         string  `json:"name" binding:"required"`
-		Slug         string  `json:"slug" binding:"required"`
-		Description  string  `json:"description"`
-		ParentID     *uint64 `json:"parent_id"`
-		SortOrder    int     `json:"sort_order"`
-		LanguageCode string  `json:"language_code"`
-		ImageURL     *string `json:"image_url"`
-		ImageAltText *string `json:"image_alt_text"`
+		Name               string  `json:"name" binding:"required"`
+		Slug               string  `json:"slug" binding:"required"`
+		Description        string  `json:"description"`
+		ParentID           *uint64 `json:"parent_id"`
+		SortOrder          int     `json:"sort_order"`
+		LanguageCode       string  `json:"language_code"`
+		TranslationGroupID *uint64 `json:"translation_group_id"`
+		ImageURL           *string `json:"image_url"`
+		ImageAltText       *string `json:"image_alt_text"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -705,15 +712,16 @@ func (cmh *ContentManagementHandlers) UpdateCategory(c *gin.Context) {
 	}
 
 	category := &models.Category{
-		ID:           id,  // Add this line!
-		Name:         req.Name,
-		Slug:         req.Slug,
-		Description:  req.Description,
-		ParentID:     req.ParentID,
-		SortOrder:    req.SortOrder,
-		ImageURL:     req.ImageURL,
-		ImageAltText: req.ImageAltText,
-		LanguageCode: req.LanguageCode,
+		ID:                 id,  // Add this line!
+		Name:               req.Name,
+		Slug:               req.Slug,
+		Description:        req.Description,
+		ParentID:           req.ParentID,
+		SortOrder:          req.SortOrder,
+		TranslationGroupID: req.TranslationGroupID,
+		ImageURL:           req.ImageURL,
+		ImageAltText:       req.ImageAltText,
+		LanguageCode:       req.LanguageCode,
 	}
 
 	if err := cmh.categoryService.Update(category); err != nil {
@@ -807,12 +815,13 @@ func (cmh *ContentManagementHandlers) CreateTag(c *gin.Context) {
 	}
 
 	var req struct {
-		Name         string   `json:"name" binding:"required"`
-		Slug         string   `json:"slug" binding:"required"`
-		Description  string   `json:"description"`
-		Keywords     []string `json:"keywords"`        // Add this
-		Color        string   `json:"color"`
-		LanguageCode string   `json:"language_code"`
+		Name               string   `json:"name" binding:"required"`
+		Slug               string   `json:"slug" binding:"required"`
+		Description        string   `json:"description"`
+		Keywords           []string `json:"keywords"`
+		Color              string   `json:"color"`
+		LanguageCode       string   `json:"language_code"`
+		TranslationGroupID *uint64  `json:"translation_group_id"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -825,12 +834,13 @@ func (cmh *ContentManagementHandlers) CreateTag(c *gin.Context) {
 	}
 
 	tag := &models.Tag{
-		Name:         req.Name,
-		Slug:         req.Slug,
-		Description:  req.Description,
-		Keywords:     req.Keywords,
-		Color:        req.Color,
-		LanguageCode: req.LanguageCode,
+		Name:               req.Name,
+		Slug:               req.Slug,
+		Description:        req.Description,
+		Keywords:           req.Keywords,
+		Color:              req.Color,
+		LanguageCode:       req.LanguageCode,
+		TranslationGroupID: req.TranslationGroupID,
 	}
 
 	if err := cmh.tagService.Create(tag); err != nil {
@@ -884,12 +894,13 @@ func (cmh *ContentManagementHandlers) UpdateTag(c *gin.Context) {
 	}
 
 	var req struct {
-		Name         string   `json:"name" binding:"required"`
-		Slug         string   `json:"slug" binding:"required"`
-		Description  string   `json:"description"`
-		Keywords     []string `json:"keywords"`        // Add this
-		Color        string   `json:"color"`
-		LanguageCode string   `json:"language_code"`
+		Name               string   `json:"name" binding:"required"`
+		Slug               string   `json:"slug" binding:"required"`
+		Description        string   `json:"description"`
+		Keywords           []string `json:"keywords"`
+		Color              string   `json:"color"`
+		LanguageCode       string   `json:"language_code"`
+		TranslationGroupID *uint64  `json:"translation_group_id"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -902,13 +913,14 @@ func (cmh *ContentManagementHandlers) UpdateTag(c *gin.Context) {
 	}
 
 	tag := &models.Tag{
-		ID:           id,
-		Name:         req.Name,
-		Slug:         req.Slug,
-		Description:  req.Description,
-		Keywords:     req.Keywords,
-		Color:        req.Color,
-		LanguageCode: req.LanguageCode,
+		ID:                 id,
+		Name:               req.Name,
+		Slug:               req.Slug,
+		Description:        req.Description,
+		Keywords:           req.Keywords,
+		Color:              req.Color,
+		LanguageCode:       req.LanguageCode,
+		TranslationGroupID: req.TranslationGroupID,
 	}
 
 	if err := cmh.tagService.Update(tag); err != nil {

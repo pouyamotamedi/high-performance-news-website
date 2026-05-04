@@ -44,10 +44,22 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         <label for="languageCode" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Language</label>
                         <select id="languageCode" name="language_code"
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px;">
-                            <option value="en">English</option>
-                            <option value="fa">Persian/Farsi</option>
-                            <option value="ar">Arabic</option>
+                            <option value="en">🇬🇧 English</option>
+                            <option value="de">🇩🇪 Deutsch</option>
+                            <option value="fr">🇫🇷 Français</option>
+                            <option value="es">🇪🇸 Español</option>
+                            <option value="ar">🇸🇦 العربية</option>
                         </select>
+                    </div>
+                    <div>
+                        <label for="translationGroupId" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Translation Of</label>
+                        <select id="translationGroupId" name="translation_group_id"
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                            <option value="">New category (no translation)</option>
+                        </select>
+                        <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem;">
+                            💡 Select an existing category to create a translation
+                        </div>
                     </div>
                     <div style="grid-column: 1 / -1;">
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Category Image</label>
@@ -163,6 +175,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
             document.addEventListener('DOMContentLoaded', function() {
                 loadCategories();
                 setupMediaPicker();
+                loadTranslationGroups();
             });
 
             // Auto-generate slug from name and replace spaces with hyphens
@@ -176,6 +189,67 @@ func (s *Server) renderManageCategories(c *gin.Context) {
             document.getElementById('categorySlug').addEventListener('input', function() {
                 this.value = this.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
             });
+
+            // Filter translation groups when language changes
+            document.getElementById('languageCode').addEventListener('change', function() {
+                filterTranslationGroups(this.value);
+            });
+
+            function loadTranslationGroups() {
+                fetch('/api/v1/admin/content/categories', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) return;
+                    
+                    const categories = data.data.categories || [];
+                    window.allCategories = categories;
+                    filterTranslationGroups(document.getElementById('languageCode').value);
+                })
+                .catch(error => console.error('Error loading translation groups:', error));
+            }
+
+            function filterTranslationGroups(selectedLang) {
+                const select = document.getElementById('translationGroupId');
+                select.innerHTML = '<option value="">New category (no translation)</option>';
+                
+                if (!window.allCategories) return;
+                
+                // Group categories by translation_group_id
+                const groups = {};
+                window.allCategories.forEach(cat => {
+                    const groupId = cat.translation_group_id || cat.id;
+                    if (!groups[groupId]) {
+                        groups[groupId] = [];
+                    }
+                    groups[groupId].push(cat);
+                });
+                
+                // Show categories that don't have a translation in the selected language
+                Object.keys(groups).forEach(groupId => {
+                    const groupCats = groups[groupId];
+                    const hasSelectedLang = groupCats.some(c => c.language_code === selectedLang);
+                    
+                    if (!hasSelectedLang) {
+                        // Find the primary category (usually English or first one)
+                        const primary = groupCats.find(c => c.language_code === 'en') || groupCats[0];
+                        const langFlags = groupCats.map(c => {
+                            return c.language_code === 'de' ? '🇩🇪' : 
+                                   c.language_code === 'fr' ? '🇫🇷' :
+                                   c.language_code === 'es' ? '🇪🇸' :
+                                   c.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
+                        }).join(' ');
+                        
+                        const option = document.createElement('option');
+                        option.value = primary.translation_group_id || primary.id;
+                        option.textContent = primary.name + ' (' + langFlags + ')';
+                        select.appendChild(option);
+                    }
+                });
+            }
 
             function setupMediaPicker() {
                 // Media library button
@@ -339,6 +413,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                 const parentId = document.getElementById('parentCategory').value;
                 const sortOrder = parseInt(document.getElementById('sortOrder').value) || 0;
                 const languageCode = document.getElementById('languageCode').value;
+                const translationGroupId = document.getElementById('translationGroupId').value;
                 
                 if (!categoryName || !categorySlug) {
                     alert('Please fill in both category name and slug');
@@ -355,6 +430,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                     parent_id: parentId ? parseInt(parentId) : null,
                     sort_order: sortOrder,
                     language_code: languageCode,
+                    translation_group_id: translationGroupId ? parseInt(translationGroupId) : null,
                     image_url: imageUrl || null,
                     image_alt_text: imageAltText || null
                 });
@@ -373,6 +449,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         parent_id: parentId ? parseInt(parentId) : null,
                         sort_order: sortOrder,
                         language_code: languageCode,
+                        translation_group_id: translationGroupId ? parseInt(translationGroupId) : null,
                         image_url: imageUrl || null,
                         image_alt_text: imageAltText || null
                     })
@@ -387,9 +464,11 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         // Reset to default values
                         document.getElementById('sortOrder').value = '0';
                         document.getElementById('languageCode').value = 'en';
+                        document.getElementById('translationGroupId').value = '';
                         // Clear image preview
                         clearSelectedImage();
                         loadCategories(); // Refresh the list
+                        loadTranslationGroups(); // Refresh translation groups
                     }
                 })
                 .catch(error => {
@@ -432,8 +511,27 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         }
                         
                         // Fix language flag detection
-                        const langFlag = category.language_code === 'fa' ? '🇮🇷' : 
-                                        category.language_code === 'ar' ? '🇸🇦' : '🇺🇸';
+                        const langFlag = category.language_code === 'de' ? '🇩🇪' : 
+                                        category.language_code === 'fr' ? '🇫🇷' :
+                                        category.language_code === 'es' ? '🇪🇸' :
+                                        category.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
+                        
+                        // Find translation siblings
+                        let translationInfo = '';
+                        if (category.translation_group_id) {
+                            const siblings = categories.filter(c => 
+                                c.translation_group_id === category.translation_group_id && c.id !== category.id
+                            );
+                            if (siblings.length > 0) {
+                                const siblingFlags = siblings.map(s => {
+                                    return s.language_code === 'de' ? '🇩🇪' : 
+                                           s.language_code === 'fr' ? '🇫🇷' :
+                                           s.language_code === 'es' ? '🇪🇸' :
+                                           s.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
+                                }).join(' ');
+                                translationInfo = ' <span style="color: #10b981; font-size: 0.75rem;">🔗 Translations: ' + siblingFlags + '</span>';
+                            }
+                        }
                         
                         // Create thumbnail HTML
                         let thumbnailHtml = '';
@@ -453,7 +551,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                             '<input type="checkbox" class="category-checkbox" value="' + category.id + '" onchange="updateBulkActions()">' +
                             thumbnailHtml +
                             '<div>' +
-                            '<div><strong>' + category.name + '</strong> ' + langFlag + ' <span style="color: #6b7280;">[ID: ' + category.id + '] (' + category.slug + ')' + parentInfo + '</span></div>' +
+                            '<div><strong>' + category.name + '</strong> ' + langFlag + ' <span style="color: #6b7280;">[ID: ' + category.id + '] (' + category.slug + ')' + parentInfo + '</span>' + translationInfo + '</div>' +
                             '<div><small>' + (category.description || 'No description') + '</small></div>' +
                             '<div><span style="font-size: 0.75rem; color: #9ca3af;">Sort: ' + (category.sort_order || 0) + ' | Lang: ' + (category.language_code || 'en') + '</span></div>' +
                             '</div>' +
@@ -528,6 +626,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                     document.getElementById('parentCategory').value = category.parent_id || '';
                     document.getElementById('sortOrder').value = category.sort_order || 0;
                     document.getElementById('languageCode').value = category.language_code || 'en';
+                    document.getElementById('translationGroupId').value = category.translation_group_id || '';
                     document.getElementById('categoryImageUrl').value = category.image_url || '';
                     document.getElementById('categoryImageAlt').value = category.image_alt_text || '';
                     
@@ -563,6 +662,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                 const parentId = document.getElementById('parentCategory').value;
                 const sortOrder = parseInt(document.getElementById('sortOrder').value) || 0;
                 const languageCode = document.getElementById('languageCode').value;
+                const translationGroupId = document.getElementById('translationGroupId').value;
                 const imageUrl = document.getElementById('categoryImageUrl').value.trim();
                 const imageAltText = document.getElementById('categoryImageAlt').value.trim();
                 
@@ -584,6 +684,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         parent_id: parentId ? parseInt(parentId) : null,
                         sort_order: sortOrder,
                         language_code: languageCode,
+                        translation_group_id: translationGroupId ? parseInt(translationGroupId) : null,
                         image_url: imageUrl || null,
                         image_alt_text: imageAltText || null
                     })
@@ -598,12 +699,14 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         document.getElementById('categoryForm').reset();
                         document.getElementById('sortOrder').value = '0';
                         document.getElementById('languageCode').value = 'en';
+                        document.getElementById('translationGroupId').value = '';
                         // Clear image preview
                         clearSelectedImage();
                         const submitBtn = document.querySelector('#categoryForm button[type="submit"]');
                         submitBtn.innerHTML = '➕ Add Category';
                         submitBtn.onclick = null;
                         loadCategories(); // Refresh the list
+                        loadTranslationGroups(); // Refresh translation groups
                     }
                 })
                 .catch(error => {

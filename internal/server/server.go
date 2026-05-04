@@ -1145,6 +1145,8 @@ func (s *Server) handleTagsSitemap(c *gin.Context) {
 }
 
 // handleLanguageSitemap generates sitemap for a specific language with hreflang support
+// IMPORTANT: hreflang tags are ONLY generated for languages that have actual translations
+// This follows SEO best practices - missing translation ≠ SEO penalty, but broken hreflang = problem
 func (s *Server) handleLanguageSitemap(c *gin.Context) {
 	// Extract language from URL (e.g., /sitemap-en.xml -> en)
 	path := c.Request.URL.Path
@@ -1156,13 +1158,13 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
 		baseURL = fmt.Sprintf("https://%s", c.Request.Host)
 	}
 
-	languages := []string{"en", "de", "fr", "es", "ar"}
+	allLanguages := []string{"en", "de", "fr", "es", "ar"}
 
 	xml := `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">`
 
-	// Add homepage
+	// Add homepage - homepage exists in all languages
 	xml += fmt.Sprintf(`
   <url>
     <loc>%s/%s/</loc>
@@ -1170,8 +1172,8 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
     <changefreq>daily</changefreq>
     <priority>1.0</priority>`, baseURL, lang, time.Now().Format("2006-01-02"))
 
-	// Add hreflang for all languages
-	for _, l := range languages {
+	// Add hreflang for all languages (homepage always exists in all languages)
+	for _, l := range allLanguages {
 		xml += fmt.Sprintf(`
     <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/"/>`, l, baseURL, l)
 	}
@@ -1179,15 +1181,51 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
     <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/"/>
   </url>`, baseURL)
 
-	// Add articles
+	// Add articles - only include hreflang for existing translations
 	if s.articleService != nil {
 		filters := services.ArticleFilters{Status: "published"}
 		articles, _, _ := s.articleService.List(c.Request.Context(), 1000, 0, filters, "published_at", "DESC")
 
+		// Group articles by translation_group_id to avoid duplicates
+		processedGroups := make(map[uint64]bool)
+
 		for _, article := range articles {
+			// Skip if we've already processed this translation group
+			groupID := article.ID
+			if article.TranslationGroupID != nil {
+				groupID = *article.TranslationGroupID
+			}
+			if processedGroups[groupID] {
+				continue
+			}
+			processedGroups[groupID] = true
+
 			lastMod := time.Now().Format("2006-01-02")
 			if !article.UpdatedAt.IsZero() {
 				lastMod = article.UpdatedAt.Format("2006-01-02")
+			}
+
+			// Get available translations for this article
+			availableTranslations, err := s.articleService.GetAvailableTranslations(c.Request.Context(), article.ID)
+			var availableLangs []string
+			if err == nil && len(availableTranslations) > 0 {
+				for _, trans := range availableTranslations {
+					availableLangs = append(availableLangs, trans.LanguageCode)
+				}
+			} else {
+				availableLangs = []string{article.LanguageCode}
+			}
+
+			// Only add URL if this language has a translation
+			hasCurrentLang := false
+			for _, l := range availableLangs {
+				if l == lang {
+					hasCurrentLang = true
+					break
+				}
+			}
+			if !hasCurrentLang {
+				continue
 			}
 
 			xml += fmt.Sprintf(`
@@ -1197,58 +1235,173 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>`, baseURL, lang, article.Slug, lastMod)
 
-			// Add hreflang for all languages
-			for _, l := range languages {
+			// Add hreflang ONLY for existing translations
+			for _, l := range availableLangs {
 				xml += fmt.Sprintf(`
     <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/article/%s"/>`, l, baseURL, l, article.Slug)
 			}
+			
+			// x-default points to English if available, otherwise first available language
+			xDefaultLang := "en"
+			hasEnglish := false
+			for _, l := range availableLangs {
+				if l == "en" {
+					hasEnglish = true
+					break
+				}
+			}
+			if !hasEnglish && len(availableLangs) > 0 {
+				xDefaultLang = availableLangs[0]
+			}
 			xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/article/%s"/>
-  </url>`, baseURL, article.Slug)
+    <xhtml:link rel="alternate" hreflang="x-default" href="%s/%s/article/%s"/>
+  </url>`, baseURL, xDefaultLang, article.Slug)
 		}
 	}
 
-	// Add categories
+	// Add categories - only include hreflang for existing translations
 	if s.categoryService != nil {
 		categories, _ := s.categoryService.GetAll()
+		
+		// Group categories by translation_group_id to avoid duplicates
+		processedGroups := make(map[uint64]bool)
+		
 		for _, cat := range categories {
+			// Skip if we've already processed this translation group
+			groupID := cat.ID
+			if cat.TranslationGroupID != nil {
+				groupID = *cat.TranslationGroupID
+			}
+			if processedGroups[groupID] {
+				continue
+			}
+			processedGroups[groupID] = true
+
+			// Get available translations for this category
+			availableTranslations, err := s.categoryService.GetAllTranslations(groupID)
+			var availableLangs []string
+			if err == nil && len(availableTranslations) > 0 {
+				for _, trans := range availableTranslations {
+					availableLangs = append(availableLangs, trans.LanguageCode)
+				}
+			} else {
+				availableLangs = []string{cat.LanguageCode}
+			}
+
+			// Only add URL if this language has a translation
+			hasCurrentLang := false
+			for _, l := range availableLangs {
+				if l == lang {
+					hasCurrentLang = true
+					break
+				}
+			}
+			if !hasCurrentLang {
+				continue
+			}
+
 			xml += fmt.Sprintf(`
   <url>
     <loc>%s/%s/category/%s</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>`, baseURL, lang, cat.Slug)
 
-			for _, l := range languages {
+			// Add hreflang ONLY for existing translations
+			for _, l := range availableLangs {
 				xml += fmt.Sprintf(`
     <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/category/%s"/>`, l, baseURL, l, cat.Slug)
 			}
+			
+			// x-default
+			xDefaultLang := "en"
+			hasEnglish := false
+			for _, l := range availableLangs {
+				if l == "en" {
+					hasEnglish = true
+					break
+				}
+			}
+			if !hasEnglish && len(availableLangs) > 0 {
+				xDefaultLang = availableLangs[0]
+			}
 			xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/category/%s"/>
-  </url>`, baseURL, cat.Slug)
+    <xhtml:link rel="alternate" hreflang="x-default" href="%s/%s/category/%s"/>
+  </url>`, baseURL, xDefaultLang, cat.Slug)
 		}
 	}
 
-	// Add tags
+	// Add tags - only include hreflang for existing translations
 	if s.tagService != nil {
 		tags, _ := s.tagService.GetAll()
+		
+		// Group tags by translation_group_id to avoid duplicates
+		processedGroups := make(map[uint64]bool)
+		
 		for _, tag := range tags {
+			// Skip if we've already processed this translation group
+			groupID := tag.ID
+			if tag.TranslationGroupID != nil {
+				groupID = *tag.TranslationGroupID
+			}
+			if processedGroups[groupID] {
+				continue
+			}
+			processedGroups[groupID] = true
+
+			// Get available translations for this tag
+			availableTranslations, err := s.tagService.GetAllTranslations(groupID)
+			var availableLangs []string
+			if err == nil && len(availableTranslations) > 0 {
+				for _, trans := range availableTranslations {
+					availableLangs = append(availableLangs, trans.LanguageCode)
+				}
+			} else {
+				availableLangs = []string{tag.LanguageCode}
+			}
+
+			// Only add URL if this language has a translation
+			hasCurrentLang := false
+			for _, l := range availableLangs {
+				if l == lang {
+					hasCurrentLang = true
+					break
+				}
+			}
+			if !hasCurrentLang {
+				continue
+			}
+
 			xml += fmt.Sprintf(`
   <url>
     <loc>%s/%s/tag/%s</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>`, baseURL, lang, tag.Slug)
 
-			for _, l := range languages {
+			// Add hreflang ONLY for existing translations
+			for _, l := range availableLangs {
 				xml += fmt.Sprintf(`
     <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/tag/%s"/>`, l, baseURL, l, tag.Slug)
 			}
+			
+			// x-default
+			xDefaultLang := "en"
+			hasEnglish := false
+			for _, l := range availableLangs {
+				if l == "en" {
+					hasEnglish = true
+					break
+				}
+			}
+			if !hasEnglish && len(availableLangs) > 0 {
+				xDefaultLang = availableLangs[0]
+			}
 			xml += fmt.Sprintf(`
-    <xhtml:link rel="alternate" hreflang="x-default" href="%s/en/tag/%s"/>
-  </url>`, baseURL, tag.Slug)
+    <xhtml:link rel="alternate" hreflang="x-default" href="%s/%s/tag/%s"/>
+  </url>`, baseURL, xDefaultLang, tag.Slug)
 		}
 	}
 
-	// Add static pages
+	// Add static pages - these exist in all languages
 	staticPages := []string{"latest", "trending", "categories", "tags", "about", "contact"}
 	for _, page := range staticPages {
 		xml += fmt.Sprintf(`
@@ -1257,7 +1410,7 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>`, baseURL, lang, page)
 
-		for _, l := range languages {
+		for _, l := range allLanguages {
 			xml += fmt.Sprintf(`
     <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/%s"/>`, l, baseURL, l, page)
 		}
@@ -1440,6 +1593,8 @@ func getLanguageName(lang string) string {
 }
 
 // generateAlternateURLs generates alternate language URLs for hreflang tags
+// This is the default implementation for static pages (homepage, about, etc.)
+// For articles, use generateArticleAlternateURLs instead
 func (s *Server) generateAlternateURLs(currentPath string) []map[string]string {
 	languages := []string{"en", "de", "fr", "es", "ar"}
 	baseURL := s.config.App.BaseURL
@@ -1478,6 +1633,51 @@ func (s *Server) generateAlternateURLs(currentPath string) []map[string]string {
 	alternates = append(alternates, map[string]string{
 		"lang": "x-default",
 		"url":  baseURL + "/en" + cleanPath,
+	})
+
+	return alternates
+}
+
+// generateAlternateURLsForTranslations generates hreflang URLs only for existing translations
+// This should be used for articles, categories, and tags that have translation groups
+func (s *Server) generateAlternateURLsForTranslations(availableLanguages []string, pathTemplate string) []map[string]string {
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://a.10top.shop"
+	}
+
+	var alternates []map[string]string
+	var hasEnglish bool
+	
+	for _, lang := range availableLanguages {
+		url := baseURL + "/" + lang + pathTemplate
+		// Clean up double slashes
+		url = strings.ReplaceAll(url, "//", "/")
+		url = strings.Replace(url, ":/", "://", 1)
+
+		alternates = append(alternates, map[string]string{
+			"lang": lang,
+			"url":  url,
+		})
+		
+		if lang == "en" {
+			hasEnglish = true
+		}
+	}
+
+	// Add x-default pointing to English if available, otherwise first language
+	xDefaultLang := "en"
+	if !hasEnglish && len(availableLanguages) > 0 {
+		xDefaultLang = availableLanguages[0]
+	}
+	
+	xDefaultURL := baseURL + "/" + xDefaultLang + pathTemplate
+	xDefaultURL = strings.ReplaceAll(xDefaultURL, "//", "/")
+	xDefaultURL = strings.Replace(xDefaultURL, ":/", "://", 1)
+	
+	alternates = append(alternates, map[string]string{
+		"lang": "x-default",
+		"url":  xDefaultURL,
 	})
 
 	return alternates
@@ -3415,6 +3615,140 @@ func (s *Server) getCategoryByID(categoryID uint64) (gin.H, error) {
 	}, nil
 }
 
+// getCategoryByIDForLanguage fetches category information by ID, resolving to the correct language version
+// If the category has a translation_group_id, it finds the version in the requested language
+func (s *Server) getCategoryByIDForLanguage(categoryID uint64, lang string) (gin.H, error) {
+	if s.db == nil {
+		return gin.H{"Name": "General", "Slug": "general"}, nil
+	}
+
+	// First, get the translation_group_id for this category
+	var translationGroupID uint64
+	var originalName, originalSlug string
+	query := `SELECT COALESCE(translation_group_id, id), name, slug FROM categories WHERE id = $1`
+	err := s.db.DB.QueryRow(query, categoryID).Scan(&translationGroupID, &originalName, &originalSlug)
+	if err != nil {
+		return gin.H{"Name": "General", "Slug": "general"}, err
+	}
+
+	// Now find the category in the requested language
+	var name, slug string
+	langQuery := `
+		SELECT name, slug FROM categories 
+		WHERE (translation_group_id = $1 OR id = $1) AND language_code = $2
+		LIMIT 1
+	`
+	err = s.db.DB.QueryRow(langQuery, translationGroupID, lang).Scan(&name, &slug)
+	if err != nil {
+		// If no translation exists, return the original
+		return gin.H{
+			"Name": originalName,
+			"Slug": originalSlug,
+		}, nil
+	}
+
+	return gin.H{
+		"Name": name,
+		"Slug": slug,
+	}, nil
+}
+
+// getArticleTagsForLanguage fetches tags for an article, resolving to the correct language versions
+func (s *Server) getArticleTagsForLanguage(articleID uint64, lang string) ([]gin.H, error) {
+	if s.db == nil {
+		return nil, nil
+	}
+
+	// Get tag IDs for this article
+	query := `SELECT tag_id FROM article_tags WHERE article_id = $1`
+	rows, err := s.db.DB.Query(query, articleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tagIDs []uint64
+	for rows.Next() {
+		var tagID uint64
+		if err := rows.Scan(&tagID); err != nil {
+			continue
+		}
+		tagIDs = append(tagIDs, tagID)
+	}
+
+	if len(tagIDs) == 0 {
+		return nil, nil
+	}
+
+	// For each tag, find the correct language version
+	var tags []gin.H
+	for _, tagID := range tagIDs {
+		// Get translation_group_id
+		var translationGroupID uint64
+		var originalName, originalSlug, originalColor string
+		groupQuery := `SELECT COALESCE(translation_group_id, id), name, slug, COALESCE(color, '#3b82f6') FROM tags WHERE id = $1`
+		err := s.db.DB.QueryRow(groupQuery, tagID).Scan(&translationGroupID, &originalName, &originalSlug, &originalColor)
+		if err != nil {
+			continue
+		}
+
+		// Find the tag in the requested language
+		var name, slug, color string
+		langQuery := `
+			SELECT name, slug, COALESCE(color, '#3b82f6') FROM tags 
+			WHERE (translation_group_id = $1 OR id = $1) AND language_code = $2
+			LIMIT 1
+		`
+		err = s.db.DB.QueryRow(langQuery, translationGroupID, lang).Scan(&name, &slug, &color)
+		if err != nil {
+			// Use original if no translation
+			name, slug, color = originalName, originalSlug, originalColor
+		}
+
+		tags = append(tags, gin.H{
+			"Name":  name,
+			"Slug":  slug,
+			"Color": color,
+		})
+	}
+
+	return tags, nil
+}
+
+// getAvailableLanguagesForArticle returns language info for the language switcher, only for available translations
+func (s *Server) getAvailableLanguagesForArticle(translations []models.Article, slug string) []map[string]interface{} {
+	languageInfo := map[string]struct {
+		Name       string
+		NativeName string
+		Direction  string
+	}{
+		"en": {"English", "English", "ltr"},
+		"de": {"German", "Deutsch", "ltr"},
+		"fr": {"French", "Français", "ltr"},
+		"es": {"Spanish", "Español", "ltr"},
+		"ar": {"Arabic", "العربية", "rtl"},
+	}
+
+	var result []map[string]interface{}
+	for _, trans := range translations {
+		info, ok := languageInfo[trans.LanguageCode]
+		if !ok {
+			continue
+		}
+
+		url := "/" + trans.LanguageCode + "/article/" + slug
+		result = append(result, map[string]interface{}{
+			"Code":       trans.LanguageCode,
+			"Name":       info.Name,
+			"NativeName": info.NativeName,
+			"Direction":  info.Direction,
+			"URL":        url,
+		})
+	}
+
+	return result
+}
+
 // buildResponsiveImageData builds ResponsiveImageData from an image ID for dynamic rendering
 func (s *Server) buildResponsiveImageData(imageID uint64, altText string) *services.ResponsiveImageData {
 	if s.mediaService == nil || imageID == 0 {
@@ -3849,16 +4183,16 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 		}
 	}
 
-	// Get category
+	// Get category - resolve to correct language version
 	if article.CategoryID > 0 {
-		categoryData, err := s.getCategoryByID(article.CategoryID)
+		categoryData, err := s.getCategoryByIDForLanguage(article.CategoryID, lang)
 		if err == nil {
 			articleData["Category"] = categoryData
 		}
 	}
 
-	// Get tags
-	tags, err := s.getArticleTags(article.ID)
+	// Get tags - resolve to correct language versions
+	tags, err := s.getArticleTagsForLanguage(article.ID, lang)
 	if err == nil {
 		articleData["Tags"] = tags
 	}
@@ -3874,7 +4208,32 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 	data["Title"] = article.Title
 	data["PageType"] = "article"
 	data["Article"] = articleData
-	s.addMultilingualData(data, lang, "/article/"+slug)
+	
+	// Get available translations for correct hreflang tags
+	availableTranslations, err := s.articleService.GetAvailableTranslations(c.Request.Context(), article.ID)
+	if err == nil && len(availableTranslations) > 0 {
+		// Build list of available languages
+		var availableLangs []string
+		for _, trans := range availableTranslations {
+			availableLangs = append(availableLangs, trans.LanguageCode)
+		}
+		// Use the new method that only includes existing translations
+		data["AlternateURLs"] = s.generateAlternateURLsForTranslations(availableLangs, "/article/"+slug)
+	} else {
+		// Fallback to current article's language only
+		data["AlternateURLs"] = s.generateAlternateURLsForTranslations([]string{lang}, "/article/"+slug)
+	}
+	
+	// Add other multilingual data
+	data["LanguageCode"] = lang
+	data["LanguageDirection"] = getLanguageDirection(lang)
+	data["LanguageName"] = getLanguageName(lang)
+	data["LanguageNativeName"] = getLanguageNativeName(lang)
+	data["AvailableLanguages"] = s.getAvailableLanguagesForArticle(availableTranslations, slug)
+	data["CanonicalURL"] = s.generateCanonicalURL(lang, "/article/"+slug)
+	data["IsRTL"] = lang == "ar"
+	data["BaseURL"] = s.config.App.BaseURL
+	data["Navigation"] = s.getNavigationForLanguage(lang)
 
 	if s.templateEngine != nil {
 		if html, err := s.templateEngine.Render("article", data); err == nil {

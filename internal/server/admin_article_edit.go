@@ -169,7 +169,19 @@ function initializeEditor() {
         document.getElementById('metaDescCount').textContent = this.value.length;
         updateSEOPreview();
     });
+    
+    // Add language change handler to filter categories
+    document.getElementById('languageCode').addEventListener('change', function() {
+        // With the new translation group system, we always show core categories
+        // The system will automatically resolve to the correct language version when displaying
+        displayCoreCategories();
+        displayCoreTags();
+    });
 }
+
+// Store all categories and tags for filtering
+let allCategories = [];
+let allTags = [];
 
 async function loadCategories() {
     try {
@@ -178,20 +190,19 @@ async function loadCategories() {
         });
         if (response.ok) {
             const data = await response.json();
-            categories = data.data.categories || [];
+            allCategories = data.data.categories || [];
+            
+            // Show core categories (one per translation group)
+            displayCoreCategories();
+            
             const select = document.getElementById('categorySelect');
-            select.innerHTML = '<option value="">Select a category to add...</option>';
-            categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.textContent = category.name;
-                select.appendChild(option);
-            });
             
             // Handle category selection
             select.addEventListener('change', function() {
                 if (this.value) {
-                    addCategory(this.value, this.options[this.selectedIndex].text);
+                    const selectedCat = allCategories.find(c => c.id == this.value);
+                    const groupId = selectedCat?.translation_group_id || selectedCat?.id;
+                    addCategory(this.value, this.options[this.selectedIndex].text, groupId);
                     this.selectedIndex = 0; // Reset selection
                 }
             });
@@ -201,6 +212,78 @@ async function loadCategories() {
     }
 }
 
+function displayCoreCategories() {
+    const select = document.getElementById('categorySelect');
+    select.innerHTML = '<option value="">Select a category to add...</option>';
+    
+    // Group categories by translation_group_id
+    const groups = {};
+    allCategories.forEach(cat => {
+        const groupId = cat.translation_group_id || cat.id;
+        if (!groups[groupId]) {
+            groups[groupId] = [];
+        }
+        groups[groupId].push(cat);
+    });
+    
+    // For each group, show the primary category (prefer English, then first)
+    Object.keys(groups).forEach(groupId => {
+        const groupCats = groups[groupId];
+        const primary = groupCats.find(c => c.language_code === 'en') || groupCats[0];
+        
+        // Show available language flags
+        const langFlags = groupCats.map(c => {
+            return c.language_code === 'de' ? '🇩🇪' : 
+                   c.language_code === 'fr' ? '🇫🇷' :
+                   c.language_code === 'es' ? '🇪🇸' :
+                   c.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
+        }).join(' ');
+        
+        const option = document.createElement('option');
+        option.value = primary.id;
+        option.dataset.translationGroupId = groupId;
+        option.textContent = primary.name + ' (' + langFlags + ')';
+        select.appendChild(option);
+    });
+    
+    if (Object.keys(groups).length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '⚠️ No categories found - create one first';
+        option.disabled = true;
+        select.appendChild(option);
+    }
+}
+
+function filterCategoriesByLanguage(lang) {
+    displayCoreCategories();
+}
+
+function filterTagsByLanguage(lang) {
+    displayCoreTags();
+}
+
+function displayCoreTags() {
+    // Group tags by translation_group_id
+    const groups = {};
+    allTags.forEach(tag => {
+        const groupId = tag.translation_group_id || tag.id;
+        if (!groups[groupId]) {
+            groups[groupId] = [];
+        }
+        groups[groupId].push(tag);
+    });
+    
+    // For suggestions, show primary tags from each group
+    availableTags = [];
+    Object.keys(groups).forEach(groupId => {
+        const groupTags = groups[groupId];
+        const primary = groupTags.find(t => t.language_code === 'en') || groupTags[0];
+        primary._translationGroupId = groupId;
+        availableTags.push(primary);
+    });
+}
+
 async function loadTags() {
     try {
         const response = await fetch('/api/v1/admin/content/tags', {
@@ -208,9 +291,12 @@ async function loadTags() {
         });
         if (response.ok) {
             const data = await response.json();
-            availableTags = data.data.tags || [];
+            allTags = data.data.tags || [];
+            
+            // Show core tags (one per translation group)
+            displayCoreTags();
+            
             console.log('Available tags loaded:', availableTags);
-            console.log('First tag structure:', availableTags[0]);
         }
     } catch (error) {
         console.error('Failed to load tags:', error);
@@ -348,14 +434,21 @@ function renderTags() {
 }
 
 // Category management functions
-function addCategory(categoryId, categoryName) {
-    // Check if category is already selected
-    if (selectedCategories.find(cat => cat.id === categoryId)) {
+function addCategory(categoryId, categoryName, translationGroupId) {
+    // Check if category is already selected (by translation group to avoid duplicates)
+    const groupId = translationGroupId || categoryId;
+    if (selectedCategories.find(cat => cat.groupId === groupId || cat.id === categoryId)) {
         return;
     }
 
-    // Add to selected categories
-    selectedCategories.push({ id: categoryId, name: categoryName });
+    // Add to selected categories with translation group info
+    // We store the category ID but also track the translation group
+    // This ensures the same category concept is used across all language versions
+    selectedCategories.push({ 
+        id: categoryId, 
+        name: categoryName,
+        groupId: groupId
+    });
     updateCategoryDisplay();
 }
 

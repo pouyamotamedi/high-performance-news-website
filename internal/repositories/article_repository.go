@@ -164,6 +164,94 @@ func (r *ArticleRepository) GetBySlug(ctx context.Context, slug string) (*models
 	return article, nil
 }
 
+// GetByTranslationGroup retrieves all articles in the same translation group
+// This is used for generating hreflang tags with only existing translations
+func (r *ArticleRepository) GetByTranslationGroup(ctx context.Context, translationGroupID uint64) ([]models.Article, error) {
+	query := `
+		SELECT id, title, slug, content, excerpt, author_id, category_id, status, 
+		       published_at, created_at, updated_at, view_count, like_count, dislike_count,
+		       meta_title, meta_description, focus_keyword, canonical_url, schema_type,
+		       auto_linking, language_code, translation_group_id, moderation_status,
+		       moderation_notes, last_moderated_at, last_moderated_by, featured_image_id
+		FROM articles 
+		WHERE (translation_group_id = $1 OR id = $1) AND status = 'published'
+		ORDER BY language_code
+	`
+	
+	rows, err := r.db.Query(query, translationGroupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query articles by translation group: %w", err)
+	}
+	defer rows.Close()
+	
+	var articles []models.Article
+	for rows.Next() {
+		var article models.Article
+		var publishedAt, lastModeratedAt sql.NullTime
+		var translationGrpID, lastModeratedBy, featuredImageID sql.NullInt64
+		var moderationNotes sql.NullString
+		
+		err := rows.Scan(
+			&article.ID,
+			&article.Title,
+			&article.Slug,
+			&article.Content,
+			&article.Excerpt,
+			&article.AuthorID,
+			&article.CategoryID,
+			&article.Status,
+			&publishedAt,
+			&article.CreatedAt,
+			&article.UpdatedAt,
+			&article.ViewCount,
+			&article.LikeCount,
+			&article.DislikeCount,
+			&article.MetaTitle,
+			&article.MetaDescription,
+			&article.FocusKeyword,
+			&article.CanonicalURL,
+			&article.SchemaType,
+			&article.AutoLinking,
+			&article.LanguageCode,
+			&translationGrpID,
+			&article.ModerationStatus,
+			&moderationNotes,
+			&lastModeratedAt,
+			&lastModeratedBy,
+			&featuredImageID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan article: %w", err)
+		}
+		
+		if publishedAt.Valid {
+			article.PublishedAt = &publishedAt.Time
+		}
+		if translationGrpID.Valid {
+			tgid := uint64(translationGrpID.Int64)
+			article.TranslationGroupID = &tgid
+		}
+		if lastModeratedAt.Valid {
+			article.LastModeratedAt = &lastModeratedAt.Time
+		}
+		if lastModeratedBy.Valid {
+			lmb := uint64(lastModeratedBy.Int64)
+			article.LastModeratedBy = &lmb
+		}
+		if featuredImageID.Valid {
+			fid := uint64(featuredImageID.Int64)
+			article.FeaturedImageID = &fid
+		}
+		if moderationNotes.Valid {
+			article.ModerationNotes = moderationNotes.String
+		}
+		
+		articles = append(articles, article)
+	}
+	
+	return articles, nil
+}
+
 // GetByCategory retrieves articles by category with pagination
 func (r *ArticleRepository) GetByCategory(ctx context.Context, categoryID uint64, limit, offset int) ([]models.Article, error) {
 	stmt, err := r.db.GetPreparedStatement(database.StmtGetCategory)
