@@ -137,6 +137,9 @@ func ValidateArticle(article *Article) error {
 	}
 
 	if len(errors) > 0 {
+		// Log validation errors for debugging
+		fmt.Printf("Article validation failed: %v (Title=%s, Content length=%d, AuthorID=%d, CategoryID=%d, LanguageCode=%s, Status=%s, Slug=%s)\n", 
+			errors, article.Title, len(article.Content), article.AuthorID, article.CategoryID, article.LanguageCode, article.Status, article.Slug)
 		return &ValidationError{
 			Message: "Article validation failed",
 			Fields:  errors,

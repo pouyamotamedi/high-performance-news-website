@@ -704,10 +704,72 @@ func parseUint64ArrayQuery(c *gin.Context, key string) []uint64 {
 	return result
 }
 
+// Transliteration maps for SEO-friendly slugs
+var arabicToLatin = map[rune]string{
+	'ا': "a", 'أ': "a", 'إ': "e", 'آ': "a",
+	'ب': "b", 'ت': "t", 'ث': "th",
+	'ج': "j", 'ح': "h", 'خ': "kh",
+	'د': "d", 'ذ': "dh",
+	'ر': "r", 'ز': "z",
+	'س': "s", 'ش': "sh",
+	'ص': "s", 'ض': "d",
+	'ط': "t", 'ظ': "z",
+	'ع': "a", 'غ': "gh",
+	'ف': "f", 'ق': "q",
+	'ك': "k", 'ک': "k",
+	'ل': "l", 'م': "m", 'ن': "n",
+	'ه': "h", 'ة': "h",
+	'و': "w", 'ؤ': "w",
+	'ي': "y", 'ى': "y", 'ئ': "y",
+	'ء': "",
+	'٠': "0", '١': "1", '٢': "2", '٣': "3", '٤': "4",
+	'٥': "5", '٦': "6", '٧': "7", '٨': "8", '٩': "9",
+	'َ': "a", 'ُ': "u", 'ِ': "i", 'ً': "", 'ٌ': "", 'ٍ': "",
+	'ّ': "", 'ْ': "",
+}
+
+var germanToLatin = map[rune]string{
+	'ä': "ae", 'Ä': "ae", 'ö': "oe", 'Ö': "oe",
+	'ü': "ue", 'Ü': "ue", 'ß': "ss",
+}
+
+var frenchToLatin = map[rune]string{
+	'à': "a", 'â': "a", 'æ': "ae", 'ç': "c",
+	'é': "e", 'è': "e", 'ê': "e", 'ë': "e",
+	'î': "i", 'ï': "i", 'ô': "o", 'œ': "oe",
+	'ù': "u", 'û': "u", 'ü': "u", 'ÿ': "y",
+}
+
+var spanishToLatin = map[rune]string{
+	'á': "a", 'é': "e", 'í': "i", 'ó': "o", 'ú': "u",
+	'ñ': "n", 'Ñ': "n", 'ü': "u",
+}
+
+// transliterate converts non-ASCII characters to ASCII equivalents
+func transliterate(text string) string {
+	var result strings.Builder
+	for _, char := range text {
+		if val, ok := arabicToLatin[char]; ok {
+			result.WriteString(val)
+		} else if val, ok := germanToLatin[char]; ok {
+			result.WriteString(val)
+		} else if val, ok := frenchToLatin[char]; ok {
+			result.WriteString(val)
+		} else if val, ok := spanishToLatin[char]; ok {
+			result.WriteString(val)
+		} else {
+			result.WriteRune(char)
+		}
+	}
+	return result.String()
+}
+
 // generateSlugFromTitle creates a URL-friendly slug from a title
 func generateSlugFromTitle(title string) string {
+	// First transliterate non-ASCII characters
+	slug := transliterate(title)
 	// Convert to lowercase
-	slug := strings.ToLower(title)
+	slug = strings.ToLower(slug)
 	// Replace spaces with hyphens
 	slug = strings.ReplaceAll(slug, " ", "-")
 	// Remove special characters (keep only letters, numbers, and hyphens)
@@ -716,6 +778,10 @@ func generateSlugFromTitle(title string) string {
 	slug = regexp.MustCompile(`-+`).ReplaceAllString(slug, "-")
 	// Trim hyphens from start and end
 	slug = strings.Trim(slug, "-")
+	// If slug is empty after all processing, generate a random one
+	if slug == "" {
+		slug = fmt.Sprintf("article-%d", time.Now().UnixNano())
+	}
 	return slug
 }
 
