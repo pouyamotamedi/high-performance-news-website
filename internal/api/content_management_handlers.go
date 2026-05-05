@@ -42,26 +42,28 @@ func NewContentManagementHandlers(
 
 // ArticleManagementResponse represents article management data
 type ArticleManagementResponse struct {
-	ID              uint64    `json:"id"`
-	Title           string    `json:"title"`
-	Slug            string    `json:"slug"`
-	Status          string    `json:"status"`
-	AuthorID        uint64    `json:"author_id"`
-	AuthorName      string    `json:"author_name"`
-	CategoryID      uint64    `json:"category_id"`
-	CategoryName    string    `json:"category_name"`
-	Tags            []string  `json:"tags"`
-	Views           int64     `json:"views"`
-	Likes           int64     `json:"likes"`
-	Comments        int64     `json:"comments"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-	PublishedAt     *time.Time `json:"published_at"`
-	ScheduledAt     *time.Time `json:"scheduled_at"`
-	WordCount       int       `json:"word_count"`
-	ReadingTime     int       `json:"reading_time_minutes"`
-	FeaturedImage   string    `json:"featured_image"`
-	MetaDescription string    `json:"meta_description"`
+	ID                 uint64    `json:"id"`
+	Title              string    `json:"title"`
+	Slug               string    `json:"slug"`
+	Status             string    `json:"status"`
+	AuthorID           uint64    `json:"author_id"`
+	AuthorName         string    `json:"author_name"`
+	CategoryID         uint64    `json:"category_id"`
+	CategoryName       string    `json:"category_name"`
+	Tags               []string  `json:"tags"`
+	Views              int64     `json:"views"`
+	Likes              int64     `json:"likes"`
+	Comments           int64     `json:"comments"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	PublishedAt        *time.Time `json:"published_at"`
+	ScheduledAt        *time.Time `json:"scheduled_at"`
+	WordCount          int       `json:"word_count"`
+	ReadingTime        int       `json:"reading_time_minutes"`
+	FeaturedImage      string    `json:"featured_image"`
+	MetaDescription    string    `json:"meta_description"`
+	LanguageCode       string    `json:"language_code"`
+	TranslationGroupID *uint64   `json:"translation_group_id"`
 }
 
 // UserManagementResponse represents user management data
@@ -427,32 +429,69 @@ func (cmh *ContentManagementHandlers) GetTagsForManagement(c *gin.Context) {
 // Helper methods (simplified implementations)
 
 func (cmh *ContentManagementHandlers) getArticlesWithManagementInfo(filters map[string]interface{}) ([]ArticleManagementResponse, int64, error) {
-	// This would typically query the database with joins to get all the management info
-	// For now, returning mock data
-	articles := []ArticleManagementResponse{
-		{
-			ID:              1,
-			Title:           "Sample Article 1",
-			Slug:            "sample-article-1",
-			Status:          "published",
-			AuthorID:        1,
-			AuthorName:      "John Doe",
-			CategoryID:      1,
-			CategoryName:    "Technology",
-			Tags:            []string{"tech", "news"},
-			Views:           1500,
-			Likes:           45,
-			Comments:        12,
-			CreatedAt:       time.Now().Add(-24 * time.Hour),
-			UpdatedAt:       time.Now().Add(-2 * time.Hour),
-			WordCount:       850,
-			ReadingTime:     4,
-			FeaturedImage:   "/images/sample1.jpg",
-			MetaDescription: "A sample article about technology",
-		},
+	// Get real articles from ArticleService
+	limit := 20
+	offset := 0
+	
+	if l, ok := filters["limit"].(int); ok && l > 0 {
+		limit = l
+	}
+	if p, ok := filters["page"].(int); ok && p > 1 {
+		offset = (p - 1) * limit
 	}
 	
-	return articles, 1, nil
+	// Get articles from service
+	articles, total, err := cmh.articleService.GetArticles(limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// Convert to management response format
+	var result []ArticleManagementResponse
+	for _, article := range articles {
+		authorName := "Unknown"
+		if article.Author != nil {
+			authorName = article.Author.FirstName + " " + article.Author.LastName
+		}
+		
+		categoryName := ""
+		var categoryID uint64
+		if article.Category != nil {
+			categoryName = article.Category.Name
+			categoryID = article.Category.ID
+		}
+		
+		// Extract tag names
+		var tagNames []string
+		for _, tag := range article.Tags {
+			tagNames = append(tagNames, tag.Name)
+		}
+		
+		result = append(result, ArticleManagementResponse{
+			ID:                   article.ID,
+			Title:                article.Title,
+			Slug:                 article.Slug,
+			Status:               article.Status,
+			AuthorID:             article.AuthorID,
+			AuthorName:           authorName,
+			CategoryID:           categoryID,
+			CategoryName:         categoryName,
+			Tags:                 tagNames,
+			Views:                int(article.ViewCount),
+			Likes:                0,
+			Comments:             int(article.CommentCount),
+			CreatedAt:            article.CreatedAt,
+			UpdatedAt:            article.UpdatedAt,
+			WordCount:            article.WordCount,
+			ReadingTime:          article.ReadTime,
+			FeaturedImage:        article.FeaturedImage,
+			MetaDescription:      article.MetaDescription,
+			LanguageCode:         article.LanguageCode,
+			TranslationGroupID:   article.TranslationGroupID,
+		})
+	}
+	
+	return result, total, nil
 }
 
 func (cmh *ContentManagementHandlers) performBulkArticleOperation(articleIDs []uint64, action string, userID uint64, categoryID *uint64, tagIDs []uint64) (map[string]interface{}, error) {

@@ -9,22 +9,30 @@
 {{end}}
 <link rel="stylesheet" href="/static/css/article.css">
 <style>
+    /* Force article page to match header width exactly - 1280px max with same padding */
+    .article-layout,
+    .comments-section {
+        max-width: 1280px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+        box-sizing: border-box !important;
+    }
+    
     /* Enhanced Professional Article Styles */
     .article-layout {
         display: grid;
         grid-template-columns: 1fr 320px;
         gap: var(--space-8);
-        max-width: 1280px; /* Match header container width */
-        margin: 0 auto;
-        padding: var(--space-8) var(--space-6); /* Match header horizontal padding (1.5rem = 24px) */
-        box-sizing: border-box;
+        padding-top: var(--space-8);
+        padding-bottom: var(--space-8);
     }
 
     @media (max-width: 1024px) {
         .article-layout {
             grid-template-columns: 1fr;
             gap: var(--space-6);
-            padding: var(--space-6) var(--space-4); /* Smaller padding on mobile */
         }
 
         .article-sidebar {
@@ -512,12 +520,9 @@
         background: var(--color-primary-hover);
     }
 
-    /* Comments Section */
+    /* Comments Section - width handled by global rule above */
     .comments-section {
-        max-width: 1280px; /* Match header container width */
-        margin: var(--space-12) auto 0 auto;
-        padding: 0 var(--space-6); /* Match header horizontal padding */
-        box-sizing: border-box;
+        margin-top: var(--space-12);
     }
 
     .comments-container {
@@ -975,7 +980,7 @@
 {{end}}
 
 {{define "content"}}
-<div class="article-layout">
+<div class="article-layout" style="max-width:1280px;margin:0 auto;padding:0 16px;box-sizing:border-box;">
     <!-- Main Article Content -->
     <main class="article-main-enhanced">
         <!-- Article Header -->
@@ -1265,7 +1270,7 @@
 {{end}}
 
 <!-- Comments Section -->
-<section class="comments-section">
+<section class="comments-section" style="max-width:1280px;margin:0 auto;padding:0 16px;box-sizing:border-box;margin-top:3rem;">
     <div class="comments-container">
         <div class="comments-header">
             <h2 class="comments-title">
