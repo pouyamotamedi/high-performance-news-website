@@ -45,6 +45,18 @@ func (r *ArticleRepository) Create(ctx context.Context, article *models.Article)
 	
 	article.PrepareForDB()
 	
+	// If this is a new article (not a translation), create a translation group first
+	if article.TranslationGroupID == nil {
+		var groupID uint64
+		err := r.db.QueryRow(
+			"INSERT INTO translation_groups (group_type) VALUES ('article') RETURNING id",
+		).Scan(&groupID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create translation group: %w", err)
+		}
+		article.TranslationGroupID = &groupID
+	}
+	
 	// Ensure partition exists for the article's published date
 	if err := r.ensurePartitionExists(ctx, article.PublishedAt); err != nil {
 		log.Printf("Warning: Failed to ensure partition exists: %v", err)

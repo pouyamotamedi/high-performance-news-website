@@ -33,6 +33,18 @@ func (r *CategoryRepository) Create(category *models.Category) (*models.Category
 		return nil, err
 	}
 
+	// If this is a new category (not a translation), create a translation group first
+	if category.TranslationGroupID == nil {
+		var groupID uint64
+		err := r.db.QueryRow(
+			"INSERT INTO translation_groups (group_type) VALUES ('category') RETURNING id",
+		).Scan(&groupID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create translation group: %w", err)
+		}
+		category.TranslationGroupID = &groupID
+	}
+
 	query := `
 		INSERT INTO categories (name, slug, description, parent_id, sort_order, language_code, translation_group_id, image_url, image_alt_text, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)

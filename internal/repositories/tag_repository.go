@@ -38,6 +38,18 @@ func (r *TagRepository) Create(tag *models.Tag) (*models.Tag, error) {
 		return nil, err
 	}
 
+	// If this is a new tag (not a translation), create a translation group first
+	if tag.TranslationGroupID == nil {
+		var groupID uint64
+		err := r.db.QueryRow(
+			"INSERT INTO translation_groups (group_type) VALUES ('tag') RETURNING id",
+		).Scan(&groupID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create translation group: %w", err)
+		}
+		tag.TranslationGroupID = &groupID
+	}
+
 	keywordsJSON, err := json.Marshal(tag.Keywords)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal keywords: %w", err)
