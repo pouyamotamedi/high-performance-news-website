@@ -590,67 +590,57 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         parentSelect.innerHTML += '<option value="' + category.id + '">' + category.name + '</option>';
                     });
                     
-                    // Rest of the existing code for displaying categories...
-                    let html = '';
+                    // Group categories by translation_group_id
+                    const groups = {};
+                    const standalone = [];
+                    
                     categories.forEach(category => {
-                        // Find parent name if parent_id exists
-                        let parentInfo = '';
-                        if (category.parent_id) {
-                            const parent = categories.find(cat => cat.id === category.parent_id);
-                            parentInfo = parent ? ' (Child of: ' + parent.name + ')' : ' (Sub-category)';
+                        const groupId = category.translation_group_id || category.id;
+                        if (!groups[groupId]) {
+                            groups[groupId] = [];
                         }
-                        
-                        // Fix language flag detection
-                        const langFlag = category.language_code === 'de' ? '🇩🇪' : 
-                                        category.language_code === 'fr' ? '🇫🇷' :
-                                        category.language_code === 'es' ? '🇪🇸' :
-                                        category.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
-                        
-                        // Find translation siblings
-                        let translationInfo = '';
-                        if (category.translation_group_id) {
-                            const siblings = categories.filter(c => 
-                                c.translation_group_id === category.translation_group_id && c.id !== category.id
-                            );
-                            if (siblings.length > 0) {
-                                const siblingFlags = siblings.map(s => {
-                                    return s.language_code === 'de' ? '🇩🇪' : 
-                                           s.language_code === 'fr' ? '🇫🇷' :
-                                           s.language_code === 'es' ? '🇪🇸' :
-                                           s.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
-                                }).join(' ');
-                                translationInfo = ' <span style="color: #10b981; font-size: 0.75rem;">🔗 Translations: ' + siblingFlags + '</span>';
-                            }
-                        }
-                        
-                        // Create thumbnail HTML
-                        let thumbnailHtml = '';
-                        if (category.image_url) {
-                            thumbnailHtml = '<img src="' + category.image_url + '" alt="' + (category.image_alt_text || category.name) + '" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 1rem; border: 1px solid #e5e7eb;">';
-                        } else {
-                            // Show emoji placeholder based on category name
-                            const emoji = category.name.toLowerCase().includes('tech') ? '💻' :
-                                         category.name.toLowerCase().includes('sport') ? '⚽' :
-                                         category.name.toLowerCase().includes('health') ? '🏥' :
-                                         category.name.toLowerCase().includes('news') ? '📰' : '📂';
-                            thumbnailHtml = '<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 6px; margin-right: 1rem; font-size: 20px;">' + emoji + '</div>';
-                        }
-                        
-                        html += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 0.5rem;">' +
-                            '<div style="display: flex; align-items: center; gap: 1rem;">' +
-                            '<input type="checkbox" class="category-checkbox" value="' + category.id + '" onchange="updateBulkActions()">' +
-                            thumbnailHtml +
-                            '<div>' +
-                            '<div><strong>' + category.name + '</strong> ' + langFlag + ' <span style="color: #6b7280;">[ID: ' + category.id + '] (' + category.slug + ')' + parentInfo + '</span>' + translationInfo + '</div>' +
-                            '<div><small>' + (category.description || 'No description') + '</small></div>' +
-                            '<div><span style="font-size: 0.75rem; color: #9ca3af;">Sort: ' + (category.sort_order || 0) + ' | Lang: ' + (category.language_code || 'en') + '</span></div>' +
-                            '</div>' +
-                            '</div>' +
-                            '<div><button class="action-button" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="editCategory(' + category.id + ')">✏️ Edit</button>' +
-                            '<button class="action-button" style="padding: 0.5rem 1rem; font-size: 0.8rem; background-color: #ef4444;" onclick="deleteCategory(' + category.id + ')">🗑️ Delete</button></div>' +
-                            '</div>';
+                        groups[groupId].push(category);
                     });
-
+                    
+                    // Sort each group: English first, then by language code
+                    Object.keys(groups).forEach(groupId => {
+                        groups[groupId].sort((a, b) => {
+                            if (a.language_code === 'en') return -1;
+                            if (b.language_code === 'en') return 1;
+                            return (a.language_code || '').localeCompare(b.language_code || '');
+                        });
+                    });
+                    
+                    // Build HTML with grouped display
+                    let html = '';
+                    const processedGroups = new Set();
+                    
+                    categories.forEach(category => {
+                        const groupId = category.translation_group_id || category.id;
+                        if (processedGroups.has(groupId)) return;
+                        processedGroups.add(groupId);
+                        
+                        const groupCats = groups[groupId];
+                        const isGroup = groupCats.length > 1;
+                        
+                        if (isGroup) {
+                            // Render group container
+                            html += '<div style="border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">';
+                            html += '<div style="background: #f8fafc; padding: 0.5rem 1rem; border-bottom: 1px solid #e5e7eb; font-size: 0.8rem; color: #6b7280;">📦 Translation Group (ID: ' + groupId + ')</div>';
+                        }
+                        
+                        groupCats.forEach((cat, index) => {
+                            const isTranslation = isGroup && index > 0;
+                            const indent = isTranslation ? 'margin-left: 2rem; border-left: 3px solid #3b82f6;' : '';
+                            const bgColor = isTranslation ? 'background: #f0f9ff;' : '';
+                            
+                            html += renderCategoryItem(cat, categories, indent, bgColor, isTranslation);
+                        });
+                        
+                        if (isGroup) {
+                            html += '</div>';
+                        }
+                    });
                     
                     if (html === '') {
                         html = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No categories found</div>';
@@ -662,6 +652,48 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                     document.getElementById('categoriesList').innerHTML = 
                         '<div style="color: #ef4444; padding: 1rem;">Network error loading categories</div>';
                 });
+            }
+            
+            function renderCategoryItem(category, allCategories, indent, bgColor, isTranslation) {
+                // Find parent name if parent_id exists
+                let parentInfo = '';
+                if (category.parent_id) {
+                    const parent = allCategories.find(cat => cat.id === category.parent_id);
+                    parentInfo = parent ? ' (Child of: ' + parent.name + ')' : ' (Sub-category)';
+                }
+                
+                const langFlag = category.language_code === 'de' ? '🇩🇪' : 
+                                category.language_code === 'fr' ? '🇫🇷' :
+                                category.language_code === 'es' ? '🇪🇸' :
+                                category.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
+                
+                const translationLabel = isTranslation ? '<span style="background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">Translation</span>' : '';
+                
+                // Create thumbnail HTML
+                let thumbnailHtml = '';
+                if (category.image_url) {
+                    thumbnailHtml = '<img src="' + category.image_url + '" alt="' + (category.image_alt_text || category.name) + '" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 1rem; border: 1px solid #e5e7eb;">';
+                } else {
+                    const emoji = category.name.toLowerCase().includes('tech') ? '💻' :
+                                 category.name.toLowerCase().includes('sport') ? '⚽' :
+                                 category.name.toLowerCase().includes('health') ? '🏥' :
+                                 category.name.toLowerCase().includes('news') ? '📰' : '📂';
+                    thumbnailHtml = '<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 6px; margin-right: 1rem; font-size: 20px;">' + emoji + '</div>';
+                }
+                
+                return '<div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #e5e7eb; ' + indent + bgColor + '">' +
+                    '<div style="display: flex; align-items: center; gap: 1rem;">' +
+                    '<input type="checkbox" class="category-checkbox" value="' + category.id + '" onchange="updateBulkActions()">' +
+                    thumbnailHtml +
+                    '<div>' +
+                    '<div><strong>' + category.name + '</strong> ' + langFlag + translationLabel + ' <span style="color: #6b7280;">[ID: ' + category.id + '] (' + category.slug + ')' + parentInfo + '</span></div>' +
+                    '<div><small>' + (category.description || 'No description') + '</small></div>' +
+                    '<div><span style="font-size: 0.75rem; color: #9ca3af;">Sort: ' + (category.sort_order || 0) + ' | Lang: ' + (category.language_code || 'en') + '</span></div>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div><button class="action-button" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="editCategory(' + category.id + ')">✏️ Edit</button>' +
+                    '<button class="action-button" style="padding: 0.5rem 1rem; font-size: 0.8rem; background-color: #ef4444;" onclick="deleteCategory(' + category.id + ')">🗑️ Delete</button></div>' +
+                    '</div>';
             }
 
             function deleteCategory(id) {

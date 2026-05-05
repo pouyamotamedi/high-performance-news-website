@@ -291,45 +291,54 @@ func (s *Server) renderManageTags(c *gin.Context) {
 				}
 				
 				const tags = data.data.tags || [];
+				
+				// Group tags by translation_group_id
+				const groups = {};
+				tags.forEach(tag => {
+					const groupId = tag.translation_group_id || tag.id;
+					if (!groups[groupId]) {
+						groups[groupId] = [];
+					}
+					groups[groupId].push(tag);
+				});
+				
+				// Sort each group: English first, then by language code
+				Object.keys(groups).forEach(groupId => {
+					groups[groupId].sort((a, b) => {
+						if (a.language_code === 'en') return -1;
+						if (b.language_code === 'en') return 1;
+						return (a.language_code || '').localeCompare(b.language_code || '');
+					});
+				});
+				
+				// Build HTML with grouped display
 				let html = '';
+				const processedGroups = new Set();
 				
 				tags.forEach(tag => {
-					const langFlag = tag.language_code === 'de' ? '🇩🇪' : 
-									tag.language_code === 'fr' ? '🇫🇷' :
-									tag.language_code === 'es' ? '🇪🇸' :
-									tag.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
-					const colorDot = '<span style="display: inline-block; width: 12px; height: 12px; background-color: ' + 
-									(tag.color || '#3b82f6') + '; border-radius: 50%; margin-right: 0.5rem;"></span>';
+					const groupId = tag.translation_group_id || tag.id;
+					if (processedGroups.has(groupId)) return;
+					processedGroups.add(groupId);
 					
-					// Find translation siblings
-					let translationInfo = '';
-					if (tag.translation_group_id) {
-						const siblings = tags.filter(t => 
-							t.translation_group_id === tag.translation_group_id && t.id !== tag.id
-						);
-						if (siblings.length > 0) {
-							const siblingFlags = siblings.map(s => {
-								return s.language_code === 'de' ? '🇩🇪' : 
-									   s.language_code === 'fr' ? '🇫🇷' :
-									   s.language_code === 'es' ? '🇪🇸' :
-									   s.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
-							}).join(' ');
-							translationInfo = '<br><span style="color: #10b981; font-size: 0.75rem;">🔗 Translations: ' + siblingFlags + '</span>';
-						}
+					const groupTags = groups[groupId];
+					const isGroup = groupTags.length > 1;
+					
+					if (isGroup) {
+						html += '<div style="border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">';
+						html += '<div style="background: #f8fafc; padding: 0.5rem 1rem; border-bottom: 1px solid #e5e7eb; font-size: 0.8rem; color: #6b7280;">🏷️ Translation Group (ID: ' + groupId + ')</div>';
 					}
 					
-					html += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 0.5rem;">' +
-						'<div style="display: flex; align-items: center; gap: 1rem;">' +
-						'<input type="checkbox" class="tag-checkbox" value="' + tag.id + '" onchange="updateBulkActions()">' +
-						'<div>' + colorDot + '<strong>' + tag.name + '</strong> ' + langFlag + ' <span style="color: #6b7280;">[ID: ' + tag.id + '] (' + tag.slug + ')</span><br>' +
-						'<small>' + (tag.description || 'No description') + 
-						(tag.keywords && tag.keywords.length > 0 ? '<br><strong>Keywords:</strong> ' + tag.keywords.join(', ') : '') + '</small>' +
-						translationInfo +
-						'<br><span style="font-size: 0.75rem; color: #9ca3af;">Lang: ' + (tag.language_code || 'en') + '</span></div>' +
-						'</div>' +
-						'<div><button class="action-button" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="editTag(' + tag.id + ')">✏️ Edit</button>' +
-						'<button class="action-button" style="padding: 0.5rem 1rem; font-size: 0.8rem; background-color: #ef4444;" onclick="deleteTag(' + tag.id + ')">🗑️ Delete</button></div>' +
-						'</div>';
+					groupTags.forEach((t, index) => {
+						const isTranslation = isGroup && index > 0;
+						const indent = isTranslation ? 'margin-left: 2rem; border-left: 3px solid #3b82f6;' : '';
+						const bgColor = isTranslation ? 'background: #f0f9ff;' : '';
+						
+						html += renderTagItem(t, indent, bgColor, isTranslation);
+					});
+					
+					if (isGroup) {
+						html += '</div>';
+					}
 				});
 				
 				if (html === '') {
@@ -342,6 +351,29 @@ func (s *Server) renderManageTags(c *gin.Context) {
 				document.getElementById('tagsList').innerHTML = 
 					'<div style="color: #ef4444; padding: 1rem;">Network error loading tags</div>';
 			});
+		}
+		
+		function renderTagItem(tag, indent, bgColor, isTranslation) {
+			const langFlag = tag.language_code === 'de' ? '🇩🇪' : 
+							tag.language_code === 'fr' ? '🇫🇷' :
+							tag.language_code === 'es' ? '🇪🇸' :
+							tag.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
+			const colorDot = '<span style="display: inline-block; width: 12px; height: 12px; background-color: ' + 
+							(tag.color || '#3b82f6') + '; border-radius: 50%; margin-right: 0.5rem;"></span>';
+			
+			const translationLabel = isTranslation ? '<span style="background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">Translation</span>' : '';
+			
+			return '<div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #e5e7eb; ' + indent + bgColor + '">' +
+				'<div style="display: flex; align-items: center; gap: 1rem;">' +
+				'<input type="checkbox" class="tag-checkbox" value="' + tag.id + '" onchange="updateBulkActions()">' +
+				'<div>' + colorDot + '<strong>' + tag.name + '</strong> ' + langFlag + translationLabel + ' <span style="color: #6b7280;">[ID: ' + tag.id + '] (' + tag.slug + ')</span><br>' +
+				'<small>' + (tag.description || 'No description') + 
+				(tag.keywords && tag.keywords.length > 0 ? '<br><strong>Keywords:</strong> ' + tag.keywords.join(', ') : '') + '</small>' +
+				'<br><span style="font-size: 0.75rem; color: #9ca3af;">Lang: ' + (tag.language_code || 'en') + '</span></div>' +
+				'</div>' +
+				'<div><button class="action-button" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="editTag(' + tag.id + ')">✏️ Edit</button>' +
+				'<button class="action-button" style="padding: 0.5rem 1rem; font-size: 0.8rem; background-color: #ef4444;" onclick="deleteTag(' + tag.id + ')">🗑️ Delete</button></div>' +
+				'</div>';
 		}
 
 		// Create/Update tag form submission

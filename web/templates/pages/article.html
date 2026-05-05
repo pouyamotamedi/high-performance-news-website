@@ -16,7 +16,7 @@
         gap: var(--space-8);
         max-width: 1280px; /* Match header container width */
         margin: 0 auto;
-        padding: var(--space-8) 16px; /* Match header padding (16px horizontal) */
+        padding: var(--space-8) var(--space-6); /* Match header horizontal padding (1.5rem = 24px) */
         box-sizing: border-box;
     }
 
@@ -24,6 +24,7 @@
         .article-layout {
             grid-template-columns: 1fr;
             gap: var(--space-6);
+            padding: var(--space-6) var(--space-4); /* Smaller padding on mobile */
         }
 
         .article-sidebar {
@@ -515,7 +516,7 @@
     .comments-section {
         max-width: 1280px; /* Match header container width */
         margin: var(--space-12) auto 0 auto;
-        padding: 0 16px; /* Match header padding */
+        padding: 0 var(--space-6); /* Match header horizontal padding */
         box-sizing: border-box;
     }
 

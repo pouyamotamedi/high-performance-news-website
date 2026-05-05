@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // Tag represents a content tag with keyword bank for auto-linking
@@ -153,17 +154,18 @@ func IsValidHexColor(color string) bool {
 }
 
 // IsValidKeyword validates individual keyword format
+// Keywords can contain Unicode letters (for multilingual support), numbers, spaces, hyphens, and apostrophes
 func IsValidKeyword(keyword string) bool {
-	// Keywords should not contain special characters that could break auto-linking
 	keyword = strings.TrimSpace(keyword)
 	if keyword == "" {
 		return false
 	}
 	
-	// Allow letters, numbers, spaces, hyphens, and apostrophes
+	// Allow Unicode letters, numbers, spaces, hyphens, and apostrophes
+	// This supports Arabic, German, French, Spanish, etc.
 	for _, r := range keyword {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || 
-			 (r >= '0' && r <= '9') || r == ' ' || r == '-' || r == '\'') {
+		if !unicode.IsLetter(r) && !unicode.IsNumber(r) && 
+		   r != ' ' && r != '-' && r != '\'' && r != '.' && r != ',' {
 			return false
 		}
 	}

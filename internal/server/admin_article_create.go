@@ -339,6 +339,7 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                 initializeEditor();
                 loadCategories();
                 loadTags();
+                loadArticleTranslationGroups();
                 setupEventListeners();
                 updateSEOPreview();
                 
@@ -346,8 +347,82 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                 document.getElementById('languageCode').addEventListener('change', function() {
                     filterCategoriesByLanguage(this.value);
                     filterTagsByLanguage(this.value);
+                    filterArticleTranslationGroups(this.value);
                 });
             });
+            
+            // Store all articles for translation group filtering
+            let allArticlesForTranslation = [];
+            
+            async function loadArticleTranslationGroups() {
+                try {
+                    const response = await fetch('/api/v1/admin/content/articles?limit=500', {
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.data && data.data.articles) {
+                        allArticlesForTranslation = data.data.articles;
+                        filterArticleTranslationGroups(document.getElementById('languageCode').value);
+                    }
+                } catch (error) {
+                    console.error('Failed to load articles for translation groups:', error);
+                }
+            }
+            
+            function filterArticleTranslationGroups(selectedLang) {
+                const select = document.getElementById('translationGroupId');
+                select.innerHTML = '<option value="">New article (no translation group)</option>';
+                
+                if (!allArticlesForTranslation || allArticlesForTranslation.length === 0) return;
+                
+                // Group articles by translation_group_id
+                const groups = {};
+                allArticlesForTranslation.forEach(article => {
+                    const groupId = article.translation_group_id || article.id;
+                    if (!groups[groupId]) {
+                        groups[groupId] = [];
+                    }
+                    groups[groupId].push(article);
+                });
+                
+                // Show articles that don't have a translation in the selected language
+                let addedCount = 0;
+                Object.keys(groups).forEach(groupId => {
+                    const groupArticles = groups[groupId];
+                    const hasSelectedLang = groupArticles.some(a => a.language_code === selectedLang);
+                    
+                    // Only show if this group doesn't have the selected language yet
+                    if (!hasSelectedLang) {
+                        // Find the primary article (usually English or first one)
+                        const primary = groupArticles.find(a => a.language_code === 'en') || groupArticles[0];
+                        const langFlags = groupArticles.map(a => {
+                            return a.language_code === 'de' ? '🇩🇪' : 
+                                   a.language_code === 'fr' ? '🇫🇷' :
+                                   a.language_code === 'es' ? '🇪🇸' :
+                                   a.language_code === 'ar' ? '🇸🇦' : '🇬🇧';
+                        }).join(' ');
+                        
+                        const option = document.createElement('option');
+                        option.value = primary.translation_group_id || primary.id;
+                        // Truncate title if too long
+                        const displayTitle = primary.title.length > 50 ? primary.title.substring(0, 50) + '...' : primary.title;
+                        option.textContent = displayTitle + ' (' + langFlags + ')';
+                        select.appendChild(option);
+                        addedCount++;
+                    }
+                });
+                
+                // If no options were added, show a message
+                if (addedCount === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = '-- All articles already have ' + selectedLang.toUpperCase() + ' translation --';
+                    option.disabled = true;
+                    select.appendChild(option);
+                }
+            }
 
             function initializeEditor() {
                 // Initialize author field with current user
