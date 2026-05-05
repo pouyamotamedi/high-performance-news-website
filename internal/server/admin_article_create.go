@@ -377,10 +377,13 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                 
                 if (!allArticlesForTranslation || allArticlesForTranslation.length === 0) return;
                 
-                // Group articles by translation_group_id
+                // Group articles by translation_group_id - ONLY use translation_group_id, never the article id
                 const groups = {};
                 allArticlesForTranslation.forEach(article => {
-                    const groupId = article.translation_group_id || article.id;
+                    // Skip articles without translation_group_id - they can't be grouped
+                    if (!article.translation_group_id) return;
+                    
+                    const groupId = article.translation_group_id;
                     if (!groups[groupId]) {
                         groups[groupId] = [];
                     }
@@ -405,7 +408,8 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                         }).join(' ');
                         
                         const option = document.createElement('option');
-                        option.value = primary.translation_group_id || primary.id;
+                        // CRITICAL: Use translation_group_id, NOT the article id
+                        option.value = primary.translation_group_id;
                         // Truncate title if too long
                         const displayTitle = primary.title.length > 50 ? primary.title.substring(0, 50) + '...' : primary.title;
                         option.textContent = displayTitle + ' (' + langFlags + ')';

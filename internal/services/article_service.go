@@ -506,6 +506,7 @@ func (s *ArticleService) List(ctx context.Context, limit, offset int, filters Ar
 		SELECT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
 			   a.status, a.published_at, a.created_at, a.updated_at, a.view_count,
 			   a.like_count, a.dislike_count, a.featured_image_id,
+			   a.language_code, a.translation_group_id,
 			   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END as featured_image
 		FROM articles a
 		LEFT JOIN images i ON a.featured_image_id = i.id
@@ -602,6 +603,7 @@ func (s *ArticleService) List(ctx context.Context, limit, offset int, filters Ar
 	for rows.Next() {
 		var article models.Article
 		var featuredImageURL sql.NullString
+		var translationGroupID sql.NullInt64
 		err := rows.Scan(
 			&article.ID,
 			&article.Title,
@@ -617,10 +619,16 @@ func (s *ArticleService) List(ctx context.Context, limit, offset int, filters Ar
 			&article.LikeCount,
 			&article.DislikeCount,
 			&article.FeaturedImageID,
+			&article.LanguageCode,
+			&translationGroupID,
 			&featuredImageURL,
 		)
 		if err == nil && featuredImageURL.Valid {
 			article.FeaturedImage = featuredImageURL.String
+		}
+		if err == nil && translationGroupID.Valid {
+			tgid := uint64(translationGroupID.Int64)
+			article.TranslationGroupID = &tgid
 		}
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan article: %w", err)

@@ -136,8 +136,12 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 	var primaryCategoryID uint64
 	if len(req.CategoryIDs) > 0 {
 		primaryCategoryID = req.CategoryIDs[0] // Use first category as primary
-	} else {
+		log.Printf("Using CategoryIDs[0] as primaryCategoryID: %d", primaryCategoryID)
+	} else if req.CategoryID > 0 {
 		primaryCategoryID = req.CategoryID
+		log.Printf("Using CategoryID as primaryCategoryID: %d", primaryCategoryID)
+	} else {
+		log.Printf("WARNING: No category provided! CategoryID=%d, CategoryIDs=%v", req.CategoryID, req.CategoryIDs)
 	}
 	
 	article := &models.Article{
@@ -156,6 +160,8 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 		LanguageCode:       req.LanguageCode,
 		TranslationGroupID: req.TranslationGroupID,
 	}
+	
+	log.Printf("Article object created: CategoryID=%d, TranslationGroupID=%v", article.CategoryID, article.TranslationGroupID)
 	
 	// Set default language code if not provided
 	if article.LanguageCode == "" {
