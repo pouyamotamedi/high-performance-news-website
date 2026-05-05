@@ -1,9 +1,22 @@
 /* Article page specific styles */
 
+/* Force article page width to match header - 1280px */
+.article-page,
+.article-layout,
+.article-main-enhanced,
+.comments-section,
+.next-article-section {
+  max-width: 1280px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  box-sizing: border-box !important;
+}
+
 .article-page {
-  max-width: var(--container-lg);
-  margin: 0 auto;
-  padding: var(--space-8) var(--space-4);
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
 }
 
 @media (min-width: 768px) {

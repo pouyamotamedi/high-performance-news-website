@@ -617,12 +617,77 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                 }
             }
 
+            // Transliteration maps for SEO-friendly slugs
+            const arabicToLatin = {
+                'ا': 'a', 'أ': 'a', 'إ': 'e', 'آ': 'a',
+                'ب': 'b', 'ت': 't', 'ث': 'th',
+                'ج': 'j', 'ح': 'h', 'خ': 'kh',
+                'د': 'd', 'ذ': 'dh',
+                'ر': 'r', 'ز': 'z',
+                'س': 's', 'ش': 'sh',
+                'ص': 's', 'ض': 'd',
+                'ط': 't', 'ظ': 'z',
+                'ع': 'a', 'غ': 'gh',
+                'ف': 'f', 'ق': 'q',
+                'ك': 'k', 'ک': 'k',
+                'ل': 'l', 'م': 'm', 'ن': 'n',
+                'ه': 'h', 'ة': 'h',
+                'و': 'w', 'ؤ': 'w',
+                'ي': 'y', 'ى': 'y', 'ئ': 'y',
+                'ء': '',
+                '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+                '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+                'َ': 'a', 'ُ': 'u', 'ِ': 'i', 'ً': '', 'ٌ': '', 'ٍ': '',
+                'ّ': '', 'ْ': ''
+            };
+            
+            const germanToLatin = {
+                'ä': 'ae', 'Ä': 'ae', 'ö': 'oe', 'Ö': 'oe',
+                'ü': 'ue', 'Ü': 'ue', 'ß': 'ss'
+            };
+            
+            const frenchToLatin = {
+                'à': 'a', 'â': 'a', 'æ': 'ae', 'ç': 'c',
+                'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+                'î': 'i', 'ï': 'i', 'ô': 'o', 'œ': 'oe',
+                'ù': 'u', 'û': 'u', 'ü': 'u', 'ÿ': 'y'
+            };
+            
+            const spanishToLatin = {
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+                'ñ': 'n', 'Ñ': 'n', 'ü': 'u'
+            };
+            
+            // Transliterate text to ASCII for SEO-friendly slugs
+            function transliterate(text) {
+                let result = '';
+                for (const char of text) {
+                    if (arabicToLatin[char] !== undefined) {
+                        result += arabicToLatin[char];
+                    } else if (germanToLatin[char] !== undefined) {
+                        result += germanToLatin[char];
+                    } else if (frenchToLatin[char] !== undefined) {
+                        result += frenchToLatin[char];
+                    } else if (spanishToLatin[char] !== undefined) {
+                        result += spanishToLatin[char];
+                    } else {
+                        result += char;
+                    }
+                }
+                return result;
+            }
+
+            // Generate SEO-friendly slug (always ASCII)
             function generateSlug(title) {
-                return title.toLowerCase()
-                    .replace(/[^a-z0-9\s-]/g, '')
-                    .replace(/\s+/g, '-')
-                    .replace(/-+/g, '-')
-                    .trim('-');
+                return transliterate(title)
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+                    .replace(/\s+/g, '-')            // Replace spaces with hyphens
+                    .replace(/[^a-z0-9-]/g, '')      // Remove non-ASCII
+                    .replace(/-+/g, '-')             // Replace multiple hyphens
+                    .replace(/^-|-$/g, '')           // Trim hyphens
+                    .substring(0, 100);              // Limit length
             }
 
             function switchEditorMode(mode) {
