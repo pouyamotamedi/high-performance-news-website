@@ -7,15 +7,17 @@
 {{if .Article.FeaturedImage}}
 <link rel="preload" as="image" href="{{.Article.FeaturedImage}}" fetchpriority="high">
 {{end}}
-<link rel="stylesheet" href="/static/css/article.css?v=20260505">
+<link rel="stylesheet" href="/static/css/article.css?v=20260505b">
 <style>
     /* CRITICAL: Force article page width to match header - 1280px */
-    /* This MUST override everything else */
-    .article-layout,
-    .article-main-enhanced,
-    .comments-section,
-    .next-article-section,
-    main.article-main-enhanced {
+    /* This MUST override everything else - using highest specificity */
+    html body .article-layout,
+    html body .article-main-enhanced,
+    html body .comments-section,
+    html body .next-article-section,
+    html body main.article-main-enhanced,
+    html body main,
+    html body .article-page {
         max-width: 1280px !important;
         width: 100% !important;
         margin-left: auto !important;
@@ -26,7 +28,7 @@
     }
     
     /* Override any grid that might cause overflow */
-    .article-layout {
+    html body .article-layout {
         display: grid !important;
         grid-template-columns: 1fr 320px !important;
         gap: 2rem !important;
@@ -51,7 +53,7 @@
     }
 
     @media (max-width: 1024px) {
-        .article-layout {
+        html body .article-layout {
             grid-template-columns: 1fr !important;
             gap: 1.5rem !important;
         }

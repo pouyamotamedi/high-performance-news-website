@@ -163,7 +163,7 @@ func (r *TagRepository) GetBySlug(slug, languageCode string) (*models.Tag, error
 
 // GetAll retrieves all tags
 func (r *TagRepository) GetAll() ([]models.Tag, error) {
-	query := `SELECT id, name, slug, description, keywords, color, created_at, language_code
+	query := `SELECT id, name, slug, description, keywords, color, created_at, language_code, translation_group_id
 		FROM tags ORDER BY name`
 
 	rows, err := r.db.Query(query)
@@ -178,10 +178,11 @@ func (r *TagRepository) GetAll() ([]models.Tag, error) {
 		var description sql.NullString
 		var keywordsJSON sql.NullString
 		var color sql.NullString
+		var translationGroupID sql.NullInt64
 		
 		err := rows.Scan(
 			&tag.ID, &tag.Name, &tag.Slug, &description,
-			&keywordsJSON, &color, &tag.CreatedAt, &tag.LanguageCode,
+			&keywordsJSON, &color, &tag.CreatedAt, &tag.LanguageCode, &translationGroupID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan tag: %w", err)
@@ -195,6 +196,10 @@ func (r *TagRepository) GetAll() ([]models.Tag, error) {
 			tag.Color = color.String
 		} else {
 			tag.Color = "#000000" // Default color
+		}
+		if translationGroupID.Valid {
+			val := uint64(translationGroupID.Int64)
+			tag.TranslationGroupID = &val
 		}
 
 		// Handle keywords JSON

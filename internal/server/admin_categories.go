@@ -298,10 +298,13 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                 
                 if (!window.allCategories || window.allCategories.length === 0) return;
                 
-                // Group categories by translation_group_id
+                // Group categories by translation_group_id - ONLY use translation_group_id, never the item id
                 const groups = {};
                 window.allCategories.forEach(cat => {
-                    const groupId = cat.translation_group_id || cat.id;
+                    // Skip categories without translation_group_id - they can't be grouped
+                    if (!cat.translation_group_id) return;
+                    
+                    const groupId = cat.translation_group_id;
                     if (!groups[groupId]) {
                         groups[groupId] = [];
                     }
@@ -325,7 +328,8 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         }).join(' ');
                         
                         const option = document.createElement('option');
-                        option.value = primary.translation_group_id || primary.id;
+                        // CRITICAL: Use translation_group_id, NOT the category id
+                        option.value = primary.translation_group_id;
                         option.textContent = primary.name + ' (' + langFlags + ')';
                         select.appendChild(option);
                     }
@@ -590,16 +594,20 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         parentSelect.innerHTML += '<option value="' + category.id + '">' + category.name + '</option>';
                     });
                     
-                    // Group categories by translation_group_id
+                    // Group categories by translation_group_id - ONLY use translation_group_id
                     const groups = {};
                     const standalone = [];
                     
                     categories.forEach(category => {
-                        const groupId = category.translation_group_id || category.id;
-                        if (!groups[groupId]) {
-                            groups[groupId] = [];
+                        if (category.translation_group_id) {
+                            const groupId = category.translation_group_id;
+                            if (!groups[groupId]) {
+                                groups[groupId] = [];
+                            }
+                            groups[groupId].push(category);
+                        } else {
+                            standalone.push(category);
                         }
-                        groups[groupId].push(category);
                     });
                     
                     // Sort each group: English first, then by language code
@@ -615,8 +623,10 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                     let html = '';
                     const processedGroups = new Set();
                     
+                    // First render grouped categories
                     categories.forEach(category => {
-                        const groupId = category.translation_group_id || category.id;
+                        if (!category.translation_group_id) return;
+                        const groupId = category.translation_group_id;
                         if (processedGroups.has(groupId)) return;
                         processedGroups.add(groupId);
                         
@@ -640,6 +650,11 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         if (isGroup) {
                             html += '</div>';
                         }
+                    });
+                    
+                    // Then render standalone categories (those without translation_group_id)
+                    standalone.forEach(category => {
+                        html += renderCategoryItem(category, categories, '', '', false);
                     });
                     
                     if (html === '') {

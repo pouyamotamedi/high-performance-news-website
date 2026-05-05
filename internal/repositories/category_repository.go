@@ -87,7 +87,7 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id uint64) (*models.Ca
 // GetAll retrieves all categories
 func (r *CategoryRepository) GetAll() ([]models.Category, error) {
 	query := `
-		SELECT id, name, slug, description, parent_id, sort_order, image_url, image_alt_text, created_at, language_code
+		SELECT id, name, slug, description, parent_id, sort_order, image_url, image_alt_text, created_at, language_code, translation_group_id
 		FROM categories
 		ORDER BY parent_id NULLS FIRST, sort_order, name`
 
@@ -100,12 +100,17 @@ func (r *CategoryRepository) GetAll() ([]models.Category, error) {
 	var categories []models.Category
 	for rows.Next() {
 		var category models.Category
+		var translationGroupID sql.NullInt64
 		err := rows.Scan(
 			&category.ID, &category.Name, &category.Slug, &category.Description,
-			&category.ParentID, &category.SortOrder, &category.ImageURL, &category.ImageAltText, &category.CreatedAt, &category.LanguageCode,
+			&category.ParentID, &category.SortOrder, &category.ImageURL, &category.ImageAltText, &category.CreatedAt, &category.LanguageCode, &translationGroupID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan category: %w", err)
+		}
+		if translationGroupID.Valid {
+			val := uint64(translationGroupID.Int64)
+			category.TranslationGroupID = &val
 		}
 		categories = append(categories, category)
 	}

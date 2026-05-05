@@ -233,10 +233,13 @@ func (s *Server) renderManageTags(c *gin.Context) {
 			
 			if (!window.allTags || window.allTags.length === 0) return;
 			
-			// Group tags by translation_group_id
+			// Group tags by translation_group_id - ONLY use translation_group_id, never the item id
 			const groups = {};
 			window.allTags.forEach(tag => {
-				const groupId = tag.translation_group_id || tag.id;
+				// Skip tags without translation_group_id - they can't be grouped
+				if (!tag.translation_group_id) return;
+				
+				const groupId = tag.translation_group_id;
 				if (!groups[groupId]) {
 					groups[groupId] = [];
 				}
@@ -260,7 +263,8 @@ func (s *Server) renderManageTags(c *gin.Context) {
 					}).join(' ');
 					
 					const option = document.createElement('option');
-					option.value = primary.translation_group_id || primary.id;
+					// CRITICAL: Use translation_group_id, NOT the tag id
+					option.value = primary.translation_group_id;
 					option.textContent = primary.name + ' (' + langFlags + ')';
 					select.appendChild(option);
 				}
@@ -292,14 +296,19 @@ func (s *Server) renderManageTags(c *gin.Context) {
 				
 				const tags = data.data.tags || [];
 				
-				// Group tags by translation_group_id
+				// Group tags by translation_group_id - ONLY use translation_group_id
 				const groups = {};
+				const standalone = [];
 				tags.forEach(tag => {
-					const groupId = tag.translation_group_id || tag.id;
-					if (!groups[groupId]) {
-						groups[groupId] = [];
+					if (tag.translation_group_id) {
+						const groupId = tag.translation_group_id;
+						if (!groups[groupId]) {
+							groups[groupId] = [];
+						}
+						groups[groupId].push(tag);
+					} else {
+						standalone.push(tag);
 					}
-					groups[groupId].push(tag);
 				});
 				
 				// Sort each group: English first, then by language code
@@ -315,8 +324,10 @@ func (s *Server) renderManageTags(c *gin.Context) {
 				let html = '';
 				const processedGroups = new Set();
 				
+				// First render grouped tags
 				tags.forEach(tag => {
-					const groupId = tag.translation_group_id || tag.id;
+					if (!tag.translation_group_id) return;
+					const groupId = tag.translation_group_id;
 					if (processedGroups.has(groupId)) return;
 					processedGroups.add(groupId);
 					
@@ -339,6 +350,11 @@ func (s *Server) renderManageTags(c *gin.Context) {
 					if (isGroup) {
 						html += '</div>';
 					}
+				});
+				
+				// Then render standalone tags (those without translation_group_id)
+				standalone.forEach(tag => {
+					html += renderTagItem(tag, '', '', false);
 				});
 				
 				if (html === '') {
