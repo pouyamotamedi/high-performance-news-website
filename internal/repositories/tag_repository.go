@@ -43,13 +43,13 @@ func (r *TagRepository) Create(tag *models.Tag) (*models.Tag, error) {
 		return nil, fmt.Errorf("failed to marshal keywords: %w", err)
 	}
 
-	query := `INSERT INTO tags (name, slug, description, keywords, color, language_code, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	query := `INSERT INTO tags (name, slug, description, keywords, color, language_code, translation_group_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at`
 
 	now := time.Now()
 	err = r.db.QueryRow(query, tag.Name, tag.Slug, tag.Description, 
-		keywordsJSON, tag.Color, tag.LanguageCode, now).Scan(&tag.ID, &tag.CreatedAt)
+		keywordsJSON, tag.Color, tag.LanguageCode, tag.TranslationGroupID, now).Scan(&tag.ID, &tag.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tag: %w", err)
 	}

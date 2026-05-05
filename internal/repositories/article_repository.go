@@ -83,6 +83,7 @@ func (r *ArticleRepository) Create(ctx context.Context, article *models.Article)
 		article.FocusKeyword,
 		article.ModerationStatus,
 		article.LastModeratedBy,
+		article.TranslationGroupID,
 	).Scan(&id, &createdAt)
 	
 	if err != nil {

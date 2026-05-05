@@ -34,13 +34,13 @@ func (r *CategoryRepository) Create(category *models.Category) (*models.Category
 	}
 
 	query := `
-		INSERT INTO categories (name, slug, description, parent_id, sort_order, language_code, image_url, image_alt_text, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO categories (name, slug, description, parent_id, sort_order, language_code, translation_group_id, image_url, image_alt_text, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at`
 
 	now := time.Now()
 	err := r.db.QueryRow(query, category.Name, category.Slug, category.Description,
-		category.ParentID, category.SortOrder, category.LanguageCode, category.ImageURL, category.ImageAltText, now).Scan(&category.ID, &category.CreatedAt)
+		category.ParentID, category.SortOrder, category.LanguageCode, category.TranslationGroupID, category.ImageURL, category.ImageAltText, now).Scan(&category.ID, &category.CreatedAt)
 	
 	if err != nil {
 		return nil, fmt.Errorf("failed to create category: %w", err)
