@@ -144,6 +144,16 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 		log.Printf("WARNING: No category provided! CategoryID=%d, CategoryIDs=%v", req.CategoryID, req.CategoryIDs)
 	}
 	
+	// Truncate SEO fields to prevent validation errors
+	metaTitle := req.SEOData.MetaTitle
+	if len(metaTitle) > 60 {
+		metaTitle = metaTitle[:60]
+	}
+	metaDescription := req.SEOData.MetaDescription
+	if len(metaDescription) > 160 {
+		metaDescription = metaDescription[:160]
+	}
+	
 	article := &models.Article{
 		Title:              req.Title,
 		Slug:               slug,
@@ -153,9 +163,9 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 		CategoryID:         primaryCategoryID, // Keep for backward compatibility
 		Status:             req.Status,
 		AutoLinking:        req.AutoLinking, // Use the value from the request
-		// Map SEO fields to individual columns
-		MetaTitle:          req.SEOData.MetaTitle,
-		MetaDescription:    req.SEOData.MetaDescription,
+		// Map SEO fields to individual columns (truncated)
+		MetaTitle:          metaTitle,
+		MetaDescription:    metaDescription,
 		SchemaType:         "NewsArticle", // Default schema type
 		LanguageCode:       req.LanguageCode,
 		TranslationGroupID: req.TranslationGroupID,
