@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -429,7 +430,7 @@ func (cmh *ContentManagementHandlers) GetTagsForManagement(c *gin.Context) {
 // Helper methods (simplified implementations)
 
 func (cmh *ContentManagementHandlers) getArticlesWithManagementInfo(filters map[string]interface{}) ([]ArticleManagementResponse, int64, error) {
-	// Get real articles from ArticleService
+	// Get real articles from ArticleService using List method
 	limit := 20
 	offset := 0
 	
@@ -440,8 +441,12 @@ func (cmh *ContentManagementHandlers) getArticlesWithManagementInfo(filters map[
 		offset = (p - 1) * limit
 	}
 	
-	// Get articles from service
-	articles, total, err := cmh.articleService.GetArticles(limit, offset)
+	// Build article filters
+	articleFilters := services.ArticleFilters{}
+	
+	// Get articles from service using List method
+	ctx := context.Background()
+	articles, total, err := cmh.articleService.List(ctx, limit, offset, articleFilters, "created_at", "desc")
 	if err != nil {
 		return nil, 0, err
 	}
@@ -477,9 +482,9 @@ func (cmh *ContentManagementHandlers) getArticlesWithManagementInfo(filters map[
 			CategoryID:           categoryID,
 			CategoryName:         categoryName,
 			Tags:                 tagNames,
-			Views:                int(article.ViewCount),
+			Views:                int64(article.ViewCount),
 			Likes:                0,
-			Comments:             int(article.CommentCount),
+			Comments:             int64(article.CommentCount),
 			CreatedAt:            article.CreatedAt,
 			UpdatedAt:            article.UpdatedAt,
 			WordCount:            article.WordCount,
@@ -491,7 +496,7 @@ func (cmh *ContentManagementHandlers) getArticlesWithManagementInfo(filters map[
 		})
 	}
 	
-	return result, total, nil
+	return result, int64(total), nil
 }
 
 func (cmh *ContentManagementHandlers) performBulkArticleOperation(articleIDs []uint64, action string, userID uint64, categoryID *uint64, tagIDs []uint64) (map[string]interface{}, error) {
