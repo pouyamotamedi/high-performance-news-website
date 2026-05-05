@@ -454,22 +454,18 @@ func (cmh *ContentManagementHandlers) getArticlesWithManagementInfo(filters map[
 	// Convert to management response format
 	var result []ArticleManagementResponse
 	for _, article := range articles {
-		authorName := "Unknown"
-		if article.Author != nil {
-			authorName = article.Author.FirstName + " " + article.Author.LastName
-		}
-		
-		categoryName := ""
-		var categoryID uint64
-		if article.Category != nil {
-			categoryName = article.Category.Name
-			categoryID = article.Category.ID
-		}
-		
 		// Extract tag names
 		var tagNames []string
 		for _, tag := range article.Tags {
 			tagNames = append(tagNames, tag.Name)
+		}
+		
+		// Get category name from Categories array if available
+		categoryName := ""
+		var categoryID uint64 = article.CategoryID
+		if len(article.Categories) > 0 {
+			categoryName = article.Categories[0].Name
+			categoryID = article.Categories[0].ID
 		}
 		
 		result = append(result, ArticleManagementResponse{
@@ -478,17 +474,18 @@ func (cmh *ContentManagementHandlers) getArticlesWithManagementInfo(filters map[
 			Slug:                 article.Slug,
 			Status:               article.Status,
 			AuthorID:             article.AuthorID,
-			AuthorName:           authorName,
+			AuthorName:           "", // Will be populated separately if needed
 			CategoryID:           categoryID,
 			CategoryName:         categoryName,
 			Tags:                 tagNames,
 			Views:                int64(article.ViewCount),
-			Likes:                0,
-			Comments:             int64(article.CommentCount),
+			Likes:                int64(article.LikeCount),
+			Comments:             0, // Not available in basic model
 			CreatedAt:            article.CreatedAt,
 			UpdatedAt:            article.UpdatedAt,
-			WordCount:            article.WordCount,
-			ReadingTime:          article.ReadTime,
+			PublishedAt:          article.PublishedAt,
+			WordCount:            0, // Not available in basic model
+			ReadingTime:          0, // Not available in basic model
 			FeaturedImage:        article.FeaturedImage,
 			MetaDescription:      article.MetaDescription,
 			LanguageCode:         article.LanguageCode,
