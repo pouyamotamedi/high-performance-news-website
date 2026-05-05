@@ -224,7 +224,7 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                                 <input type="text" id="metaTitle" name="meta_title" maxlength="60"
                                        style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem;"
                                        placeholder="SEO title (auto-generated if empty)">
-                                <div style="font-size: 0.7rem; color: #6b7280; text-align: right;"><span id="metaTitleCount">0</span>/60</div>
+                                <div style="font-size: 0.7rem; color: #6b7280; text-align: right;"><span id="metaTitleCount">0</span>/60 <span id="metaTitleWarning" style="color: #ef4444; display: none;">⚠️ Will be truncated</span></div>
                             </div>
                             
                             <div>
@@ -232,7 +232,7 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                                 <textarea id="metaDescription" name="meta_description" rows="3" maxlength="160"
                                           style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; resize: vertical;"
                                           placeholder="Brief description for search engines"></textarea>
-                                <div style="font-size: 0.7rem; color: #6b7280; text-align: right;"><span id="metaDescCount">0</span>/160</div>
+                                <div style="font-size: 0.7rem; color: #6b7280; text-align: right;"><span id="metaDescCount">0</span>/160 <span id="metaDescWarning" style="color: #ef4444; display: none;">⚠️ Will be truncated</span></div>
                             </div>
                             
                             <div>
@@ -465,14 +465,45 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                     }
                 });
 
-                // Character counters
+                // Character counters with truncation for SEO fields
                 document.getElementById('metaTitle').addEventListener('input', function() {
-                    document.getElementById('metaTitleCount').textContent = this.value.length;
+                    const count = this.value.length;
+                    document.getElementById('metaTitleCount').textContent = count;
+                    const warning = document.getElementById('metaTitleWarning');
+                    if (count > 60) {
+                        warning.style.display = 'inline';
+                        this.style.borderColor = '#ef4444';
+                    } else {
+                        warning.style.display = 'none';
+                        this.style.borderColor = '#d1d5db';
+                    }
                 });
                 
                 document.getElementById('metaDescription').addEventListener('input', function() {
-                    document.getElementById('metaDescCount').textContent = this.value.length;
+                    const count = this.value.length;
+                    document.getElementById('metaDescCount').textContent = count;
+                    const warning = document.getElementById('metaDescWarning');
+                    if (count > 160) {
+                        warning.style.display = 'inline';
+                        this.style.borderColor = '#ef4444';
+                    } else {
+                        warning.style.display = 'none';
+                        this.style.borderColor = '#d1d5db';
+                    }
                 });
+            }
+
+            // Helper function to truncate SEO fields before submission
+            function truncateSEOFields() {
+                const metaTitle = document.getElementById('metaTitle');
+                const metaDesc = document.getElementById('metaDescription');
+                
+                if (metaTitle.value.length > 60) {
+                    metaTitle.value = metaTitle.value.substring(0, 60);
+                }
+                if (metaDesc.value.length > 160) {
+                    metaDesc.value = metaDesc.value.substring(0, 160);
+                }
             }
 
             function setupEventListeners() {
@@ -967,8 +998,8 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                     language_code: document.getElementById('languageCode').value || 'en',
                     translation_group_id: document.getElementById('translationGroupId').value ? parseInt(document.getElementById('translationGroupId').value) : null,
                     seo_data: {
-                        meta_title: document.getElementById('metaTitle').value,
-                        meta_description: document.getElementById('metaDescription').value,
+                        meta_title: document.getElementById('metaTitle').value.substring(0, 60),
+                        meta_description: document.getElementById('metaDescription').value.substring(0, 160),
                         focus_keyword: document.getElementById('focusKeyword').value
                     }
                 };
