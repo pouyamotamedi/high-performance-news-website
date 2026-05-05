@@ -219,14 +219,15 @@ func GenerateSlug(title string) string {
 	return slug
 }
 
-// IsValidSlug checks if a slug contains only valid characters
+// IsValidSlug checks if a slug contains only valid ASCII characters
+// Slugs must be ASCII-only for SEO best practices
 func IsValidSlug(s string) bool {
-	// Slug should contain only lowercase letters, numbers, and hyphens
-	// Should not start or end with hyphen
 	if s == "" {
 		return false
 	}
 	
+	// Slug should contain only lowercase letters, numbers, and hyphens
+	// Should not start or end with hyphen, no consecutive hyphens
 	slugRegex := regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 	return slugRegex.MatchString(s)
 }

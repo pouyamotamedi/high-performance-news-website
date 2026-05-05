@@ -113,37 +113,91 @@ func (s *Server) renderManageTags(c *gin.Context) {
 			loadTagTranslationGroups();
 		});
 
-		// Auto-generate slug from name - supports multilingual characters
+		// Transliteration maps for SEO-friendly slugs
+		const arabicToLatin = {
+			'ا': 'a', 'أ': 'a', 'إ': 'e', 'آ': 'a',
+			'ب': 'b', 'ت': 't', 'ث': 'th',
+			'ج': 'j', 'ح': 'h', 'خ': 'kh',
+			'د': 'd', 'ذ': 'dh',
+			'ر': 'r', 'ز': 'z',
+			'س': 's', 'ش': 'sh',
+			'ص': 's', 'ض': 'd',
+			'ط': 't', 'ظ': 'z',
+			'ع': 'a', 'غ': 'gh',
+			'ف': 'f', 'ق': 'q',
+			'ك': 'k', 'ک': 'k',
+			'ل': 'l', 'م': 'm', 'ن': 'n',
+			'ه': 'h', 'ة': 'h',
+			'و': 'w', 'ؤ': 'w',
+			'ي': 'y', 'ى': 'y', 'ئ': 'y',
+			'ء': '',
+			'٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+			'٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+			'َ': 'a', 'ُ': 'u', 'ِ': 'i', 'ً': '', 'ٌ': '', 'ٍ': '',
+			'ّ': '', 'ْ': ''
+		};
+		
+		const germanToLatin = {
+			'ä': 'ae', 'Ä': 'ae', 'ö': 'oe', 'Ö': 'oe',
+			'ü': 'ue', 'Ü': 'ue', 'ß': 'ss'
+		};
+		
+		const frenchToLatin = {
+			'à': 'a', 'â': 'a', 'æ': 'ae', 'ç': 'c',
+			'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+			'î': 'i', 'ï': 'i', 'ô': 'o', 'œ': 'oe',
+			'ù': 'u', 'û': 'u', 'ü': 'u', 'ÿ': 'y'
+		};
+		
+		const spanishToLatin = {
+			'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+			'ñ': 'n', 'Ñ': 'n', 'ü': 'u'
+		};
+		
+		// Transliterate text to ASCII for SEO-friendly slugs
+		function transliterate(text) {
+			let result = '';
+			for (const char of text) {
+				if (arabicToLatin[char] !== undefined) {
+					result += arabicToLatin[char];
+				} else if (germanToLatin[char] !== undefined) {
+					result += germanToLatin[char];
+				} else if (frenchToLatin[char] !== undefined) {
+					result += frenchToLatin[char];
+				} else if (spanishToLatin[char] !== undefined) {
+					result += spanishToLatin[char];
+				} else {
+					result += char;
+				}
+			}
+			return result;
+		}
+		
+		// Generate SEO-friendly slug (always ASCII)
+		function generateSlug(name) {
+			return transliterate(name)
+				.toLowerCase()
+				.normalize('NFD')
+				.replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+				.replace(/\s+/g, '-')            // Replace spaces with hyphens
+				.replace(/[^a-z0-9-]/g, '')      // Remove non-ASCII
+				.replace(/-+/g, '-')             // Replace multiple hyphens
+				.replace(/^-|-$/g, '')           // Trim hyphens
+				.substring(0, 100);              // Limit length
+		}
+
+		// Auto-generate slug from name - uses transliteration for SEO
 		document.getElementById('tagName').addEventListener('input', function() {
 			const name = this.value;
-			const lang = document.getElementById('tagLanguage').value;
-			let slug;
-			
-			if (lang === 'en') {
-				// For English: only allow a-z, 0-9, and hyphens
-				slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-			} else {
-				// For other languages: allow Unicode letters, numbers, and hyphens
-				slug = name.toLowerCase()
-					.replace(/\s+/g, '-')           // Replace spaces with hyphens
-					.replace(/[^\p{L}\p{N}-]/gu, '') // Keep Unicode letters, numbers, hyphens
-					.replace(/-+/g, '-')            // Replace multiple hyphens with single
-					.replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
-			}
-			document.getElementById('tagSlug').value = slug;
+			document.getElementById('tagSlug').value = generateSlug(name);
 		});
 
-		// Handle manual slug input - supports multilingual
+		// Handle manual slug input - only allow ASCII
 		document.getElementById('tagSlug').addEventListener('input', function() {
-			const lang = document.getElementById('tagLanguage').value;
-			if (lang === 'en') {
-				this.value = this.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-			} else {
-				this.value = this.value.toLowerCase()
-					.replace(/\s+/g, '-')
-					.replace(/[^\p{L}\p{N}-]/gu, '')
-					.replace(/-+/g, '-');
-			}
+			this.value = this.value.toLowerCase()
+				.replace(/\s+/g, '-')
+				.replace(/[^a-z0-9-]/g, '')
+				.replace(/-+/g, '-');
 		});
 
 		// Filter translation groups when language changes
