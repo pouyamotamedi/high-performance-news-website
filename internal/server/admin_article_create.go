@@ -221,18 +221,18 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                             <div>
                                 <label for="metaTitle" style="display: block; margin-bottom: 0.25rem; font-weight: 600; font-size: 0.9rem;">Meta Title</label>
-                                <input type="text" id="metaTitle" name="meta_title" maxlength="60"
+                                <input type="text" id="metaTitle" name="meta_title"
                                        style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem;"
                                        placeholder="SEO title (auto-generated if empty)">
-                                <div style="font-size: 0.7rem; color: #6b7280; text-align: right;"><span id="metaTitleCount">0</span>/60 <span id="metaTitleWarning" style="color: #ef4444; display: none;">⚠️ Will be truncated</span></div>
+                                <div style="font-size: 0.7rem; color: #6b7280; text-align: right;"><span id="metaTitleCount">0</span>/60</div>
                             </div>
                             
                             <div>
                                 <label for="metaDescription" style="display: block; margin-bottom: 0.25rem; font-weight: 600; font-size: 0.9rem;">Meta Description</label>
-                                <textarea id="metaDescription" name="meta_description" rows="3" maxlength="160"
+                                <textarea id="metaDescription" name="meta_description" rows="3"
                                           style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; resize: vertical;"
                                           placeholder="Brief description for search engines"></textarea>
-                                <div style="font-size: 0.7rem; color: #6b7280; text-align: right;"><span id="metaDescCount">0</span>/160 <span id="metaDescWarning" style="color: #ef4444; display: none;">⚠️ Will be truncated</span></div>
+                                <div style="font-size: 0.7rem; color: #6b7280; text-align: right;"><span id="metaDescCount">0</span>/160</div>
                             </div>
                             
                             <div>
@@ -465,44 +465,57 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                     }
                 });
 
-                // Character counters with truncation for SEO fields
+                // Character counters with real-time enforcement for SEO fields
+                // Using spread operator [...str] to correctly count Unicode characters (Arabic, etc.)
                 document.getElementById('metaTitle').addEventListener('input', function() {
-                    const count = this.value.length;
+                    const chars = [...this.value];
+                    const count = chars.length;
                     document.getElementById('metaTitleCount').textContent = count;
-                    const warning = document.getElementById('metaTitleWarning');
+                    
+                    // Enforce limit - truncate if over 60 characters
                     if (count > 60) {
-                        warning.style.display = 'inline';
-                        this.style.borderColor = '#ef4444';
+                        this.value = chars.slice(0, 60).join('');
+                        document.getElementById('metaTitleCount').textContent = 60;
+                        this.style.borderColor = '#f59e0b'; // Warning color
+                    } else if (count >= 55) {
+                        this.style.borderColor = '#f59e0b'; // Warning when close to limit
                     } else {
-                        warning.style.display = 'none';
                         this.style.borderColor = '#d1d5db';
                     }
                 });
                 
                 document.getElementById('metaDescription').addEventListener('input', function() {
-                    const count = this.value.length;
+                    const chars = [...this.value];
+                    const count = chars.length;
                     document.getElementById('metaDescCount').textContent = count;
-                    const warning = document.getElementById('metaDescWarning');
+                    
+                    // Enforce limit - truncate if over 160 characters
                     if (count > 160) {
-                        warning.style.display = 'inline';
-                        this.style.borderColor = '#ef4444';
+                        this.value = chars.slice(0, 160).join('');
+                        document.getElementById('metaDescCount').textContent = 160;
+                        this.style.borderColor = '#f59e0b'; // Warning color
+                    } else if (count >= 150) {
+                        this.style.borderColor = '#f59e0b'; // Warning when close to limit
                     } else {
-                        warning.style.display = 'none';
                         this.style.borderColor = '#d1d5db';
                     }
                 });
             }
 
-            // Helper function to truncate SEO fields before submission
+            // Helper function to truncate SEO fields before submission (Unicode-safe)
             function truncateSEOFields() {
                 const metaTitle = document.getElementById('metaTitle');
                 const metaDesc = document.getElementById('metaDescription');
                 
-                if (metaTitle.value.length > 60) {
-                    metaTitle.value = metaTitle.value.substring(0, 60);
+                // Use spread operator to correctly handle Unicode characters
+                const titleChars = [...metaTitle.value];
+                const descChars = [...metaDesc.value];
+                
+                if (titleChars.length > 60) {
+                    metaTitle.value = titleChars.slice(0, 60).join('');
                 }
-                if (metaDesc.value.length > 160) {
-                    metaDesc.value = metaDesc.value.substring(0, 160);
+                if (descChars.length > 160) {
+                    metaDesc.value = descChars.slice(0, 160).join('');
                 }
             }
 
@@ -998,8 +1011,8 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
                     language_code: document.getElementById('languageCode').value || 'en',
                     translation_group_id: document.getElementById('translationGroupId').value ? parseInt(document.getElementById('translationGroupId').value) : null,
                     seo_data: {
-                        meta_title: document.getElementById('metaTitle').value.substring(0, 60),
-                        meta_description: document.getElementById('metaDescription').value.substring(0, 160),
+                        meta_title: [...document.getElementById('metaTitle').value].slice(0, 60).join(''),
+                        meta_description: [...document.getElementById('metaDescription').value].slice(0, 160).join(''),
                         focus_keyword: document.getElementById('focusKeyword').value
                     }
                 };

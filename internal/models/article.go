@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 )
 
 // Article represents a news article with comprehensive metadata
@@ -130,10 +131,11 @@ func ValidateArticle(article *Article) error {
 	}
 
 	// SEO data validation - now using individual fields
-	if len(article.MetaTitle) > 60 {
+	// Use utf8.RuneCountInString for correct Unicode character counting (Arabic, etc.)
+	if utf8.RuneCountInString(article.MetaTitle) > 60 {
 		errors = append(errors, "meta_title: must be 60 characters or less")
 	}
-	if len(article.MetaDescription) > 160 {
+	if utf8.RuneCountInString(article.MetaDescription) > 160 {
 		errors = append(errors, "meta_description: must be 160 characters or less")
 	}
 
@@ -154,18 +156,18 @@ func ValidateArticle(article *Article) error {
 func ValidateSEOData(seo *SEOData) error {
 	var errors []string
 
-	// Meta title validation
-	if len(seo.MetaTitle) > 60 {
+	// Meta title validation - use rune count for Unicode support
+	if utf8.RuneCountInString(seo.MetaTitle) > 60 {
 		errors = append(errors, "meta_title must be less than 60 characters")
 	}
 
-	// Meta description validation
-	if len(seo.MetaDescription) > 160 {
+	// Meta description validation - use rune count for Unicode support
+	if utf8.RuneCountInString(seo.MetaDescription) > 160 {
 		errors = append(errors, "meta_description must be less than 160 characters")
 	}
 
 	// Focus keyword validation
-	if len(seo.FocusKeyword) > 100 {
+	if utf8.RuneCountInString(seo.FocusKeyword) > 100 {
 		errors = append(errors, "focus_keyword must be less than 100 characters")
 	}
 

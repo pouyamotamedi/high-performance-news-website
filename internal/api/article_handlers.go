@@ -145,13 +145,16 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 	}
 	
 	// Truncate SEO fields to prevent validation errors
+	// Use rune slicing to avoid cutting multi-byte UTF-8 characters
 	metaTitle := req.SEOData.MetaTitle
-	if len(metaTitle) > 60 {
-		metaTitle = metaTitle[:60]
+	metaTitleRunes := []rune(metaTitle)
+	if len(metaTitleRunes) > 60 {
+		metaTitle = string(metaTitleRunes[:60])
 	}
 	metaDescription := req.SEOData.MetaDescription
-	if len(metaDescription) > 160 {
-		metaDescription = metaDescription[:160]
+	metaDescRunes := []rune(metaDescription)
+	if len(metaDescRunes) > 160 {
+		metaDescription = string(metaDescRunes[:160])
 	}
 	
 	article := &models.Article{
