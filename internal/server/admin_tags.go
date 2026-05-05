@@ -113,21 +113,47 @@ func (s *Server) renderManageTags(c *gin.Context) {
 			loadTagTranslationGroups();
 		});
 
-		// Auto-generate slug from name and replace spaces with hyphens
+		// Auto-generate slug from name - supports multilingual characters
 		document.getElementById('tagName').addEventListener('input', function() {
 			const name = this.value;
-			const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+			const lang = document.getElementById('tagLanguage').value;
+			let slug;
+			
+			if (lang === 'en') {
+				// For English: only allow a-z, 0-9, and hyphens
+				slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+			} else {
+				// For other languages: allow Unicode letters, numbers, and hyphens
+				slug = name.toLowerCase()
+					.replace(/\s+/g, '-')           // Replace spaces with hyphens
+					.replace(/[^\p{L}\p{N}-]/gu, '') // Keep Unicode letters, numbers, hyphens
+					.replace(/-+/g, '-')            // Replace multiple hyphens with single
+					.replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+			}
 			document.getElementById('tagSlug').value = slug;
 		});
 
-		// Handle manual slug input
+		// Handle manual slug input - supports multilingual
 		document.getElementById('tagSlug').addEventListener('input', function() {
-			this.value = this.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+			const lang = document.getElementById('tagLanguage').value;
+			if (lang === 'en') {
+				this.value = this.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+			} else {
+				this.value = this.value.toLowerCase()
+					.replace(/\s+/g, '-')
+					.replace(/[^\p{L}\p{N}-]/gu, '')
+					.replace(/-+/g, '-');
+			}
 		});
 
 		// Filter translation groups when language changes
 		document.getElementById('tagLanguage').addEventListener('change', function() {
 			filterTagTranslationGroups(this.value);
+			// Re-generate slug with new language rules
+			const nameInput = document.getElementById('tagName');
+			if (nameInput.value) {
+				nameInput.dispatchEvent(new Event('input'));
+			}
 		});
 
 		function loadTagTranslationGroups() {
@@ -151,7 +177,7 @@ func (s *Server) renderManageTags(c *gin.Context) {
 			const select = document.getElementById('tagTranslationGroupId');
 			select.innerHTML = '<option value="">New tag (no translation)</option>';
 			
-			if (!window.allTags) return;
+			if (!window.allTags || window.allTags.length === 0) return;
 			
 			// Group tags by translation_group_id
 			const groups = {};
@@ -168,6 +194,7 @@ func (s *Server) renderManageTags(c *gin.Context) {
 				const groupTags = groups[groupId];
 				const hasSelectedLang = groupTags.some(t => t.language_code === selectedLang);
 				
+				// Only show if this group doesn't have the selected language yet
 				if (!hasSelectedLang) {
 					// Find the primary tag (usually English or first one)
 					const primary = groupTags.find(t => t.language_code === 'en') || groupTags[0];
@@ -184,6 +211,15 @@ func (s *Server) renderManageTags(c *gin.Context) {
 					select.appendChild(option);
 				}
 			});
+			
+			// If no options were added (all tags have the selected language), show a message
+			if (select.options.length === 1) {
+				const option = document.createElement('option');
+				option.value = '';
+				option.textContent = '-- All tags already have ' + selectedLang.toUpperCase() + ' translation --';
+				option.disabled = true;
+				select.appendChild(option);
+			}
 		}
 
 		function loadTags() {

@@ -12,10 +12,14 @@ CREATE TABLE IF NOT EXISTS images (
     height INTEGER NOT NULL,
     file_size BIGINT NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
+    hash VARCHAR(64),  -- Content hash for deduplication
     article_id BIGINT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Create index for hash-based deduplication
+CREATE INDEX IF NOT EXISTS idx_images_hash ON images (hash) WHERE hash IS NOT NULL;
 
 -- Create indexes for images table
 CREATE INDEX idx_images_article_id ON images (article_id);
@@ -72,21 +76,24 @@ BEGIN
     END IF;
 END $$;
 
--- Create image_variants table for responsive images (optional, for future use)
+-- Create image_variants table for responsive images
 CREATE TABLE IF NOT EXISTS image_variants (
     id BIGSERIAL PRIMARY KEY,
     image_id BIGINT NOT NULL REFERENCES images(id) ON DELETE CASCADE,
-    variant_name VARCHAR(50) NOT NULL, -- e.g., 'thumbnail', 'medium', 'large'
-    filename VARCHAR(255) NOT NULL,
+    size VARCHAR(50) NOT NULL,        -- e.g., 'thumbnail', 'small', 'medium', 'large', 'xlarge'
+    format VARCHAR(20) NOT NULL,      -- e.g., 'webp', 'jpeg', 'avif'
+    url TEXT NOT NULL,                -- URL path to the variant
     width INTEGER NOT NULL,
     height INTEGER NOT NULL,
     file_size BIGINT NOT NULL,
+    quality INTEGER DEFAULT 85,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE (image_id, variant_name)
+    UNIQUE (image_id, size, format)
 );
 
 -- Create index for image variants
-CREATE INDEX idx_image_variants_image_id ON image_variants (image_id);
+CREATE INDEX IF NOT EXISTS idx_image_variants_image_id ON image_variants (image_id);
+CREATE INDEX IF NOT EXISTS idx_image_variants_size_format ON image_variants (size, format);
 
 -- Create function to automatically create daily partitions for article_tags
 -- This ensures partitions are created automatically when needed

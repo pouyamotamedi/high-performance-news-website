@@ -296,7 +296,8 @@ func (ip *ImageProcessor) generateVariantPath(imageID uint64, size models.ImageS
 	day := now.Format("02")
 
 	filename := fmt.Sprintf("%d_%s.%s", imageID, size, format)
-	return filepath.Join(ip.storageBasePath, "images", year, month, day, filename)
+	// Path matches URL: /uploads/YYYY/MM/DD/filename
+	return filepath.Join(ip.storageBasePath, year, month, day, filename)
 }
 
 // generateVariantURL generates the web URL for an image variant
@@ -542,7 +543,7 @@ func (ip *ImageProcessor) DeleteImageVariants(variantURLs []string) error {
 		// URL format: /uploads/YYYY/MM/DD/filename
 		if strings.HasPrefix(url, "/uploads/") {
 			relativePath := strings.TrimPrefix(url, "/uploads/")
-			fullPath := filepath.Join(ip.storageBasePath, "images", relativePath)
+			fullPath := filepath.Join(ip.storageBasePath, relativePath)
 
 			if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
 				errors = append(errors, fmt.Errorf("failed to delete %s: %w", fullPath, err))

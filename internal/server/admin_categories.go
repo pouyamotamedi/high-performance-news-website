@@ -178,21 +178,48 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                 loadTranslationGroups();
             });
 
-            // Auto-generate slug from name and replace spaces with hyphens
+            // Auto-generate slug from name - supports multilingual characters
             document.getElementById('categoryName').addEventListener('input', function() {
                 const name = this.value;
-                const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                const lang = document.getElementById('languageCode').value;
+                let slug;
+                
+                if (lang === 'en') {
+                    // For English: only allow a-z, 0-9, and hyphens
+                    slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                } else {
+                    // For other languages: allow Unicode letters, numbers, and hyphens
+                    // Convert spaces to hyphens, keep Unicode letters
+                    slug = name.toLowerCase()
+                        .replace(/\s+/g, '-')           // Replace spaces with hyphens
+                        .replace(/[^\p{L}\p{N}-]/gu, '') // Keep Unicode letters, numbers, hyphens
+                        .replace(/-+/g, '-')            // Replace multiple hyphens with single
+                        .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+                }
                 document.getElementById('categorySlug').value = slug;
             });
 
-            // Also handle manual slug input
+            // Also handle manual slug input - supports multilingual
             document.getElementById('categorySlug').addEventListener('input', function() {
-                this.value = this.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                const lang = document.getElementById('languageCode').value;
+                if (lang === 'en') {
+                    this.value = this.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                } else {
+                    this.value = this.value.toLowerCase()
+                        .replace(/\s+/g, '-')
+                        .replace(/[^\p{L}\p{N}-]/gu, '')
+                        .replace(/-+/g, '-');
+                }
             });
 
             // Filter translation groups when language changes
             document.getElementById('languageCode').addEventListener('change', function() {
                 filterTranslationGroups(this.value);
+                // Re-generate slug with new language rules
+                const nameInput = document.getElementById('categoryName');
+                if (nameInput.value) {
+                    nameInput.dispatchEvent(new Event('input'));
+                }
             });
 
             function loadTranslationGroups() {
@@ -216,7 +243,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                 const select = document.getElementById('translationGroupId');
                 select.innerHTML = '<option value="">New category (no translation)</option>';
                 
-                if (!window.allCategories) return;
+                if (!window.allCategories || window.allCategories.length === 0) return;
                 
                 // Group categories by translation_group_id
                 const groups = {};
@@ -233,6 +260,7 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                     const groupCats = groups[groupId];
                     const hasSelectedLang = groupCats.some(c => c.language_code === selectedLang);
                     
+                    // Only show if this group doesn't have the selected language yet
                     if (!hasSelectedLang) {
                         // Find the primary category (usually English or first one)
                         const primary = groupCats.find(c => c.language_code === 'en') || groupCats[0];
@@ -249,6 +277,15 @@ func (s *Server) renderManageCategories(c *gin.Context) {
                         select.appendChild(option);
                     }
                 });
+                
+                // If no options were added (all categories have the selected language), show a message
+                if (select.options.length === 1) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = '-- All categories already have ' + selectedLang.toUpperCase() + ' translation --';
+                    option.disabled = true;
+                    select.appendChild(option);
+                }
             }
 
             function setupMediaPicker() {

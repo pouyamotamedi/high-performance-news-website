@@ -14,9 +14,10 @@
         display: grid;
         grid-template-columns: 1fr 320px;
         gap: var(--space-8);
-        max-width: var(--container-xl);
+        max-width: 1280px; /* Match header width */
         margin: 0 auto;
         padding: var(--space-8) var(--space-4);
+        box-sizing: border-box;
     }
 
     @media (max-width: 1024px) {
@@ -512,9 +513,10 @@
 
     /* Comments Section */
     .comments-section {
-        max-width: var(--container-xl);
+        max-width: 1280px; /* Match header width */
         margin: var(--space-12) auto 0 auto;
         padding: 0 var(--space-4);
+        box-sizing: border-box;
     }
 
     .comments-container {
