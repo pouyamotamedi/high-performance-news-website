@@ -1824,341 +1824,20 @@ func (s *Server) handleProductionArticle(c *gin.Context) {
 			return
 		}
 
-		// Debug: Log the article data
-		log.Printf("Article data: ID=%d, ViewCount=%d, LikeCount=%d, DislikeCount=%d",
-			article.ID, article.ViewCount, article.LikeCount, article.DislikeCount)
-
-		// Convert article to template data using actual model fields
-		articleData := gin.H{
-			"ID":           article.ID,
-			"Title":        article.Title,
-			"Slug":         article.Slug,
-			"Content":      article.Content,
-			"Excerpt":      article.Excerpt,
-			"PublishedAt":  article.PublishedAt,
-			"ViewCount":    article.ViewCount,
-			"LikeCount":    article.LikeCount,
-			"DislikeCount": article.DislikeCount,
-			"CommentCount": 0, // TODO: Implement comment count
-			"ReadTime":     calculateReadTime(article.Content),
-			// Add SEO fields from individual columns
-			"MetaTitle":       article.MetaTitle,
-			"MetaDescription": article.MetaDescription,
-			"CanonicalURL":    article.CanonicalURL,
-			"SchemaType":      article.SchemaType,
+		// Redirect to the correct language-prefixed URL (301 permanent redirect for SEO)
+		// This ensures all articles are accessed via /{lang}/article/{slug}
+		articleLang := article.LanguageCode
+		if articleLang == "" {
+			articleLang = "en" // Default to English if not set
 		}
-
-		// Get featured image if available (only local paths starting with /uploads/)
-		if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 {
-			log.Printf("DEBUG: FeaturedImageID is %d", *article.FeaturedImageID)
-			if s.db != nil {
-				var imageURL sql.NullString
-				query := "SELECT CASE WHEN original_url LIKE '/uploads/%' THEN original_url ELSE NULL END FROM images WHERE id = $1"
-				err := s.db.DB.QueryRow(query, *article.FeaturedImageID).Scan(&imageURL)
-				log.Printf("DEBUG: Image query result - err: %v, valid: %v, value: %s", err, imageURL.Valid, imageURL.String)
-				if err == nil && imageURL.Valid && imageURL.String != "" {
-					articleData["FeaturedImage"] = imageURL.String
-					log.Printf("DEBUG: Set FeaturedImage to %s", imageURL.String)
-				}
-			}
-			// Build responsive image data for the article
-			if s.mediaService != nil {
-				imageData := s.buildResponsiveImageData(*article.FeaturedImageID, article.Title)
-				if imageData != nil {
-					articleData["ImageData"] = imageData
-					log.Printf("DEBUG: Set ImageData with HasVariants=%v", imageData.HasVariants)
-
-					// Trigger static regeneration in background if static file doesn't exist
-					// This ensures articles with responsive images get proper static files
-					if s.staticGenerator != nil && imageData.HasVariants {
-						go func() {
-							staticPath := fmt.Sprintf("static-html/articles/%s/index.html", article.Slug)
-							if _, err := os.Stat(staticPath); os.IsNotExist(err) {
-								log.Printf("Static file missing for article %s with responsive images, regenerating...", article.Slug)
-								ctx := context.Background()
-								if err := s.staticGenerator.GenerateArticlePage(ctx, article); err != nil {
-									log.Printf("Warning: Failed to regenerate static file for article %s: %v", article.Slug, err)
-								} else {
-									log.Printf("Successfully regenerated static file for article %s", article.Slug)
-								}
-							}
-						}()
-					}
-				}
-			}
-		} else {
-			log.Printf("DEBUG: FeaturedImageID is nil or 0")
-		}
-
-		// Increment view count in background
-		if s.db != nil {
-			go func() {
-				updateQuery := "UPDATE articles SET view_count = view_count + 1 WHERE id = $1"
-				_, err := s.db.DB.Exec(updateQuery, article.ID)
-				if err != nil {
-					log.Printf("Error incrementing view count for article %d: %v", article.ID, err)
-				}
-			}()
-		}
-
-		// Add tags if available from article model
-		if len(article.Tags) > 0 {
-			tags := make([]gin.H, len(article.Tags))
-			for i, tag := range article.Tags {
-				tags[i] = gin.H{
-					"Name": tag.Name,
-					"Slug": tag.Slug,
-				}
-			}
-			articleData["Tags"] = tags
-		}
-
-		// Add author info
-		articleData["Author"] = gin.H{
-			"FirstName": "Article",
-			"LastName":  "Author",
-			"Bio":       "Content Creator",
-		}
-
-		// Get category info and add it to the article data
-		// Check if article has multiple categories loaded
-		if len(article.Categories) > 0 {
-			categories := make([]gin.H, len(article.Categories))
-			for i, category := range article.Categories {
-				categories[i] = gin.H{
-					"ID":          category.ID,
-					"Name":        category.Name,
-					"Slug":        category.Slug,
-					"Description": category.Description,
-				}
-			}
-			articleData["Categories"] = categories
-			articleData["Category"] = categories[0] // First category for backward compatibility
-		} else if article.CategoryID > 0 {
-			// Fallback to single category lookup
-			categoryData, err := s.getCategoryByID(article.CategoryID)
-			if err == nil {
-				articleData["Category"] = categoryData
-				articleData["Categories"] = []gin.H{categoryData}
-			} else {
-				fallbackCategory := gin.H{"Name": "General", "Slug": "general"}
-				articleData["Category"] = fallbackCategory
-				articleData["Categories"] = []gin.H{fallbackCategory}
-			}
-		} else {
-			fallbackCategory := gin.H{"Name": "General", "Slug": "general"}
-			articleData["Category"] = fallbackCategory
-			articleData["Categories"] = []gin.H{fallbackCategory}
-		}
-
-		// Get tags for the article and add them to article data (if not already loaded)
-		if articleData["Tags"] == nil {
-			tags, err := s.getArticleTags(article.ID)
-			if err == nil && len(tags) > 0 {
-				articleData["Tags"] = tags
-			} else {
-				// Provide empty tags array if none found
-				articleData["Tags"] = []gin.H{}
-			}
-		}
-
-		// Create template data
-		data := s.createBaseTemplateData(c)
-		data["Title"] = article.Title
-		data["Article"] = articleData
-
-		// Add HeroImage to root level for base template preload tag
-		if featuredImage, ok := articleData["FeaturedImage"].(string); ok && featuredImage != "" {
-			data["HeroImage"] = featuredImage
-			log.Printf("DEBUG: HeroImage set to: %s", featuredImage)
-		} else {
-			log.Printf("DEBUG: FeaturedImage not found or empty in articleData")
-		}
-
-		// Add SEO fields to root level for base template
-		// Use meta fields if they exist, otherwise use article title/excerpt
-		if article.MetaTitle != "" {
-			data["SEOTitle"] = article.MetaTitle
-		} else {
-			data["SEOTitle"] = article.Title + " - " + s.config.App.Name
-		}
-
-		if article.MetaDescription != "" {
-			data["SEODescription"] = article.MetaDescription
-		} else {
-			data["SEODescription"] = article.Excerpt
-		}
-
-		if article.CanonicalURL != "" {
-			data["CanonicalURL"] = article.CanonicalURL
-		} else {
-			data["CanonicalURL"] = fmt.Sprintf("%s/article/%s", s.config.App.BaseURL, article.Slug)
-		}
-
-		// Set OG and Twitter image URLs (must be absolute URLs)
-		baseURL := s.config.App.BaseURL
-		if baseURL == "" {
-			baseURL = fmt.Sprintf("https://%s", c.Request.Host)
-		}
-		if featuredImage, ok := articleData["FeaturedImage"].(string); ok && featuredImage != "" {
-			// Convert relative URL to absolute URL
-			if strings.HasPrefix(featuredImage, "/") {
-				data["OGImage"] = baseURL + featuredImage
-				data["TwitterImage"] = baseURL + featuredImage
-			} else {
-				data["OGImage"] = featuredImage
-				data["TwitterImage"] = featuredImage
-			}
-		}
-
-		// Set OG type for articles
-		data["OGType"] = "article"
-
-		// Build breadcrumb items
-		breadcrumbItems := []gin.H{
-			{"Name": "Home", "URL": baseURL, "Position": 1},
-		}
-		position := 2
-
-		// Add category to breadcrumbs if available
-		if categoryData, ok := articleData["Category"].(gin.H); ok {
-			if catName, ok := categoryData["Name"].(string); ok && catName != "" {
-				if catSlug, ok := categoryData["Slug"].(string); ok && catSlug != "" {
-					breadcrumbItems = append(breadcrumbItems, gin.H{
-						"Name":     catName,
-						"URL":      fmt.Sprintf("%s/category/%s", baseURL, catSlug),
-						"Position": position,
-					})
-					position++
-				}
-			}
-		}
-
-		// Add current article (active item)
-		breadcrumbItems = append(breadcrumbItems, gin.H{
-			"Name":     article.Title,
-			"URL":      fmt.Sprintf("%s/article/%s", baseURL, article.Slug),
-			"Position": position,
-			"Active":   true,
-		})
-
-		// Generate BreadcrumbList JSON-LD schema
-		breadcrumbListElements := make([]gin.H, len(breadcrumbItems))
-		for i, item := range breadcrumbItems {
-			breadcrumbListElements[i] = gin.H{
-				"@type":    "ListItem",
-				"position": item["Position"],
-				"name":     item["Name"],
-				"item":     item["URL"],
-			}
-		}
-
-		breadcrumbSchema := gin.H{
-			"@context":        "https://schema.org",
-			"@type":           "BreadcrumbList",
-			"itemListElement": breadcrumbListElements,
-		}
-
-		// Convert breadcrumb schema to JSON string
-		breadcrumbJSON, err := json.Marshal(breadcrumbSchema)
-		if err == nil {
-			data["BreadcrumbSchema"] = string(breadcrumbJSON)
-			log.Printf("DEBUG: BreadcrumbSchema set: %s", string(breadcrumbJSON)[:100])
-		} else {
-			log.Printf("ERROR: Failed to marshal breadcrumb schema: %v", err)
-		}
-
-		// Also pass breadcrumb items for HTML rendering
-		data["BreadcrumbItems"] = breadcrumbItems
-
-		// Generate NewsArticle structured data
-		publishedTime := ""
-		modifiedTime := ""
-		if article.PublishedAt != nil {
-			publishedTime = article.PublishedAt.Format(time.RFC3339)
-		}
-		if !article.UpdatedAt.IsZero() {
-			modifiedTime = article.UpdatedAt.Format(time.RFC3339)
-		}
-
-		// Build keywords from tags
-		var keywords []string
-		if tags, ok := articleData["Tags"].([]gin.H); ok {
-			for _, tag := range tags {
-				if name, ok := tag["Name"].(string); ok {
-					keywords = append(keywords, name)
-				}
-			}
-		}
-
-		articleSchema := gin.H{
-			"@context":      "https://schema.org",
-			"@type":         "NewsArticle",
-			"headline":      article.Title,
-			"description":   article.Excerpt,
-			"datePublished": publishedTime,
-			"dateModified":  modifiedTime,
-			"mainEntityOfPage": gin.H{
-				"@type": "WebPage",
-				"@id":   fmt.Sprintf("%s/article/%s", baseURL, article.Slug),
-			},
-			"author": gin.H{
-				"@type": "Person",
-				"name":  "Article Author",
-			},
-			"publisher": gin.H{
-				"@type": "Organization",
-				"name":  s.config.App.Name,
-				"logo": gin.H{
-					"@type": "ImageObject",
-					"url":   fmt.Sprintf("%s/static/images/logo.png", baseURL),
-				},
-			},
-		}
-
-		// Add image if available
-		if featuredImage, ok := articleData["FeaturedImage"].(string); ok && featuredImage != "" {
-			articleSchema["image"] = fmt.Sprintf("%s%s", baseURL, featuredImage)
-		}
-
-		// Add keywords if available
-		if len(keywords) > 0 {
-			articleSchema["keywords"] = strings.Join(keywords, ", ")
-		}
-
-		// Convert article schema to JSON string
-		articleSchemaJSON, err := json.Marshal(articleSchema)
-		if err == nil {
-			data["StructuredData"] = string(articleSchemaJSON)
-		}
-
-		// Add related articles (could be enhanced to get real related articles)
-		data["RelatedArticles"] = []gin.H{
-			{"Title": "Related Article 1", "Slug": "related-1", "Excerpt": "Related content"},
-			{"Title": "Related Article 2", "Slug": "related-2", "Excerpt": "More related content"},
-		}
-
-		// Debug: Log the article data being passed to template
-		log.Printf("Article data for template: Title=%s, MetaTitle=%s, Tags=%v, Category=%v",
-			articleData["Title"], articleData["MetaTitle"], articleData["Tags"], articleData["Category"])
-
-		if s.templateEngine != nil {
-			if html, err := s.templateEngine.Render("article", data); err == nil {
-				c.Header("Content-Type", "text/html; charset=utf-8")
-				c.String(http.StatusOK, html)
-				return
-			} else {
-				log.Printf("Template render error for 'article': %v", err)
-			}
-		} else {
-			log.Printf("Template engine is nil")
-		}
+		correctURL := fmt.Sprintf("/%s/article/%s", articleLang, slug)
+		c.Redirect(http.StatusMovedPermanently, correctURL)
+		return
 	}
 
-	// Fallback to simple response
-	c.String(http.StatusOK, "Article: "+slug+" (Template not available)")
+	// Fallback if articleService is nil
+	c.String(http.StatusNotFound, "Article not found: "+slug)
 }
-
 func (s *Server) handleProductionCategory(c *gin.Context) {
 	slug := c.Param("slug")
 	log.Printf("handleProductionCategory called with slug: %s", slug)
@@ -4154,6 +3833,20 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 			}
 		}
 		c.String(http.StatusNotFound, "Article not found: "+slug)
+		return
+	}
+
+	// Check if the URL language matches the article's language
+	// If not, redirect to the correct language URL (301 permanent redirect for SEO)
+	articleLang := article.LanguageCode
+	if articleLang == "" {
+		articleLang = "en" // Default to English if not set
+	}
+	
+	if lang != articleLang {
+		// Redirect to the correct language URL
+		correctURL := fmt.Sprintf("/%s/article/%s", articleLang, slug)
+		c.Redirect(http.StatusMovedPermanently, correctURL)
 		return
 	}
 

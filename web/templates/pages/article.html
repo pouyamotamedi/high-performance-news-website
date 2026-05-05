@@ -1348,6 +1348,72 @@
         initializeComments();
     });
 
+    // Generate SEO-friendly slug from text
+    function generateSlug(text) {
+        // Transliteration maps for non-Latin characters
+        const arabicToLatin = {
+            'ا': 'a', 'أ': 'a', 'إ': 'e', 'آ': 'a',
+            'ب': 'b', 'ت': 't', 'ث': 'th',
+            'ج': 'j', 'ح': 'h', 'خ': 'kh',
+            'د': 'd', 'ذ': 'dh',
+            'ر': 'r', 'ز': 'z',
+            'س': 's', 'ش': 'sh',
+            'ص': 's', 'ض': 'd',
+            'ط': 't', 'ظ': 'z',
+            'ع': 'a', 'غ': 'gh',
+            'ف': 'f', 'ق': 'q',
+            'ك': 'k', 'ک': 'k',
+            'ل': 'l', 'م': 'm', 'ن': 'n',
+            'ه': 'h', 'ة': 'h',
+            'و': 'w', 'ؤ': 'w',
+            'ي': 'y', 'ى': 'y', 'ئ': 'y',
+            'ء': ''
+        };
+        
+        const germanToLatin = {
+            'ä': 'ae', 'Ä': 'ae', 'ö': 'oe', 'Ö': 'oe',
+            'ü': 'ue', 'Ü': 'ue', 'ß': 'ss'
+        };
+        
+        const frenchToLatin = {
+            'à': 'a', 'â': 'a', 'æ': 'ae', 'ç': 'c',
+            'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+            'î': 'i', 'ï': 'i', 'ô': 'o', 'œ': 'oe',
+            'ù': 'u', 'û': 'u', 'ü': 'u', 'ÿ': 'y'
+        };
+        
+        const spanishToLatin = {
+            'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+            'ñ': 'n', 'Ñ': 'n'
+        };
+        
+        // Transliterate
+        let result = '';
+        for (const char of text) {
+            if (arabicToLatin[char] !== undefined) {
+                result += arabicToLatin[char];
+            } else if (germanToLatin[char] !== undefined) {
+                result += germanToLatin[char];
+            } else if (frenchToLatin[char] !== undefined) {
+                result += frenchToLatin[char];
+            } else if (spanishToLatin[char] !== undefined) {
+                result += spanishToLatin[char];
+            } else {
+                result += char;
+            }
+        }
+        
+        return result
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+            .replace(/\s+/g, '-')            // Replace spaces with hyphens
+            .replace(/[^a-z0-9-]/g, '')      // Remove non-ASCII
+            .replace(/-+/g, '-')             // Replace multiple hyphens
+            .replace(/^-|-$/g, '')           // Trim hyphens
+            .substring(0, 50);               // Limit length
+    }
+
     function generateTableOfContents() {
         const content = document.querySelector('.article-content-enhanced');
         const tocList = document.getElementById('tocList');
@@ -1361,9 +1427,28 @@
             return;
         }
 
+        // Track used slugs to avoid duplicates
+        const usedSlugs = {};
+
         headings.forEach((heading, index) => {
             if (!heading.id) {
-                heading.id = `heading-${index}`;
+                // Generate SEO-friendly slug from heading text
+                let slug = generateSlug(heading.textContent);
+                
+                // If slug is empty (e.g., only special characters), use fallback
+                if (!slug) {
+                    slug = `section-${index + 1}`;
+                }
+                
+                // Handle duplicate slugs by appending number
+                if (usedSlugs[slug]) {
+                    usedSlugs[slug]++;
+                    slug = `${slug}-${usedSlugs[slug]}`;
+                } else {
+                    usedSlugs[slug] = 1;
+                }
+                
+                heading.id = slug;
             }
 
             const li = document.createElement('li');
@@ -1374,6 +1459,8 @@
             a.addEventListener('click', function (e) {
                 e.preventDefault();
                 heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Update URL without page reload for better UX and SEO
+                history.pushState(null, null, `#${heading.id}`);
             });
 
             li.appendChild(a);
