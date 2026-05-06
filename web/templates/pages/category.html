@@ -39,7 +39,7 @@
             <div class="categories-grid">
                 {{range .Categories}}
                 <div class="category-card">
-                    <a href="/category/{{.Slug}}" class="category-link">
+                    <a href="{{if .URL}}{{.URL}}{{else}}/{{$.CurrentLanguage}}/category/{{.Slug}}{{end}}" class="category-link">
                         <h3 class="category-name">{{.Name}}</h3>
                         {{if .Description}}
                         <p class="category-description">{{.Description}}</p>
@@ -74,7 +74,7 @@
                 <article class="article-card">
                     {{if .FeaturedImage}}
                     <div class="article-image">
-                        <a href="/{{.Slug}}">
+                        <a href="{{if .URL}}{{.URL}}{{else}}/{{$.CurrentLanguage}}/article/{{.Slug}}{{end}}">
                             <img src="{{.FeaturedImage}}" alt="{{.Title}}" class="featured-image">
                         </a>
                     </div>
@@ -82,7 +82,7 @@
                     <div class="article-content">
                         <header class="article-header">
                             <h3 class="article-title">
-                                <a href="/{{.Slug}}" class="title-link">{{.Title}}</a>
+                                <a href="{{if .URL}}{{.URL}}{{else}}/{{$.CurrentLanguage}}/article/{{.Slug}}{{end}}" class="title-link">{{.Title}}</a>
                             </h3>
                             {{if .Excerpt}}
                             <p class="article-excerpt">{{.Excerpt}}</p>

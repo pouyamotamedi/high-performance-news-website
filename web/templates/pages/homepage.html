@@ -23,18 +23,78 @@
     margin-right: auto !important;
     box-sizing: border-box !important;
 }
+html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+}
 .homepage {
     width: 100% !important;
     overflow-x: hidden !important;
 }
 .homepage .hero-section {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
     width: 100% !important;
     max-width: 100% !important;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-x: hidden !important;
+}
+/* Dark mode hero */
+[data-theme="dark"] .homepage .hero-section {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+    border-bottom: 1px solid #334155;
 }
 .homepage .hero-section .container,
 .homepage .main-content .container {
     padding: 0 1rem !important;
+}
+/* Hero text colors for light background */
+.homepage .hero-section .hero-title,
+.homepage .hero-section .hero-title a,
+.homepage .hero-section .hero-link {
+    color: #1e293b !important;
+}
+.homepage .hero-section .hero-excerpt,
+.homepage .hero-section .hero-meta,
+.homepage .hero-section .hero-author,
+.homepage .hero-section .hero-date,
+.homepage .hero-section .hero-views {
+    color: #64748b !important;
+}
+.homepage .hero-section .secondary-title,
+.homepage .hero-section .secondary-title a,
+.homepage .hero-section .secondary-link {
+    color: #1e293b !important;
+}
+.homepage .hero-section .secondary-meta,
+.homepage .hero-section .secondary-date {
+    color: #64748b !important;
+}
+/* Dark mode text colors */
+[data-theme="dark"] .homepage .hero-section .hero-title,
+[data-theme="dark"] .homepage .hero-section .hero-title a,
+[data-theme="dark"] .homepage .hero-section .hero-link {
+    color: #f1f5f9 !important;
+}
+[data-theme="dark"] .homepage .hero-section .hero-excerpt,
+[data-theme="dark"] .homepage .hero-section .hero-meta,
+[data-theme="dark"] .homepage .hero-section .hero-author,
+[data-theme="dark"] .homepage .hero-section .hero-date,
+[data-theme="dark"] .homepage .hero-section .hero-views {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .homepage .hero-section .secondary-title,
+[data-theme="dark"] .homepage .hero-section .secondary-title a,
+[data-theme="dark"] .homepage .hero-section .secondary-link {
+    color: #f1f5f9 !important;
+}
+[data-theme="dark"] .homepage .hero-section .secondary-meta,
+[data-theme="dark"] .homepage .hero-section .secondary-date {
+    color: #94a3b8 !important;
+}
+/* Hero category badge */
+.homepage .hero-section .hero-category {
+    background: #2563eb;
+    color: #fff;
 }
 </style>
 {{end}}

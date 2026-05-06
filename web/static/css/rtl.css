@@ -1,5 +1,14 @@
 /* RTL (Right-to-Left) language support */
 
+/* Prevent horizontal scroll on RTL pages */
+html.rtl-dir,
+body.rtl-dir,
+html[dir="rtl"],
+body.ar-lang {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
 /* Base RTL adjustments */
 .rtl-dir {
   direction: rtl;
@@ -461,4 +470,64 @@
   .rtl-dir .hero-search {
     direction: rtl !important;
   }
+}
+
+
+/* Homepage specific RTL fixes */
+.rtl-dir .homepage,
+.ar-lang .homepage {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+.rtl-dir .homepage .container,
+.ar-lang .homepage .container {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+.rtl-dir .hero-section,
+.ar-lang .hero-section {
+  overflow-x: hidden !important;
+}
+
+.rtl-dir .hero-grid,
+.ar-lang .hero-grid {
+  overflow-x: hidden !important;
+}
+
+.rtl-dir .main-content,
+.ar-lang .main-content {
+  overflow-x: hidden !important;
+}
+
+/* Fix breaking news ticker for RTL */
+.rtl-dir .breaking-news-banner,
+.ar-lang .breaking-news-banner {
+  direction: rtl;
+}
+
+.rtl-dir .breaking-news-banner .breaking-label,
+.ar-lang .breaking-news-banner .breaking-label {
+  margin-right: 0;
+  margin-left: var(--space-4);
+}
+
+/* Fix header for RTL - don't reverse flex direction */
+.rtl-dir .header-container,
+.ar-lang .header-container {
+  flex-direction: row !important;
+}
+
+/* Fix mobile menu for RTL */
+.rtl-dir #mobile-nav-overlay,
+.ar-lang #mobile-nav-overlay {
+  transform: translateX(100%);
+  left: auto;
+  right: 0;
+}
+
+.rtl-dir #mobile-nav-overlay[style*="translateX(0)"],
+.ar-lang #mobile-nav-overlay[style*="translateX(0)"] {
+  transform: translateX(0) !important;
 }

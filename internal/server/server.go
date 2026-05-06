@@ -3997,9 +3997,13 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 		}
 		// Use the new method that only includes existing translations
 		data["AlternateURLs"] = s.generateAlternateURLsForTranslations(availableLangs, "/article/"+slug)
+		data["AvailableLanguages"] = s.getAvailableLanguagesForArticle(availableTranslations, slug)
 	} else {
 		// Fallback to current article's language only
 		data["AlternateURLs"] = s.generateAlternateURLsForTranslations([]string{lang}, "/article/"+slug)
+		// Create a minimal translation list with just the current article
+		currentArticleAsTrans := []models.Article{{LanguageCode: lang}}
+		data["AvailableLanguages"] = s.getAvailableLanguagesForArticle(currentArticleAsTrans, slug)
 	}
 	
 	// Add other multilingual data
@@ -4007,7 +4011,6 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 	data["LanguageDirection"] = getLanguageDirection(lang)
 	data["LanguageName"] = getLanguageName(lang)
 	data["LanguageNativeName"] = getLanguageNativeName(lang)
-	data["AvailableLanguages"] = s.getAvailableLanguagesForArticle(availableTranslations, slug)
 	data["CanonicalURL"] = s.generateCanonicalURL(lang, "/article/"+slug)
 	data["IsRTL"] = lang == "ar"
 	data["BaseURL"] = s.config.App.BaseURL
