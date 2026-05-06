@@ -663,6 +663,7 @@ func (r *ArticleRepository) getByIDFromDB(ctx context.Context, id uint64) (*mode
 			   a.status, a.published_at, a.created_at, a.updated_at, a.view_count, 
 			   a.like_count, a.dislike_count, a.meta_title, a.meta_description, 
 			   a.focus_keyword, a.canonical_url, a.schema_type, a.featured_image_id, a.auto_linking,
+			   a.language_code, a.translation_group_id,
 			   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END as featured_image
 		FROM articles a
 		LEFT JOIN images i ON a.featured_image_id = i.id
@@ -672,6 +673,8 @@ func (r *ArticleRepository) getByIDFromDB(ctx context.Context, id uint64) (*mode
 	var metaTitle, metaDescription, focusKeyword, canonicalURL, schemaType sql.NullString
 	var featuredImageID sql.NullInt64
 	var featuredImage sql.NullString
+	var languageCode sql.NullString
+	var translationGroupID sql.NullInt64
 	
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&article.ID,
@@ -695,6 +698,8 @@ func (r *ArticleRepository) getByIDFromDB(ctx context.Context, id uint64) (*mode
 		&schemaType,
 		&featuredImageID,
 		&article.AutoLinking,
+		&languageCode,
+		&translationGroupID,
 		&featuredImage,
 	)
 	
@@ -711,6 +716,19 @@ func (r *ArticleRepository) getByIDFromDB(ctx context.Context, id uint64) (*mode
 	article.FocusKeyword = focusKeyword.String
 	article.CanonicalURL = canonicalURL.String
 	article.SchemaType = schemaType.String
+	
+	// Handle language code - default to "en" if not set
+	if languageCode.Valid && languageCode.String != "" {
+		article.LanguageCode = languageCode.String
+	} else {
+		article.LanguageCode = "en"
+	}
+	
+	// Handle translation group ID
+	if translationGroupID.Valid {
+		tgid := uint64(translationGroupID.Int64)
+		article.TranslationGroupID = &tgid
+	}
 	
 	// Handle featured image fields
 	if featuredImageID.Valid {
@@ -758,6 +776,8 @@ func (r *ArticleRepository) getBySlugFromDB(ctx context.Context, slug string) (*
 	var metaTitle, metaDescription, canonicalURL, schemaType sql.NullString
 	var featuredImageID sql.NullInt64
 	var featuredImage sql.NullString
+	var languageCode sql.NullString
+	var translationGroupID sql.NullInt64
 	
 	err = stmt.QueryRowContext(ctx, slug).Scan(
 		&article.ID,
@@ -777,6 +797,8 @@ func (r *ArticleRepository) getBySlugFromDB(ctx context.Context, slug string) (*
 		&schemaType,
 		&featuredImageID,
 		&article.AutoLinking,
+		&languageCode,
+		&translationGroupID,
 		&featuredImage,
 	)
 	
@@ -793,6 +815,19 @@ func (r *ArticleRepository) getBySlugFromDB(ctx context.Context, slug string) (*
 	article.CanonicalURL = canonicalURL.String
 	article.SchemaType = schemaType.String
 	article.Status = "published" // Since we only query published articles
+	
+	// Handle language code - default to "en" if not set
+	if languageCode.Valid && languageCode.String != "" {
+		article.LanguageCode = languageCode.String
+	} else {
+		article.LanguageCode = "en"
+	}
+	
+	// Handle translation group ID
+	if translationGroupID.Valid {
+		tgid := uint64(translationGroupID.Int64)
+		article.TranslationGroupID = &tgid
+	}
 	
 	// Handle featured image fields
 	if featuredImageID.Valid {

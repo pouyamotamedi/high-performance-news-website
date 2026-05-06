@@ -101,7 +101,7 @@ func (db *DB) initPreparedStatements() error {
 			SELECT a.id, a.title, a.slug, a.content, a.excerpt, a.author_id, a.category_id,
 				   a.published_at, a.view_count, a.like_count, a.dislike_count,
 				   a.meta_title, a.meta_description, a.canonical_url, a.schema_type,
-				   a.featured_image_id, a.auto_linking,
+				   a.featured_image_id, a.auto_linking, a.language_code, a.translation_group_id,
 				   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END as featured_image
 			FROM articles a
 			LEFT JOIN images i ON a.featured_image_id = i.id
