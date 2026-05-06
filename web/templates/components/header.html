@@ -54,7 +54,7 @@
                 <!-- Dropdown menu - positioned absolute, outside normal flow -->
                 <div id="lang-dropdown" style="display:none;position:fixed;background:var(--color-bg-primary, #fff);border:1px solid var(--color-border-primary, #e2e8f0);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:6px;z-index:10000;">
                     {{range .AvailableLanguages}}
-                    <a href="{{.URL}}" style="display:block;padding:8px 12px;border-radius:6px;text-decoration:none;font-size:20px;text-align:center;{{if eq .Code $.LanguageCode}}background:var(--color-primary, #2563eb);opacity:0.2;{{end}}" hreflang="{{.Code}}" title="{{.NativeName}}" onmouseover="this.style.background='var(--color-bg-secondary, #f1f5f9)'" onmouseout="this.style.background='{{if eq .Code $.LanguageCode}}var(--color-primary, #eff6ff){{else}}transparent{{end}}'">
+                    <a href="{{.URL}}" style="display:block;padding:8px 12px;border-radius:6px;text-decoration:none;font-size:20px;text-align:center;{{if eq .Code $.LanguageCode}}background:var(--color-primary, #2563eb);{{end}}" hreflang="{{.Code}}" title="{{.NativeName}}" onmouseover="this.style.background='var(--color-bg-secondary, #f1f5f9)'" onmouseout="this.style.background='{{if eq .Code $.LanguageCode}}var(--color-primary, #2563eb){{else}}transparent{{end}}'">
                         {{if eq .Code "ar"}}🇸🇦{{else if eq .Code "de"}}🇩🇪{{else if eq .Code "fr"}}🇫🇷{{else if eq .Code "es"}}🇪🇸{{else}}🇬🇧{{end}}
                     </a>
                     {{end}}

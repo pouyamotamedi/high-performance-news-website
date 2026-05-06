@@ -3952,14 +3952,19 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 				}
 				// Only include categories that match the current language
 				if catLang == lang {
-					filteredCategories = append(filteredCategories, gin.H{
+					catData := gin.H{
 						"ID":          cat.ID,
 						"Name":        cat.Name,
 						"Slug":        cat.Slug,
 						"Description": cat.Description,
 						"URL":         fmt.Sprintf("/%s/category/%s", catLang, cat.Slug),
 						"Count":       s.getCategoryArticleCountByLanguage(cat.ID, lang),
-					})
+					}
+					// Add ImageURL if available
+					if cat.ImageURL != nil && *cat.ImageURL != "" {
+						catData["ImageURL"] = *cat.ImageURL
+					}
+					filteredCategories = append(filteredCategories, catData)
 				}
 			}
 			data["Categories"] = filteredCategories
@@ -4040,7 +4045,7 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 				if tagLang != lang {
 					continue
 				}
-				articleCount := s.getTagArticleCount(tag.ID)
+				articleCount := s.getTagArticleCountByLanguage(tag.ID, lang)
 				if articleCount > 0 {
 					tagList = append(tagList, TagWithCount{
 						Name:  tag.Name,
@@ -4380,14 +4385,19 @@ func (s *Server) handleMultilingualCategories(c *gin.Context) {
 				}
 				// Only include categories that match the current language
 				if catLang == lang {
-					filteredCategories = append(filteredCategories, gin.H{
+					catData := gin.H{
 						"ID":          cat.ID,
 						"Name":        cat.Name,
 						"Slug":        cat.Slug,
 						"Description": cat.Description,
 						"URL":         fmt.Sprintf("/%s/category/%s", lang, cat.Slug),
 						"Count":       s.getCategoryArticleCountByLanguage(cat.ID, lang),
-					})
+					}
+					// Add ImageURL if available
+					if cat.ImageURL != nil && *cat.ImageURL != "" {
+						catData["ImageURL"] = *cat.ImageURL
+					}
+					filteredCategories = append(filteredCategories, catData)
 				}
 			}
 			data["Categories"] = filteredCategories
