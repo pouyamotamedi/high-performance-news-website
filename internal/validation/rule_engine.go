@@ -199,7 +199,7 @@ func (r *RuleEngine) getSuggestionForRule(ruleName string) string {
 	suggestions := map[string]string{
 		"missing-article-validation": "Add article validation: if err := models.ValidateStruct(article); err != nil { return err }",
 		"missing-slug-generation":    "Generate slug from title: article.Slug = utils.GenerateSlug(article.Title)",
-		"missing-canonical-url":      "Set canonical URL: article.CanonicalURL = fmt.Sprintf(\"/articles/%s\", article.Slug)",
+		"missing-canonical-url":      "Set canonical URL: article.CanonicalURL = fmt.Sprintf(\"/%s/article/%s\", article.LanguageCode, article.Slug)",
 		"missing-meta-tags":          "Add meta tags: <meta name=\"description\" content=\"{{.MetaDescription}}\">",
 		"missing-schema-markup":      "Add JSON-LD schema: <script type=\"application/ld+json\">{{.SchemaMarkup}}</script>",
 		"invalid-hreflang":          "Use valid hreflang format: hreflang=\"en-US\" or hreflang=\"fa\"",

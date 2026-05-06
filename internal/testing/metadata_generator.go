@@ -339,7 +339,7 @@ func (mg *MetadataGenerator) generateCanonicalURL() string {
 	domain := domains[mg.randomInt(len(domains))]
 	slug := mg.generateURLSlug()
 	
-	return fmt.Sprintf("%s/articles/%s", domain, slug)
+	return fmt.Sprintf("%s/en/article/%s", domain, slug)
 }
 
 // generateURLSlug creates a URL-friendly slug

@@ -221,15 +221,15 @@ func TestMultilingualIntegration_URLExtraction(t *testing.T) {
 	}{
 		{
 			name:         "Persian article (default)",
-			url:          "/articles/test-article",
-			expectedLang: "fa",
-			expectedPath: "articles/test-article",
+			url:          "/article/test-article",
+			expectedLang: "en",
+			expectedPath: "article/test-article",
 		},
 		{
 			name:         "English article",
-			url:          "/en/articles/test-article",
+			url:          "/en/article/test-article",
 			expectedLang: "en",
-			expectedPath: "articles/test-article",
+			expectedPath: "article/test-article",
 		},
 		{
 			name:         "Arabic category",

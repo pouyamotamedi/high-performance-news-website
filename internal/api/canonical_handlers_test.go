@@ -412,7 +412,7 @@ func TestCanonicalHandlers_GenerateCanonicalURL(t *testing.T) {
 				Target: services.NewTagTarget(tagID),
 			},
 			expectedStatus: http.StatusOK,
-			expectedURL:    "/tag/test-tag",
+			expectedURL:    "/en/tag/test-tag",
 		},
 		{
 			name: "Generate custom URL",

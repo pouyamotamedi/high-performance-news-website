@@ -81,8 +81,8 @@ func (c *ContinuousValidator) testSchemaMarkupCompliance(ctx context.Context) Mo
 	// Test multiple article pages for schema markup
 	testURLs := []string{
 		c.monitor.baseURL,
-		c.monitor.baseURL + "/articles/sample-article",
-		c.monitor.baseURL + "/category/technology",
+		c.monitor.baseURL + "/en/article/sample-article",
+		c.monitor.baseURL + "/en/category/technology",
 	}
 
 	validSchemas := 0
@@ -258,8 +258,8 @@ func (c *ContinuousValidator) testPageLoadPerformance(ctx context.Context) Monit
 		maxTime  time.Duration
 	}{
 		{c.monitor.baseURL, "homepage", 2 * time.Second},
-		{c.monitor.baseURL + "/articles/sample-article", "article", 1500 * time.Millisecond},
-		{c.monitor.baseURL + "/category/technology", "category", 2500 * time.Millisecond},
+		{c.monitor.baseURL + "/en/article/sample-article", "article", 1500 * time.Millisecond},
+		{c.monitor.baseURL + "/en/category/technology", "category", 2500 * time.Millisecond},
 	}
 
 	regressions := 0
@@ -499,7 +499,7 @@ func (c *ContinuousValidator) testMobileResponsiveDesign(ctx context.Context) Mo
 
 // Helper methods
 func (c *ContinuousValidator) getPageType(url string) string {
-	if strings.Contains(url, "/articles/") {
+	if strings.Contains(url, "/article/") {
 		return "article"
 	} else if strings.Contains(url, "/category/") {
 		return "category"

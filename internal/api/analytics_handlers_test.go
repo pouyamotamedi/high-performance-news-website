@@ -181,13 +181,13 @@ func TestAnalyticsHandlers_TrackBehavior(t *testing.T) {
 	}{
 		SessionID:   "session123",
 		UserID:      &userID,
-		PageURL:     "/article/test",
+		PageURL:     "/en/article/test",
 		TimeOnPage:  120,
 		ScrollDepth: 85.5,
 	}
 
 	// Set up mock expectation
-	mockService.On("TrackUserBehavior", mock.Anything, "session123", &userID, "/article/test", 120, 85.5, mock.AnythingOfType("*http.Request")).Return(nil)
+	mockService.On("TrackUserBehavior", mock.Anything, "session123", &userID, "/en/article/test", 120, 85.5, mock.AnythingOfType("*http.Request")).Return(nil)
 
 	// Create request
 	body, _ := json.Marshal(behaviorReq)

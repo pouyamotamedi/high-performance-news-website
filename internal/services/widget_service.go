@@ -237,7 +237,12 @@ func (s *WidgetService) renderLatestArticlesWidget(widget *models.Widget, config
 
 	for _, article := range articles {
 		html += fmt.Sprintf(`<li class="article-item">`)
-		html += fmt.Sprintf(`<a href="/articles/%s" class="article-link">`, article.Slug)
+		// Use article language, default to English
+		articleLang := article.LanguageCode
+		if articleLang == "" {
+			articleLang = "en"
+		}
+		html += fmt.Sprintf(`<a href="/%s/article/%s" class="article-link">`, articleLang, article.Slug)
 		
 
 		
@@ -278,7 +283,12 @@ func (s *WidgetService) renderPopularArticlesWidget(widget *models.Widget, confi
 
 	for _, article := range articles {
 		html += fmt.Sprintf(`<li class="article-item">`)
-		html += fmt.Sprintf(`<a href="/articles/%s" class="article-link">`, article.Slug)
+		// Use article language, default to English
+		articleLang := article.LanguageCode
+		if articleLang == "" {
+			articleLang = "en"
+		}
+		html += fmt.Sprintf(`<a href="/%s/article/%s" class="article-link">`, articleLang, article.Slug)
 		html += fmt.Sprintf(`<h4 class="article-title">%s</h4>`, template.HTMLEscapeString(article.Title))
 		html += fmt.Sprintf(`<span class="article-views">%d views</span>`, article.ViewCount)
 		html += `</a></li>`
@@ -308,7 +318,12 @@ func (s *WidgetService) renderTrendingArticlesWidget(widget *models.Widget, conf
 
 	for _, article := range articles {
 		html += fmt.Sprintf(`<li class="article-item">`)
-		html += fmt.Sprintf(`<a href="/articles/%s" class="article-link">`, article.Slug)
+		// Use article language, default to English
+		articleLang := article.LanguageCode
+		if articleLang == "" {
+			articleLang = "en"
+		}
+		html += fmt.Sprintf(`<a href="/%s/article/%s" class="article-link">`, articleLang, article.Slug)
 		html += fmt.Sprintf(`<h4 class="article-title">%s</h4>`, template.HTMLEscapeString(article.Title))
 		html += `</a></li>`
 	}

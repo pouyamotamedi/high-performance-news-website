@@ -59,14 +59,14 @@ func (s *Server) handleDevHomepage(c *gin.Context) {
 
         <h2>🌐 Website Pages <span class="mock">(Mock Data)</span></h2>
         <div class="endpoint-group">
-            <a href="/category/tech" class="endpoint">💻 Technology Category - /category/tech</a>
-            <a href="/category/sports" class="endpoint">⚽ Sports Category - /category/sports</a>
-            <a href="/category/politics" class="endpoint">🏛️ Politics Category - /category/politics</a>
-            <a href="/tag/breaking" class="endpoint">🔖 Breaking News Tag - /tag/breaking</a>
-            <a href="/tag/news" class="endpoint">📰 News Tag - /tag/news</a>
-            <a href="/latest" class="endpoint">🕐 Latest Articles - /latest</a>
-            <a href="/trending" class="endpoint">📈 Trending Articles - /trending</a>
-            <a href="/article/sample-article-1" class="endpoint">📄 Sample Article - /article/sample-article-1</a>
+            <a href="/en/category/tech" class="endpoint">💻 Technology Category - /en/category/tech</a>
+            <a href="/en/category/sports" class="endpoint">⚽ Sports Category - /en/category/sports</a>
+            <a href="/en/category/politics" class="endpoint">🏛️ Politics Category - /en/category/politics</a>
+            <a href="/en/tag/breaking" class="endpoint">🔖 Breaking News Tag - /en/tag/breaking</a>
+            <a href="/en/tag/news" class="endpoint">📰 News Tag - /en/tag/news</a>
+            <a href="/en/latest" class="endpoint">🕐 Latest Articles - /en/latest</a>
+            <a href="/en/trending" class="endpoint">📈 Trending Articles - /en/trending</a>
+            <a href="/en/article/sample-article-1" class="endpoint">📄 Sample Article - /en/article/sample-article-1</a>
         </div>
 
         <h2>🔧 System Endpoints</h2>
@@ -335,9 +335,9 @@ func (s *Server) handleDevArticle(c *gin.Context) {
         </div>
         
         <div class="tags">
-            <a href="/tag/sample" class="tag">sample</a>
-            <a href="/tag/development" class="tag">development</a>
-            <a href="/tag/news" class="tag">news</a>
+            <a href="/en/tag/sample" class="tag">sample</a>
+            <a href="/en/tag/development" class="tag">development</a>
+            <a href="/en/tag/news" class="tag">news</a>
         </div>
     </div>
 </body>

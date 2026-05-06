@@ -273,7 +273,7 @@ func TestSEOService_GenerateTagMetaTags(t *testing.T) {
 		t.Errorf("Expected keywords '%s', got '%s'", expectedKeywords, meta.Keywords)
 	}
 
-	expectedCanonical := "https://example.com/tag/golang"
+	expectedCanonical := "https://example.com/en/tag/golang"
 	if meta.CanonicalURL != expectedCanonical {
 		t.Errorf("Expected canonical URL '%s', got '%s'", expectedCanonical, meta.CanonicalURL)
 	}
@@ -328,9 +328,9 @@ func TestSEOService_URLGeneration(t *testing.T) {
 		slug     string
 		expected string
 	}{
-		{seoService.GetArticleURL, "test-article", "https://example.com/article/test-article"},
-		{seoService.GetCategoryURL, "technology", "https://example.com/category/technology"},
-		{seoService.GetTagURL, "golang", "https://example.com/tag/golang"},
+		{seoService.GetArticleURL, "test-article", "https://example.com/en/article/test-article"},
+		{seoService.GetCategoryURL, "technology", "https://example.com/en/category/technology"},
+		{seoService.GetTagURL, "golang", "https://example.com/en/tag/golang"},
 		{seoService.GetAuthorURL, "johndoe", "https://example.com/author/johndoe"},
 	}
 

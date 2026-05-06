@@ -1362,7 +1362,7 @@ func (s *Server) getCommentManagementContent() string {
                             '<span class="spam-score ' + getSpamScoreClass(comment.spam_score) + '">Spam: ' + (comment.spam_score * 100).toFixed(1) + '%</span>' +
                         '</div>' +
                         '<div class="comment-text">' + escapeHtml(comment.content) + '</div>' +
-                        '<a href="/article/' + (comment.article_slug || comment.article_id) + '" class="comment-article" target="_blank">View Article →</a>' +
+                        '<a href="/en/article/' + (comment.article_slug || comment.article_id) + '" class="comment-article" target="_blank">View Article →</a>' +
                     '</div>' +
                     '<div class="status-badge status-' + comment.status + '">' + comment.status + '</div>' +
                     '<div class="comment-actions">' +

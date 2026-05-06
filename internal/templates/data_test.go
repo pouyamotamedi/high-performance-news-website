@@ -384,7 +384,7 @@ func TestArticleStruct(t *testing.T) {
 		SEOTitle:       "SEO Title",
 		SEODescription: "SEO Description",
 		SEOKeywords:    []string{"test", "article"},
-		CanonicalURL:   "https://example.com/articles/test-article",
+		CanonicalURL:   "https://example.com/en/article/test-article",
 		FeaturedImage:  "/images/test.jpg",
 		ImageAlt:       "Test image",
 	}

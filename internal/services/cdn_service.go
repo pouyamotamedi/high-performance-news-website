@@ -422,7 +422,7 @@ func (c *CloudflareCDNService) PurgeArticleCache(articleSlug string) error {
 	}
 	
 	urls := []string{
-		fmt.Sprintf("https://%s/articles/%s", c.config.Domain, articleSlug),
+		fmt.Sprintf("https://%s/en/article/%s", c.config.Domain, articleSlug),
 		fmt.Sprintf("https://%s/", c.config.Domain), // Homepage
 		fmt.Sprintf("https://%s/sitemap.xml", c.config.Domain),
 		fmt.Sprintf("https://%s/rss.xml", c.config.Domain),

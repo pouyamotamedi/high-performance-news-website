@@ -260,13 +260,13 @@ func TestCanonicalManager_GenerateCanonicalURL(t *testing.T) {
 		{
 			name:        "Generate tag URL",
 			target:      NewTagTarget(tagID),
-			expectedURL: "/tag/test-tag",
+			expectedURL: "/en/tag/test-tag",
 			expectError: false,
 		},
 		{
 			name:        "Generate category URL",
 			target:      NewCategoryTarget(categoryID),
-			expectedURL: "/category/test-category",
+			expectedURL: "/en/category/test-category",
 			expectError: false,
 		},
 		{
@@ -372,7 +372,7 @@ func TestCanonicalManager_ProcessJob(t *testing.T) {
 		t.Errorf("Expected canonical URL to be set")
 	}
 
-	expectedURL := "/tag/test-tag"
+	expectedURL := "/en/tag/test-tag"
 	if canonicalURL.String != expectedURL {
 		t.Errorf("Expected canonical URL %s, got %s", expectedURL, canonicalURL.String)
 	}

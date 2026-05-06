@@ -363,7 +363,7 @@ func (s *SyntheticMonitor) getJavaScriptErrors(page *rod.Page) []string {
 
 func (s *SyntheticMonitor) getRecentArticleURL() (string, error) {
 	// Implementation would query database for recent article
-	return s.baseURL + "/articles/sample-article", nil
+	return s.baseURL + "/en/article/sample-article", nil
 }
 
 func (s *SyntheticMonitor) getContentLength(page *rod.Page) int {
@@ -386,7 +386,7 @@ func (s *SyntheticMonitor) testCategoryBrowse(ctx context.Context) MonitoringRes
 		Metrics:     make(map[string]float64),
 	}
 
-	page := s.browser.MustPage(s.baseURL + "/category/technology")
+	page := s.browser.MustPage(s.baseURL + "/en/category/technology")
 	defer page.Close()
 
 	loadStart := time.Now()

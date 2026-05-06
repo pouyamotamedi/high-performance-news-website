@@ -566,14 +566,14 @@ func TestSEOValidator_IntegrationWithHTTPServer(t *testing.T) {
 	// Create test server that simulates canonical URL responses
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/article/test":
+		case "/en/article/test":
 			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`<html><head><link rel="canonical" href="https://example.com/article/canonical-target"></head></html>`))
-		case "/article/self-canonical":
+			w.Write([]byte(`<html><head><link rel="canonical" href="https://example.com/en/article/canonical-target"></head></html>`))
+		case "/en/article/self-canonical":
 			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`<html><head><link rel="canonical" href="` + server.URL + `/article/self-canonical"></head></html>`))
+			w.Write([]byte(`<html><head><link rel="canonical" href="` + server.URL + `/en/article/self-canonical"></head></html>`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -586,7 +586,7 @@ func TestSEOValidator_IntegrationWithHTTPServer(t *testing.T) {
 	validator := NewSEOValidator(nil, nil, nil, server.URL, "Test Site")
 
 	t.Run("External URL validation", func(t *testing.T) {
-		result, err := validator.ValidateCanonicalChain(server.URL + "/article/self-canonical")
+		result, err := validator.ValidateCanonicalChain(server.URL + "/en/article/self-canonical")
 		if err != nil {
 			t.Fatalf("Expected no error, got %v", err)
 		}

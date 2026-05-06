@@ -91,7 +91,7 @@ func TestCanonicalWorkflowIntegration(t *testing.T) {
 			t.Errorf("Canonical URL should be set after processing")
 		}
 
-		expectedURL := "/category/test-category"
+		expectedURL := "/en/category/test-category"
 		if canonicalURL.String != expectedURL {
 			t.Errorf("Expected canonical URL %s, got %s", expectedURL, canonicalURL.String)
 		}
@@ -279,7 +279,7 @@ func TestCanonicalHierarchicalCategoriesIntegration(t *testing.T) {
 			t.Fatalf("Failed to generate canonical URL for child category: %v", err)
 		}
 
-		expectedURL := "/category/test-category/child-category"
+		expectedURL := "/en/category/test-category/child-category"
 		if canonicalURL != expectedURL {
 			t.Errorf("Expected hierarchical canonical URL %s, got %s", expectedURL, canonicalURL)
 		}
@@ -312,6 +312,7 @@ func TestCanonicalHierarchicalCategoriesIntegration(t *testing.T) {
 			t.Errorf("Canonical URL should be set after processing")
 		}
 
+		// expectedURL is already set to "/en/category/test-category/child-category" above
 		if articleCanonicalURL.String != expectedURL {
 			t.Errorf("Expected article canonical URL %s, got %s", expectedURL, articleCanonicalURL.String)
 		}

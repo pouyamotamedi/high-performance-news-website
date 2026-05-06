@@ -181,11 +181,25 @@ func NewAITestDataGenerator(llmClient LLMClient, config *AIDataConfig) *AITestDa
 				Vocabulary:   []string{"news", "article", "breaking", "update", "report", "analysis", "opinion", "editorial"},
 			},
 			{
-				Code:         "fa",
-				Name:         "Persian",
-				Direction:    "rtl",
-				CharacterSet: "persian",
-				Vocabulary:   []string{"خبر", "مقاله", "گزارش", "تحلیل", "نظر", "ویژه", "فوری", "اطلاع"},
+				Code:         "de",
+				Name:         "German",
+				Direction:    "ltr",
+				CharacterSet: "latin",
+				Vocabulary:   []string{"Nachrichten", "Artikel", "Bericht", "Analyse", "Meinung", "Eilmeldung", "Aktuell", "Information"},
+			},
+			{
+				Code:         "fr",
+				Name:         "French",
+				Direction:    "ltr",
+				CharacterSet: "latin",
+				Vocabulary:   []string{"actualités", "article", "rapport", "analyse", "opinion", "urgent", "information", "nouvelles"},
+			},
+			{
+				Code:         "es",
+				Name:         "Spanish",
+				Direction:    "ltr",
+				CharacterSet: "latin",
+				Vocabulary:   []string{"noticias", "artículo", "informe", "análisis", "opinión", "urgente", "información", "actualidad"},
 			},
 			{
 				Code:         "ar",
@@ -378,10 +392,8 @@ func (g *AITestDataGenerator) parseArticleResponse(response string, startID int)
 			UpdatedAt: time.Now().Add(-time.Duration(rand.Intn(7)) * 24 * time.Hour),
 		}
 		
-		// Set language based on title
-		if strings.Contains(title, "خبر") || strings.Contains(title, "تکنولوژی") {
-			article.Language = "fa"
-		} else if strings.Contains(title, "عاجل") || strings.Contains(title, "تقنية") {
+		// Set language based on title (supported: en, de, fr, es, ar)
+		if strings.Contains(title, "عاجل") || strings.Contains(title, "تقنية") {
 			article.Language = "ar"
 		} else {
 			article.Language = "en"
@@ -451,11 +463,16 @@ func (g *AITestDataGenerator) generateSlug(title, language string) string {
 
 // generateSEOMetadata generates SEO metadata for articles
 func (g *AITestDataGenerator) generateSEOMetadata(article TestArticle) SEOMetadata {
+	// Use article language, default to English if not set
+	lang := article.Language
+	if lang == "" {
+		lang = "en"
+	}
 	return SEOMetadata{
 		MetaTitle:       article.Title,
 		MetaDescription: article.Summary,
 		Keywords:        []string{"news", "article", "breaking"},
-		CanonicalURL:    fmt.Sprintf("/articles/%s", article.Slug),
+		CanonicalURL:    fmt.Sprintf("/%s/article/%s", lang, article.Slug),
 		SchemaMarkup: map[string]interface{}{
 			"@type": "NewsArticle",
 			"headline": article.Title,
@@ -514,10 +531,8 @@ func (g *AITestDataGenerator) generateAuthors(ctx context.Context, count int) ([
 			CreatedAt: time.Now().Add(-time.Duration(rand.Intn(365)) * 24 * time.Hour),
 		}
 		
-		// Set language based on name
-		if strings.Contains(author.Name, "احمد") || strings.Contains(author.Name, "فاطمه") {
-			author.Language = "fa"
-		} else if strings.Contains(author.Name, "محمد") || strings.Contains(author.Name, "فاطمة") {
+		// Set language based on name (supported: en, de, fr, es, ar)
+		if strings.Contains(author.Name, "محمد") || strings.Contains(author.Name, "فاطمة") || strings.Contains(author.Name, "علي") {
 			author.Language = "ar"
 		} else {
 			author.Language = "en"
@@ -535,9 +550,9 @@ func (g *AITestDataGenerator) generateCategories(ctx context.Context, count int)
 		{ID: 1, Name: "Technology", Slug: "technology", Language: "en"},
 		{ID: 2, Name: "Politics", Slug: "politics", Language: "en"},
 		{ID: 3, Name: "Sports", Slug: "sports", Language: "en"},
-		{ID: 4, Name: "تکنولوژی", Slug: "technology-fa", Language: "fa"},
-		{ID: 5, Name: "سیاست", Slug: "politics-fa", Language: "fa"},
-		{ID: 6, Name: "ورزش", Slug: "sports-fa", Language: "fa"},
+		{ID: 4, Name: "Technologie", Slug: "technologie", Language: "de"},
+		{ID: 5, Name: "Technologie", Slug: "technologie-fr", Language: "fr"},
+		{ID: 6, Name: "تكنولوجيا", Slug: "technology-ar", Language: "ar"},
 	}
 	
 	for i := range categories {
@@ -556,7 +571,7 @@ func (g *AITestDataGenerator) generateCategories(ctx context.Context, count int)
 func (g *AITestDataGenerator) generateTags(ctx context.Context, count int) ([]TestTag, error) {
 	sampleTags := []string{
 		"breaking", "urgent", "analysis", "opinion", "exclusive",
-		"فوری", "تحلیل", "نظر", "ویژه", "گزارش",
+		"eilmeldung", "analyse", "meinung", "exklusiv", "bericht",
 		"عاجل", "تحليل", "رأي", "خاص", "تقرير",
 	}
 	
@@ -570,9 +585,9 @@ func (g *AITestDataGenerator) generateTags(ctx context.Context, count int) ([]Te
 			CreatedAt:  time.Now().Add(-time.Duration(rand.Intn(200)) * 24 * time.Hour),
 		}
 		
-		// Set language
-		if strings.Contains(tag.Name, "فوری") || strings.Contains(tag.Name, "تحلیل") {
-			tag.Language = "fa"
+		// Set language (supported: en, de, fr, es, ar)
+		if strings.Contains(tag.Name, "eilmeldung") || strings.Contains(tag.Name, "analyse") || strings.Contains(tag.Name, "meinung") || strings.Contains(tag.Name, "exklusiv") || strings.Contains(tag.Name, "bericht") {
+			tag.Language = "de"
 		} else if strings.Contains(tag.Name, "عاجل") || strings.Contains(tag.Name, "تحليل") {
 			tag.Language = "ar"
 		} else {
@@ -642,8 +657,12 @@ func (g *AITestDataGenerator) generateComments(ctx context.Context, articles []T
 // generateCommentContent generates sample comment content
 func (g *AITestDataGenerator) generateCommentContent(language string) string {
 	switch language {
-	case "fa":
-		return "این مقاله بسیار جالب و مفید بود. ممنون از نویسنده."
+	case "de":
+		return "Toller Artikel! Sehr informativ und gut geschrieben."
+	case "fr":
+		return "Excellent article ! Très informatif et bien écrit."
+	case "es":
+		return "¡Excelente artículo! Muy informativo y bien escrito."
 	case "ar":
 		return "مقال رائع ومفيد جداً. شكراً للكاتب."
 	default:

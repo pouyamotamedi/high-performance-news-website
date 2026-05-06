@@ -180,15 +180,15 @@ func TestExtractLanguageFromURL(t *testing.T) {
 	}{
 		{
 			name:         "URL with language prefix",
-			path:         "/en/articles/test-article",
+			path:         "/en/article/test-article",
 			expectedLang: "en",
-			expectedPath: "articles/test-article",
+			expectedPath: "article/test-article",
 		},
 		{
 			name:         "URL without language prefix",
-			path:         "/articles/test-article",
-			expectedLang: "fa",
-			expectedPath: "articles/test-article",
+			path:         "/article/test-article",
+			expectedLang: "en",
+			expectedPath: "article/test-article",
 		},
 		{
 			name:         "Root URL with language",
@@ -363,10 +363,10 @@ func TestMultilingualArticle_ContentWithTranslations(t *testing.T) {
 // Benchmark tests
 func BenchmarkExtractLanguageFromURL(b *testing.B) {
 	paths := []string{
-		"/en/articles/test-article",
-		"/articles/test-article",
+		"/en/article/test-article",
+		"/article/test-article",
 		"/ar/categories/technology",
-		"/fa/tags/programming",
+		"/en/tags/programming",
 		"/api/v1/articles",
 	}
 	

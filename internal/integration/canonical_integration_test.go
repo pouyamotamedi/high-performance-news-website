@@ -25,51 +25,51 @@ func TestCanonicalURLChainValidation(t *testing.T) {
 	t.Run("Canonical chain detection and resolution", func(t *testing.T) {
 		canonicalService := &MockCanonicalServiceAdvanced{
 			mappings: map[string]string{
-				"/article/step1": "/article/step2",
-				"/article/step2": "/article/step3", 
-				"/article/step3": "/article/final",
-				"/article/final": "/article/final",
+				"/en/article/step1": "/en/article/step2",
+				"/en/article/step2": "/en/article/step3", 
+				"/en/article/step3": "/en/article/final",
+				"/en/article/final": "/en/article/final",
 			},
 		}
 
 		ctx := context.Background()
 
 		// Test chain resolution
-		finalURL, chainLength, err := canonicalService.ResolveCanonicalChain(ctx, "/article/step1")
+		finalURL, chainLength, err := canonicalService.ResolveCanonicalChain(ctx, "/en/article/step1")
 		require.NoError(t, err)
 		
-		assert.Equal(t, "/article/final", finalURL)
+		assert.Equal(t, "/en/article/final", finalURL)
 		assert.Equal(t, 3, chainLength)
 
 		// Test direct canonical
-		finalURL, chainLength, err = canonicalService.ResolveCanonicalChain(ctx, "/article/final")
+		finalURL, chainLength, err = canonicalService.ResolveCanonicalChain(ctx, "/en/article/final")
 		require.NoError(t, err)
 		
-		assert.Equal(t, "/article/final", finalURL)
+		assert.Equal(t, "/en/article/final", finalURL)
 		assert.Equal(t, 0, chainLength)
 
-		t.Logf("Chain resolution: /article/step1 -> %s (length: %d)", finalURL, chainLength)
+		t.Logf("Chain resolution: /en/article/step1 -> %s (length: %d)", finalURL, chainLength)
 	})
 
 	t.Run("Canonical cycle detection and prevention", func(t *testing.T) {
 		canonicalService := &MockCanonicalServiceAdvanced{
 			mappings: map[string]string{
-				"/article/cycle1": "/article/cycle2",
-				"/article/cycle2": "/article/cycle3",
-				"/article/cycle3": "/article/cycle1", // Creates cycle
+				"/en/article/cycle1": "/en/article/cycle2",
+				"/en/article/cycle2": "/en/article/cycle3",
+				"/en/article/cycle3": "/en/article/cycle1", // Creates cycle
 			},
 		}
 
 		ctx := context.Background()
 
 		// Should detect cycle and return error or original URL
-		finalURL, chainLength, err := canonicalService.ResolveCanonicalChain(ctx, "/article/cycle1")
+		finalURL, chainLength, err := canonicalService.ResolveCanonicalChain(ctx, "/en/article/cycle1")
 		
 		if err != nil {
 			assert.Contains(t, err.Error(), "cycle detected")
 		} else {
 			// If no error, should return original URL
-			assert.Equal(t, "/article/cycle1", finalURL)
+			assert.Equal(t, "/en/article/cycle1", finalURL)
 			assert.Equal(t, -1, chainLength) // Indicates cycle
 		}
 
@@ -79,33 +79,33 @@ func TestCanonicalURLChainValidation(t *testing.T) {
 	t.Run("Canonical chain length optimization", func(t *testing.T) {
 		canonicalService := &MockCanonicalServiceAdvanced{
 			mappings: map[string]string{
-				"/article/long1": "/article/long2",
-				"/article/long2": "/article/long3",
-				"/article/long3": "/article/long4",
-				"/article/long4": "/article/long5",
-				"/article/long5": "/article/final",
-				"/article/final": "/article/final",
+				"/en/article/long1": "/en/article/long2",
+				"/en/article/long2": "/en/article/long3",
+				"/en/article/long3": "/en/article/long4",
+				"/en/article/long4": "/en/article/long5",
+				"/en/article/long5": "/en/article/final",
+				"/en/article/final": "/en/article/final",
 			},
 		}
 
 		ctx := context.Background()
 
 		// Test long chain
-		finalURL, chainLength, err := canonicalService.ResolveCanonicalChain(ctx, "/article/long1")
+		finalURL, chainLength, err := canonicalService.ResolveCanonicalChain(ctx, "/en/article/long1")
 		require.NoError(t, err)
 		
-		assert.Equal(t, "/article/final", finalURL)
+		assert.Equal(t, "/en/article/final", finalURL)
 		assert.Equal(t, 5, chainLength)
 
 		// Optimize chain by updating intermediate mappings
-		err = canonicalService.OptimizeCanonicalChain(ctx, "/article/long1")
+		err = canonicalService.OptimizeCanonicalChain(ctx, "/en/article/long1")
 		require.NoError(t, err)
 
 		// After optimization, all intermediate URLs should point directly to final
-		for _, url := range []string{"/article/long1", "/article/long2", "/article/long3", "/article/long4"} {
+		for _, url := range []string{"/en/article/long1", "/en/article/long2", "/en/article/long3", "/en/article/long4"} {
 			canonical, _, err := canonicalService.ResolveCanonicalChain(ctx, url)
 			require.NoError(t, err)
-			assert.Equal(t, "/article/final", canonical)
+			assert.Equal(t, "/en/article/final", canonical)
 		}
 
 		t.Logf("Chain optimization completed for %d URLs", chainLength)
@@ -148,8 +148,8 @@ func TestCanonicalSEOIntegration(t *testing.T) {
 	t.Run("SEO metadata consistency with canonical URLs", func(t *testing.T) {
 		canonicalService := &MockCanonicalServiceAdvanced{
 			mappings: map[string]string{
-				"/article/duplicate": "/article/original",
-				"/article/original": "/article/original",
+				"/en/article/duplicate": "/en/article/original",
+				"/en/article/original": "/en/article/original",
 			},
 		}
 
@@ -160,7 +160,7 @@ func TestCanonicalSEOIntegration(t *testing.T) {
 		ctx := context.Background()
 
 		// Generate SEO metadata for duplicate URL
-		metadata, err := seoService.GenerateMetadataWithCanonical(ctx, "/article/duplicate", &models.Article{
+		metadata, err := seoService.GenerateMetadataWithCanonical(ctx, "/en/article/duplicate", &models.Article{
 			ID:    1,
 			Title: "Test Article",
 			Content: "Test content",
@@ -168,11 +168,11 @@ func TestCanonicalSEOIntegration(t *testing.T) {
 		require.NoError(t, err)
 
 		// Canonical URL in metadata should point to original
-		assert.Equal(t, "/article/original", metadata.CanonicalURL)
-		assert.Contains(t, metadata.MetaTags, `<link rel="canonical" href="/article/original">`)
+		assert.Equal(t, "/en/article/original", metadata.CanonicalURL)
+		assert.Contains(t, metadata.MetaTags, `<link rel="canonical" href="/en/article/original">`)
 
 		// Generate metadata for original URL
-		originalMetadata, err := seoService.GenerateMetadataWithCanonical(ctx, "/article/original", &models.Article{
+		originalMetadata, err := seoService.GenerateMetadataWithCanonical(ctx, "/en/article/original", &models.Article{
 			ID:    1,
 			Title: "Test Article",
 			Content: "Test content",
@@ -180,7 +180,7 @@ func TestCanonicalSEOIntegration(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should be self-referencing
-		assert.Equal(t, "/article/original", originalMetadata.CanonicalURL)
+		assert.Equal(t, "/en/article/original", originalMetadata.CanonicalURL)
 
 		t.Logf("SEO canonical metadata: duplicate=%s, original=%s", 
 			metadata.CanonicalURL, originalMetadata.CanonicalURL)
@@ -189,11 +189,11 @@ func TestCanonicalSEOIntegration(t *testing.T) {
 	t.Run("Sitemap generation with canonical URLs", func(t *testing.T) {
 		canonicalService := &MockCanonicalServiceAdvanced{
 			mappings: map[string]string{
-				"/article/dup1": "/article/canonical1",
-				"/article/dup2": "/article/canonical1",
-				"/article/dup3": "/article/canonical2",
-				"/article/canonical1": "/article/canonical1",
-				"/article/canonical2": "/article/canonical2",
+				"/en/article/dup1": "/en/article/canonical1",
+				"/en/article/dup2": "/en/article/canonical1",
+				"/en/article/dup3": "/en/article/canonical2",
+				"/en/article/canonical1": "/en/article/canonical1",
+				"/en/article/canonical2": "/en/article/canonical2",
 			},
 		}
 
@@ -204,28 +204,28 @@ func TestCanonicalSEOIntegration(t *testing.T) {
 		ctx := context.Background()
 
 		allURLs := []string{
-			"/article/dup1", "/article/dup2", "/article/dup3",
-			"/article/canonical1", "/article/canonical2",
+			"/en/article/dup1", "/en/article/dup2", "/en/article/dup3",
+			"/en/article/canonical1", "/en/article/canonical2",
 		}
 
 		sitemap, err := seoService.GenerateSitemapWithCanonical(ctx, allURLs)
 		require.NoError(t, err)
 
 		// Sitemap should only contain canonical URLs
-		assert.Contains(t, sitemap, "/article/canonical1")
-		assert.Contains(t, sitemap, "/article/canonical2")
+		assert.Contains(t, sitemap, "/en/article/canonical1")
+		assert.Contains(t, sitemap, "/en/article/canonical2")
 		
 		// Should not contain duplicate URLs
-		assert.NotContains(t, sitemap, "/article/dup1")
-		assert.NotContains(t, sitemap, "/article/dup2")
-		assert.NotContains(t, sitemap, "/article/dup3")
+		assert.NotContains(t, sitemap, "/en/article/dup1")
+		assert.NotContains(t, sitemap, "/en/article/dup2")
+		assert.NotContains(t, sitemap, "/en/article/dup3")
 
 		// Count canonical URLs in sitemap
 		canonicalCount := 0
-		if contains(sitemap, "/article/canonical1") {
+		if contains(sitemap, "/en/article/canonical1") {
 			canonicalCount++
 		}
-		if contains(sitemap, "/article/canonical2") {
+		if contains(sitemap, "/en/article/canonical2") {
 			canonicalCount++
 		}
 
@@ -237,8 +237,8 @@ func TestCanonicalSEOIntegration(t *testing.T) {
 	t.Run("Schema markup with canonical URLs", func(t *testing.T) {
 		canonicalService := &MockCanonicalServiceAdvanced{
 			mappings: map[string]string{
-				"/article/schema-dup": "/article/schema-original",
-				"/article/schema-original": "/article/schema-original",
+				"/en/article/schema-dup": "/en/article/schema-original",
+				"/en/article/schema-original": "/en/article/schema-original",
 			},
 		}
 
@@ -252,18 +252,18 @@ func TestCanonicalSEOIntegration(t *testing.T) {
 			ID:      1,
 			Title:   "Schema Test Article",
 			Content: "Test content for schema",
-			URL:     "/article/schema-dup",
+			URL:     "/en/article/schema-dup",
 		}
 
 		schema, err := seoService.GenerateSchemaMarkupWithCanonical(ctx, article)
 		require.NoError(t, err)
 
 		// Schema should use canonical URL
-		assert.Contains(t, schema, `"url": "/article/schema-original"`)
-		assert.Contains(t, schema, `"mainEntityOfPage": "/article/schema-original"`)
+		assert.Contains(t, schema, `"url": "/en/article/schema-original"`)
+		assert.Contains(t, schema, `"mainEntityOfPage": "/en/article/schema-original"`)
 		
 		// Should not contain duplicate URL
-		assert.NotContains(t, schema, `"url": "/article/schema-dup"`)
+		assert.NotContains(t, schema, `"url": "/en/article/schema-dup"`)
 
 		t.Logf("Schema markup with canonical URL: %s", schema)
 	})
@@ -273,7 +273,7 @@ func TestCanonicalCacheIntegration(t *testing.T) {
 	t.Run("Canonical URL cache invalidation", func(t *testing.T) {
 		canonicalService := &MockCanonicalServiceAdvanced{
 			mappings: map[string]string{
-				"/article/cached": "/article/original",
+				"/en/article/cached": "/en/article/original",
 			},
 			cache: make(map[string]string),
 		}
@@ -281,24 +281,24 @@ func TestCanonicalCacheIntegration(t *testing.T) {
 		ctx := context.Background()
 
 		// First resolution - should cache result
-		canonical1, _, err := canonicalService.ResolveCanonicalChain(ctx, "/article/cached")
+		canonical1, _, err := canonicalService.ResolveCanonicalChain(ctx, "/en/article/cached")
 		require.NoError(t, err)
-		assert.Equal(t, "/article/original", canonical1)
+		assert.Equal(t, "/en/article/original", canonical1)
 
 		// Verify cache was populated
 		assert.Len(t, canonicalService.cache, 1)
 
 		// Update canonical mapping
-		canonicalService.mappings["/article/cached"] = "/article/new-canonical"
+		canonicalService.mappings["/en/article/cached"] = "/en/article/new-canonical"
 
 		// Invalidate cache
-		err = canonicalService.InvalidateCache(ctx, "/article/cached")
+		err = canonicalService.InvalidateCache(ctx, "/en/article/cached")
 		require.NoError(t, err)
 
 		// Second resolution - should use new mapping
-		canonical2, _, err := canonicalService.ResolveCanonicalChain(ctx, "/article/cached")
+		canonical2, _, err := canonicalService.ResolveCanonicalChain(ctx, "/en/article/cached")
 		require.NoError(t, err)
-		assert.Equal(t, "/article/new-canonical", canonical2)
+		assert.Equal(t, "/en/article/new-canonical", canonical2)
 
 		t.Logf("Cache invalidation: %s -> %s", canonical1, canonical2)
 	})
@@ -312,8 +312,8 @@ func TestCanonicalCacheIntegration(t *testing.T) {
 		// Create many canonical mappings
 		urls := make([]string, 1000)
 		for i := 0; i < 1000; i++ {
-			url := fmt.Sprintf("/article/bulk-%d", i)
-			canonical := fmt.Sprintf("/article/canonical-%d", i/10) // 10 URLs per canonical
+			url := fmt.Sprintf("/en/article/bulk-%d", i)
+			canonical := fmt.Sprintf("/en/article/canonical-%d", i/10) // 10 URLs per canonical
 			urls[i] = url
 			canonicalService.mappings[url] = canonical
 			canonicalService.mappings[canonical] = canonical
@@ -338,8 +338,8 @@ func TestCanonicalCacheIntegration(t *testing.T) {
 	t.Run("Canonical cache consistency under concurrent access", func(t *testing.T) {
 		canonicalService := &MockCanonicalServiceAdvanced{
 			mappings: map[string]string{
-				"/article/concurrent": "/article/canonical",
-				"/article/canonical": "/article/canonical",
+				"/en/article/concurrent": "/en/article/canonical",
+				"/en/article/canonical": "/en/article/canonical",
 			},
 			cache: make(map[string]string),
 		}
@@ -355,7 +355,7 @@ func TestCanonicalCacheIntegration(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				canonical, _, err := canonicalService.ResolveCanonicalChain(ctx, "/article/concurrent")
+				canonical, _, err := canonicalService.ResolveCanonicalChain(ctx, "/en/article/concurrent")
 				if err != nil {
 					results <- "ERROR"
 				} else {
@@ -375,7 +375,7 @@ func TestCanonicalCacheIntegration(t *testing.T) {
 
 		assert.Len(t, canonicalResults, numConcurrent)
 		for _, result := range canonicalResults {
-			assert.Equal(t, "/article/canonical", result, 
+			assert.Equal(t, "/en/article/canonical", result, 
 				"All concurrent resolutions should return same canonical URL")
 		}
 
@@ -587,10 +587,10 @@ func contains(s, substr string) bool {
 func BenchmarkCanonicalChainResolution(b *testing.B) {
 	canonicalService := &MockCanonicalServiceAdvanced{
 		mappings: map[string]string{
-			"/article/bench1": "/article/bench2",
-			"/article/bench2": "/article/bench3",
-			"/article/bench3": "/article/final",
-			"/article/final": "/article/final",
+			"/en/article/bench1": "/en/article/bench2",
+			"/en/article/bench2": "/en/article/bench3",
+			"/en/article/bench3": "/en/article/final",
+			"/en/article/final": "/en/article/final",
 		},
 		cache: make(map[string]string),
 	}
@@ -599,7 +599,7 @@ func BenchmarkCanonicalChainResolution(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := canonicalService.ResolveCanonicalChain(ctx, "/article/bench1")
+		_, _, err := canonicalService.ResolveCanonicalChain(ctx, "/en/article/bench1")
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -609,8 +609,8 @@ func BenchmarkCanonicalChainResolution(b *testing.B) {
 func BenchmarkConcurrentCanonicalResolution(b *testing.B) {
 	canonicalService := &MockCanonicalServiceAdvanced{
 		mappings: map[string]string{
-			"/article/concurrent": "/article/canonical",
-			"/article/canonical": "/article/canonical",
+			"/en/article/concurrent": "/en/article/canonical",
+			"/en/article/canonical": "/en/article/canonical",
 		},
 		cache: make(map[string]string),
 	}
@@ -620,7 +620,7 @@ func BenchmarkConcurrentCanonicalResolution(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _, err := canonicalService.ResolveCanonicalChain(ctx, "/article/concurrent")
+			_, _, err := canonicalService.ResolveCanonicalChain(ctx, "/en/article/concurrent")
 			if err != nil {
 				b.Fatal(err)
 			}

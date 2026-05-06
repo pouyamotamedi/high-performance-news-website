@@ -399,10 +399,15 @@ func (s *PushNotificationService) SendBreakingNews(title, body, url string) erro
 }
 
 func (s *PushNotificationService) SendArticleNotification(article *models.Article) error {
+	// Use article language, default to English if not set
+	lang := article.LanguageCode
+	if lang == "" {
+		lang = "en"
+	}
 	notification := &models.PushNotification{
 		Title:      article.Title,
 		Body:       article.Excerpt,
-		URL:        fmt.Sprintf("/articles/%s", article.Slug),
+		URL:        fmt.Sprintf("/%s/article/%s", lang, article.Slug),
 		TargetType: models.TargetTypeCategory,
 		TargetValue: fmt.Sprintf("%d", article.CategoryID),
 		Status:     models.NotificationStatusPending,

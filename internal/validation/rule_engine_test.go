@@ -73,7 +73,7 @@ func CreateArticle(title string) Article {
 		Slug: utils.GenerateSlug(title),
 		MetaTitle: generateMetaTitle(title),
 		MetaDescription: generateMetaDescription(title),
-		CanonicalURL: fmt.Sprintf("/articles/%s", slug),
+		CanonicalURL: fmt.Sprintf("/%s/article/%s", article.LanguageCode, slug),
 	}
 	
 	if err := models.ValidateStruct(article); err != nil {

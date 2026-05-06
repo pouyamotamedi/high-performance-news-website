@@ -101,7 +101,7 @@ func TestStaticGenerator_FileServing_ArticleGeneration(t *testing.T) {
 	// Validate SEO metadata
 	assert.Contains(t, contentStr, "Test Article - File Serving")
 	assert.Contains(t, contentStr, "This is a test article for validating file serving functionality")
-	assert.Contains(t, contentStr, "https://example.com/articles/test-article-file-serving")
+	assert.Contains(t, contentStr, "https://example.com/en/article/test-article-file-serving")
 	
 	// Validate structured data
 	assert.Contains(t, contentStr, "application/ld+json")

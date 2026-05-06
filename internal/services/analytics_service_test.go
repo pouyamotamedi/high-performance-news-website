@@ -136,7 +136,7 @@ func TestAnalyticsService_TrackUserBehavior(t *testing.T) {
 	// Test
 	userID := uint64(456)
 	err := service.TrackUserBehavior(context.Background(), "session123", &userID, 
-		"/article/test", 120, 85.5, req)
+		"/en/article/test", 120, 85.5, req)
 
 	// Assertions
 	assert.NoError(t, err)

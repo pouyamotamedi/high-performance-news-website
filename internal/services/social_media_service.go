@@ -555,18 +555,24 @@ func (s *SocialMediaService) generatePostContent(post *models.SocialMediaPost) e
 		return err
 	}
 
+	// Use article language, default to English if not set
+	lang := article.LanguageCode
+	if lang == "" {
+		lang = "en"
+	}
+
 	// Generate platform-specific content
 	switch post.Platform {
 	case models.PlatformFacebook:
 		post.Content = models.PostContent{
 			Text:     fmt.Sprintf("%s\n\n%s", article.Title, article.Excerpt),
-			LinkURL:  fmt.Sprintf("https://example.com/articles/%s", article.Slug),
+			LinkURL:  fmt.Sprintf("https://example.com/%s/article/%s", lang, article.Slug),
 			Hashtags: s.extractHashtags(article),
 		}
 	case models.PlatformTelegram:
 		post.Content = models.PostContent{
 			Text:    fmt.Sprintf("<b>%s</b>\n\n%s", article.Title, article.Excerpt),
-			LinkURL: fmt.Sprintf("https://example.com/articles/%s", article.Slug),
+			LinkURL: fmt.Sprintf("https://example.com/%s/article/%s", lang, article.Slug),
 		}
 	case models.PlatformTwitter:
 		// Twitter has character limits
@@ -576,7 +582,7 @@ func (s *SocialMediaService) generatePostContent(post *models.SocialMediaPost) e
 		}
 		post.Content = models.PostContent{
 			Text:     text,
-			LinkURL:  fmt.Sprintf("https://example.com/articles/%s", article.Slug),
+			LinkURL:  fmt.Sprintf("https://example.com/%s/article/%s", lang, article.Slug),
 			Hashtags: s.extractHashtags(article)[:3], // Limit hashtags for Twitter
 		}
 	}
@@ -655,13 +661,18 @@ func (s *SocialMediaService) GetPostStatus(postID uint64) (*models.SocialMediaPo
 }
 
 func (s *SocialMediaService) generateInstantArticleHTML(article *models.Article) string {
+	// Use article language, default to English if not set
+	lang := article.LanguageCode
+	if lang == "" {
+		lang = "en"
+	}
 	// Generate Facebook Instant Article HTML format
 	return fmt.Sprintf(`
 <!doctype html>
 <html lang="en" prefix="op: http://media.facebook.com/op#">
 <head>
 	<meta charset="utf-8">
-	<link rel="canonical" href="https://example.com/articles/%s">
+	<link rel="canonical" href="https://example.com/%s/article/%s">
 	<meta property="op:markup_version" content="v1.0">
 </head>
 <body>
@@ -675,6 +686,7 @@ func (s *SocialMediaService) generateInstantArticleHTML(article *models.Article)
 	</article>
 </body>
 </html>`, 
+		lang,
 		article.Slug, 
 		article.Title,
 		article.PublishedAt.Format(time.RFC3339),
