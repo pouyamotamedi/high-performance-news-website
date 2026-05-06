@@ -3398,6 +3398,144 @@ func (s *Server) getCategoryArticleCount(categoryID uint64) int {
 	return count
 }
 
+// getArticlesByCategoryIDsAndLanguage gets articles that belong to any of the given category IDs
+// and have the specified language code. This is used for multilingual category pages where
+// articles might be assigned to the "master" category but should appear in translated category pages.
+func (s *Server) getArticlesByCategoryIDsAndLanguage(ctx context.Context, categoryIDs []uint64, languageCode string, limit int) ([]models.Article, error) {
+	if s.db == nil || len(categoryIDs) == 0 {
+		return []models.Article{}, nil
+	}
+
+	// Build the query with IN clause for category IDs
+	placeholders := make([]string, len(categoryIDs))
+	args := make([]interface{}, len(categoryIDs)+2)
+	for i, id := range categoryIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	args[len(categoryIDs)] = languageCode
+	args[len(categoryIDs)+1] = limit
+
+	query := fmt.Sprintf(`
+		SELECT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
+			   a.status, a.published_at, a.view_count, a.like_count, a.dislike_count,
+			   a.language_code, a.translation_group_id
+		FROM articles a
+		WHERE a.category_id IN (%s)
+		  AND a.language_code = $%d
+		  AND a.status = 'published'
+		  AND a.published_at IS NOT NULL
+		ORDER BY a.published_at DESC
+		LIMIT $%d
+	`, strings.Join(placeholders, ","), len(categoryIDs)+1, len(categoryIDs)+2)
+
+	rows, err := s.db.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query articles by category IDs: %w", err)
+	}
+	defer rows.Close()
+
+	var articles []models.Article
+	for rows.Next() {
+		var article models.Article
+		var translationGroupID sql.NullInt64
+		err := rows.Scan(
+			&article.ID,
+			&article.Title,
+			&article.Slug,
+			&article.Excerpt,
+			&article.AuthorID,
+			&article.CategoryID,
+			&article.Status,
+			&article.PublishedAt,
+			&article.ViewCount,
+			&article.LikeCount,
+			&article.DislikeCount,
+			&article.LanguageCode,
+			&translationGroupID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan article: %w", err)
+		}
+		if translationGroupID.Valid {
+			tgid := uint64(translationGroupID.Int64)
+			article.TranslationGroupID = &tgid
+		}
+		articles = append(articles, article)
+	}
+
+	return articles, nil
+}
+
+// getArticlesByTagIDsAndLanguage gets articles that have any of the given tag IDs
+// and have the specified language code. This is used for multilingual tag pages.
+func (s *Server) getArticlesByTagIDsAndLanguage(ctx context.Context, tagIDs []uint64, languageCode string, limit int) ([]models.Article, error) {
+	if s.db == nil || len(tagIDs) == 0 {
+		return []models.Article{}, nil
+	}
+
+	// Build the query with IN clause for tag IDs
+	placeholders := make([]string, len(tagIDs))
+	args := make([]interface{}, len(tagIDs)+2)
+	for i, id := range tagIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	args[len(tagIDs)] = languageCode
+	args[len(tagIDs)+1] = limit
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
+			   a.status, a.published_at, a.view_count, a.like_count, a.dislike_count,
+			   a.language_code, a.translation_group_id
+		FROM articles a
+		JOIN article_tags at ON a.id = at.article_id
+		WHERE at.tag_id IN (%s)
+		  AND a.language_code = $%d
+		  AND a.status = 'published'
+		  AND a.published_at IS NOT NULL
+		ORDER BY a.published_at DESC
+		LIMIT $%d
+	`, strings.Join(placeholders, ","), len(tagIDs)+1, len(tagIDs)+2)
+
+	rows, err := s.db.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query articles by tag IDs: %w", err)
+	}
+	defer rows.Close()
+
+	var articles []models.Article
+	for rows.Next() {
+		var article models.Article
+		var translationGroupID sql.NullInt64
+		err := rows.Scan(
+			&article.ID,
+			&article.Title,
+			&article.Slug,
+			&article.Excerpt,
+			&article.AuthorID,
+			&article.CategoryID,
+			&article.Status,
+			&article.PublishedAt,
+			&article.ViewCount,
+			&article.LikeCount,
+			&article.DislikeCount,
+			&article.LanguageCode,
+			&translationGroupID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan article: %w", err)
+		}
+		if translationGroupID.Valid {
+			tgid := uint64(translationGroupID.Int64)
+			article.TranslationGroupID = &tgid
+		}
+		articles = append(articles, article)
+	}
+
+	return articles, nil
+}
+
 // getTagArticleCount gets the number of published articles with a specific tag
 func (s *Server) getTagArticleCount(tagID uint64) int {
 	if s.db == nil {
@@ -3873,14 +4011,31 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 		}
 
 		// Get articles in this category - filter by same language
+		// IMPORTANT: We need to get articles from ALL categories in the same translation group
+		// because articles might be assigned to the "master" category (e.g., English)
+		// but should appear in the translated category page as well
 		if s.articleService != nil {
-			categoryID := category.ID
-			filters := services.ArticleFilters{
-				Status:       "published",
-				CategoryID:   &categoryID,
-				LanguageCode: lang, // Only get articles in the same language
+			// Get the translation group ID for this category
+			var categoryIDs []uint64
+			categoryIDs = append(categoryIDs, category.ID)
+			
+			// If category has a translation group, get all category IDs in that group
+			if category.TranslationGroupID != nil {
+				allTranslations, err := s.categoryService.GetAllTranslations(*category.TranslationGroupID)
+				if err == nil {
+					categoryIDs = nil // Reset
+					for _, cat := range allTranslations {
+						categoryIDs = append(categoryIDs, cat.ID)
+					}
+				}
 			}
-			articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
+			
+			// Query articles that belong to ANY of these categories AND have the correct language
+			articles, err := s.getArticlesByCategoryIDsAndLanguage(c.Request.Context(), categoryIDs, lang, 20)
+			if err != nil {
+				log.Printf("Error fetching articles for category %s: %v", slug, err)
+				articles = []models.Article{}
+			}
 
 			articleData := make([]gin.H, len(articles))
 			for i, article := range articles {
@@ -4003,14 +4158,31 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 		}
 
 		// Get articles with this tag - filter by same language
+		// IMPORTANT: We need to get articles from ALL tags in the same translation group
+		// because articles might be assigned to the "master" tag (e.g., English)
+		// but should appear in the translated tag page as well
 		if s.articleService != nil {
-			tagID := tag.ID
-			filters := services.ArticleFilters{
-				Status:       "published",
-				TagID:        &tagID,
-				LanguageCode: lang, // Only get articles in the same language
+			// Get the translation group ID for this tag
+			var tagIDs []uint64
+			tagIDs = append(tagIDs, tag.ID)
+			
+			// If tag has a translation group, get all tag IDs in that group
+			if tag.TranslationGroupID != nil {
+				allTranslations, err := s.tagService.GetAllTranslations(*tag.TranslationGroupID)
+				if err == nil {
+					tagIDs = nil // Reset
+					for _, t := range allTranslations {
+						tagIDs = append(tagIDs, t.ID)
+					}
+				}
 			}
-			articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
+			
+			// Query articles that have ANY of these tags AND have the correct language
+			articles, err := s.getArticlesByTagIDsAndLanguage(c.Request.Context(), tagIDs, lang, 20)
+			if err != nil {
+				log.Printf("Error fetching articles for tag %s: %v", slug, err)
+				articles = []models.Article{}
+			}
 
 			articleData := make([]gin.H, len(articles))
 			for i, article := range articles {
