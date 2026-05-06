@@ -464,17 +464,44 @@ func (bs *BreadcrumbService) GetBreadcrumbsForPath(path string, data interface{}
 	}
 }
 
-// URL generation helpers (matching other services)
+// URL generation helpers (matching other services) - with language prefix for SEO
 func (bs *BreadcrumbService) GetArticleURL(slug string) string {
-	return fmt.Sprintf("%s/article/%s", bs.baseURL, slug)
+	// Default to English - callers should use GetArticleURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/article/%s", bs.baseURL, slug)
+}
+
+// GetArticleURLWithLang generates article URL with language prefix
+func (bs *BreadcrumbService) GetArticleURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/article/%s", bs.baseURL, lang, slug)
 }
 
 func (bs *BreadcrumbService) GetCategoryURL(slug string) string {
-	return fmt.Sprintf("%s/category/%s", bs.baseURL, slug)
+	// Default to English - callers should use GetCategoryURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/category/%s", bs.baseURL, slug)
+}
+
+// GetCategoryURLWithLang generates category URL with language prefix
+func (bs *BreadcrumbService) GetCategoryURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/category/%s", bs.baseURL, lang, slug)
 }
 
 func (bs *BreadcrumbService) GetTagURL(slug string) string {
-	return fmt.Sprintf("%s/tag/%s", bs.baseURL, slug)
+	// Default to English - callers should use GetTagURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/tag/%s", bs.baseURL, slug)
+}
+
+// GetTagURLWithLang generates tag URL with language prefix
+func (bs *BreadcrumbService) GetTagURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/tag/%s", bs.baseURL, lang, slug)
 }
 
 // ValidateBreadcrumbs ensures breadcrumb data is valid

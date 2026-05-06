@@ -403,17 +403,44 @@ func (s *SitemapService) getLanguageCode(articleLang, defaultLang string) string
 	return defaultLang
 }
 
-// URL generation helpers (matching SEOService)
+// URL generation helpers (matching SEOService) - with language prefix for SEO
 func (s *SitemapService) GetArticleURL(slug string) string {
-	return fmt.Sprintf("%s/article/%s", s.baseURL, slug)
+	// Default to English - callers should use GetArticleURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/article/%s", s.baseURL, slug)
+}
+
+// GetArticleURLWithLang generates article URL with language prefix
+func (s *SitemapService) GetArticleURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/article/%s", s.baseURL, lang, slug)
 }
 
 func (s *SitemapService) GetCategoryURL(slug string) string {
-	return fmt.Sprintf("%s/category/%s", s.baseURL, slug)
+	// Default to English - callers should use GetCategoryURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/category/%s", s.baseURL, slug)
+}
+
+// GetCategoryURLWithLang generates category URL with language prefix
+func (s *SitemapService) GetCategoryURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/category/%s", s.baseURL, lang, slug)
 }
 
 func (s *SitemapService) GetTagURL(slug string) string {
-	return fmt.Sprintf("%s/tag/%s", s.baseURL, slug)
+	// Default to English - callers should use GetTagURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/tag/%s", s.baseURL, slug)
+}
+
+// GetTagURLWithLang generates tag URL with language prefix
+func (s *SitemapService) GetTagURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/tag/%s", s.baseURL, lang, slug)
 }
 
 // SitemapManager handles sitemap updates and caching with instant updates

@@ -570,17 +570,44 @@ func (s *SEOService) GenerateBreadcrumbs(pageType string, data interface{}) (*Br
 	return breadcrumbs, nil
 }
 
-// URL generation helpers
+// URL generation helpers - these generate language-prefixed URLs for SEO
 func (s *SEOService) GetArticleURL(slug string) string {
-	return fmt.Sprintf("%s/article/%s", s.baseURL, slug)
+	// Default to English - callers should use GetArticleURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/article/%s", s.baseURL, slug)
+}
+
+// GetArticleURLWithLang generates article URL with language prefix
+func (s *SEOService) GetArticleURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/article/%s", s.baseURL, lang, slug)
 }
 
 func (s *SEOService) GetCategoryURL(slug string) string {
-	return fmt.Sprintf("%s/category/%s", s.baseURL, slug)
+	// Default to English - callers should use GetCategoryURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/category/%s", s.baseURL, slug)
+}
+
+// GetCategoryURLWithLang generates category URL with language prefix
+func (s *SEOService) GetCategoryURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/category/%s", s.baseURL, lang, slug)
 }
 
 func (s *SEOService) GetTagURL(slug string) string {
-	return fmt.Sprintf("%s/tag/%s", s.baseURL, slug)
+	// Default to English - callers should use GetTagURLWithLang for multilingual
+	return fmt.Sprintf("%s/en/tag/%s", s.baseURL, slug)
+}
+
+// GetTagURLWithLang generates tag URL with language prefix
+func (s *SEOService) GetTagURLWithLang(slug, lang string) string {
+	if lang == "" {
+		lang = "en"
+	}
+	return fmt.Sprintf("%s/%s/tag/%s", s.baseURL, lang, slug)
 }
 
 func (s *SEOService) GetAuthorURL(username string) string {

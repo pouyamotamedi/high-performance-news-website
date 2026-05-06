@@ -105,8 +105,14 @@ func (v *SEOValidator) ValidateSchemaMarkup(articleID uint64) (*SchemaValidation
 		return nil, fmt.Errorf("failed to get article: %w", err)
 	}
 	
+	// Use article's language for URL (SEO best practice)
+	articleLang := article.LanguageCode
+	if articleLang == "" {
+		articleLang = "en"
+	}
+	
 	result := &SchemaValidationResult{
-		URL:            fmt.Sprintf("%s/article/%s", v.baseURL, article.Slug),
+		URL:            fmt.Sprintf("%s/%s/article/%s", v.baseURL, articleLang, article.Slug),
 		ValidationTime: time.Now(),
 		Issues:         []SchemaIssue{},
 		Recommendations: []string{},
@@ -801,7 +807,12 @@ func (v *SEOValidator) ValidateCanonicalURLsForArticles(articleIDs []uint64) (ma
 			continue
 		}
 		
-		articleURL := fmt.Sprintf("%s/article/%s", v.baseURL, article.Slug)
+		// Use article's language for URL (SEO best practice)
+		articleLang := article.LanguageCode
+		if articleLang == "" {
+			articleLang = "en"
+		}
+		articleURL := fmt.Sprintf("%s/%s/article/%s", v.baseURL, articleLang, article.Slug)
 		result, err := v.ValidateCanonicalChain(articleURL)
 		if err != nil {
 			continue
@@ -1216,8 +1227,14 @@ func (v *SEOValidator) ValidateGoogleNewsArticle(articleID uint64) (*GoogleNewsV
 		return nil, fmt.Errorf("failed to get article: %w", err)
 	}
 	
+	// Use article's language for URL (SEO best practice)
+	articleLang := article.LanguageCode
+	if articleLang == "" {
+		articleLang = "en"
+	}
+	
 	result := &GoogleNewsValidationResult{
-		URL:            fmt.Sprintf("%s/article/%s", v.baseURL, article.Slug),
+		URL:            fmt.Sprintf("%s/%s/article/%s", v.baseURL, articleLang, article.Slug),
 		ValidationTime: time.Now(),
 		Issues:         []GoogleNewsIssue{},
 		Recommendations: []string{},

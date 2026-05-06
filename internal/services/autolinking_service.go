@@ -270,12 +270,17 @@ func (s *AutoLinkingService) ProcessArticleLinks(ctx context.Context, article *m
 		// Extract the original text to preserve case
 		originalText := string(contentRunes[match.StartPos:match.EndPos])
 		
-		// Create the link (use custom URL if available, otherwise use tag URL)
+		// Create the link (use custom URL if available, otherwise use tag URL with language prefix)
 		var linkURL string
 		if match.CustomURL != "" {
 			linkURL = match.CustomURL
 		} else {
-			linkURL = "/tag/" + match.Tag.Slug
+			// Use tag's language for URL (SEO best practice)
+			tagLang := match.Tag.LanguageCode
+			if tagLang == "" {
+				tagLang = "en"
+			}
+			linkURL = "/" + tagLang + "/tag/" + match.Tag.Slug
 		}
 		
 		link := fmt.Sprintf(`<a href="%s" title="%s">%s</a>`,
@@ -351,12 +356,17 @@ func (s *AutoLinkingService) ProcessArticleLinksWithExclusions(ctx context.Conte
 		// Extract the original text to preserve case
 		originalText := string(contentRunes[match.StartPos:match.EndPos])
 		
-		// Create the link (use custom URL if available, otherwise use tag URL)
+		// Create the link (use custom URL if available, otherwise use tag URL with language prefix)
 		var linkURL string
 		if match.CustomURL != "" {
 			linkURL = match.CustomURL
 		} else {
-			linkURL = "/tag/" + match.Tag.Slug
+			// Use tag's language for URL (SEO best practice)
+			tagLang := match.Tag.LanguageCode
+			if tagLang == "" {
+				tagLang = "en"
+			}
+			linkURL = "/" + tagLang + "/tag/" + match.Tag.Slug
 		}
 		
 		link := fmt.Sprintf(`<a href="%s" title="%s">%s</a>`,
@@ -598,12 +608,17 @@ func (s *AutoLinkingService) processTextSegmentWithTracking(text string, usedKey
 		// Extract the original text to preserve case
 		originalText := string(contentRunes[match.StartPos:match.EndPos])
 		
-		// Create the link (use custom URL if available, otherwise use tag URL)
+		// Create the link (use custom URL if available, otherwise use tag URL with language prefix)
 		var linkURL string
 		if match.CustomURL != "" {
 			linkURL = match.CustomURL
 		} else {
-			linkURL = "/tag/" + match.Tag.Slug
+			// Use tag's language for URL (SEO best practice)
+			tagLang := match.Tag.LanguageCode
+			if tagLang == "" {
+				tagLang = "en"
+			}
+			linkURL = "/" + tagLang + "/tag/" + match.Tag.Slug
 		}
 		
 		link := fmt.Sprintf(`<a href="%s" title="%s">%s</a>`,

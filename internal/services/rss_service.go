@@ -223,9 +223,18 @@ func (r *RSSService) GenerateCategoryRSSFeed(categorySlug, languageCode string, 
 		return nil, fmt.Errorf("failed to get category articles: %w", err)
 	}
 
+	// Use category's language for URL (SEO best practice)
+	catLang := category.LanguageCode
+	if catLang == "" {
+		catLang = languageCode
+	}
+	if catLang == "" {
+		catLang = "en"
+	}
+
 	// Generate RSS feed
 	feedTitle := fmt.Sprintf("%s - %s", r.siteName, category.Name)
-	feedLink := fmt.Sprintf("%s/category/%s", r.baseURL, category.Slug)
+	feedLink := fmt.Sprintf("%s/%s/category/%s", r.baseURL, catLang, category.Slug)
 	feedDesc := category.Description
 	if feedDesc == "" {
 		feedDesc = fmt.Sprintf("Latest articles from %s category", category.Name)
@@ -273,9 +282,18 @@ func (r *RSSService) GenerateTagRSSFeed(tagSlug, languageCode string, limit int)
 		return nil, fmt.Errorf("failed to get tag articles: %w", err)
 	}
 
+	// Use tag's language for URL (SEO best practice)
+	tagLang := tag.LanguageCode
+	if tagLang == "" {
+		tagLang = languageCode
+	}
+	if tagLang == "" {
+		tagLang = "en"
+	}
+
 	// Generate RSS feed
 	feedTitle := fmt.Sprintf("%s - %s", r.siteName, tag.Name)
-	feedLink := fmt.Sprintf("%s/tag/%s", r.baseURL, tag.Slug)
+	feedLink := fmt.Sprintf("%s/%s/tag/%s", r.baseURL, tagLang, tag.Slug)
 	feedDesc := tag.Description
 	if feedDesc == "" {
 		feedDesc = fmt.Sprintf("Latest articles tagged with %s", tag.Name)
@@ -431,7 +449,12 @@ func (r *RSSService) buildGoogleNewsRSSFeed(articles []models.Article, languageC
 
 // buildRSSItem converts an article to RSS item
 func (r *RSSService) buildRSSItem(article models.Article) Item {
-	articleURL := fmt.Sprintf("%s/article/%s", r.baseURL, article.Slug)
+	// Use article's language for URL (SEO best practice)
+	articleLang := article.LanguageCode
+	if articleLang == "" {
+		articleLang = "en"
+	}
+	articleURL := fmt.Sprintf("%s/%s/article/%s", r.baseURL, articleLang, article.Slug)
 	
 	// Create categories from tags
 	categories := make([]string, len(article.Tags))
@@ -470,7 +493,15 @@ func (r *RSSService) buildRSSItem(article models.Article) Item {
 
 // buildGoogleNewsItem converts an article to Google News RSS item
 func (r *RSSService) buildGoogleNewsItem(article models.Article, languageCode string) GoogleNewsItem {
-	articleURL := fmt.Sprintf("%s/article/%s", r.baseURL, article.Slug)
+	// Use article's language for URL (SEO best practice)
+	articleLang := article.LanguageCode
+	if articleLang == "" {
+		articleLang = languageCode
+	}
+	if articleLang == "" {
+		articleLang = "en"
+	}
+	articleURL := fmt.Sprintf("%s/%s/article/%s", r.baseURL, articleLang, article.Slug)
 	
 	// Use excerpt or truncated content for description
 	description := article.Excerpt

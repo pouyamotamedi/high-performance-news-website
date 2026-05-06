@@ -685,12 +685,14 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 		articleCategory = &models.Category{Name: "General", Slug: "general"}
 	}
 
-	// Force English as the primary language for static generation
-	// The article's language_code in DB might be incorrect (e.g., "fa" for English content)
-	language := "en"
+	// Use article's language for URL (SEO best practice)
+	language := article.LanguageCode
+	if language == "" {
+		language = "en"
+	}
 
 	// Create base template data matching dynamic templates
-	articlePath := "/article/" + article.Slug
+	articlePath := "/" + language + "/article/" + article.Slug
 	data := sg.createBaseTemplateData(language, articlePath)
 
 	// Set article-specific SEO data
@@ -710,7 +712,7 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 	}
 
 	data.SEOKeywords = article.SEOData.Keywords
-	data.CanonicalURL = sg.baseURL + "/article/" + article.Slug
+	data.CanonicalURL = fmt.Sprintf("%s/%s/article/%s", sg.baseURL, language, article.Slug)
 	data.OGType = "article"
 
 	// Open Graph data
@@ -863,7 +865,12 @@ func (sg *StaticGenerator) generateArticleBreadcrumbs(article *models.Article) s
 
 	if len(article.Categories) > 0 {
 		cat := article.Categories[0]
-		breadcrumbs = append(breadcrumbs, fmt.Sprintf(`<a href="/category/%s">%s</a>`, cat.Slug, cat.Name))
+		// Use category's language for URL (SEO best practice)
+		catLang := cat.LanguageCode
+		if catLang == "" {
+			catLang = "en"
+		}
+		breadcrumbs = append(breadcrumbs, fmt.Sprintf(`<a href="/%s/category/%s">%s</a>`, catLang, cat.Slug, cat.Name))
 	}
 
 	breadcrumbs = append(breadcrumbs, fmt.Sprintf(`<span>%s</span>`, article.Title))
@@ -894,13 +901,24 @@ func (sg *StaticGenerator) generateBreadcrumbSchema(article *models.Article) str
 	// Add category if available
 	if len(article.Categories) > 0 {
 		cat := article.Categories[0]
+		// Use category's language for URL
+		catLang := cat.LanguageCode
+		if catLang == "" {
+			catLang = "en"
+		}
 		items = append(items, ListItem{
 			Type:     "ListItem",
 			Position: position,
 			Name:     cat.Name,
-			Item:     fmt.Sprintf("%s/category/%s", sg.baseURL, cat.Slug),
+			Item:     fmt.Sprintf("%s/%s/category/%s", sg.baseURL, catLang, cat.Slug),
 		})
 		position++
+	}
+
+	// Use article's language for URL (SEO best practice)
+	articleLang := article.LanguageCode
+	if articleLang == "" {
+		articleLang = "en"
 	}
 
 	// Add current article
@@ -908,7 +926,7 @@ func (sg *StaticGenerator) generateBreadcrumbSchema(article *models.Article) str
 		Type:     "ListItem",
 		Position: position,
 		Name:     article.Title,
-		Item:     fmt.Sprintf("%s/article/%s", sg.baseURL, article.Slug),
+		Item:     fmt.Sprintf("%s/%s/article/%s", sg.baseURL, articleLang, article.Slug),
 	})
 
 	schema := BreadcrumbList{
@@ -956,9 +974,14 @@ func (sg *StaticGenerator) GenerateCategoryPage(ctx context.Context, category *m
 	}
 
 	// Create base template data
-	categoryPath := "/category/" + category.Slug
-	language := "en" // Default language
-	data := sg.createBaseTemplateData(language, categoryPath)
+	// Use category's language for URL (SEO best practice)
+	catLang := category.LanguageCode
+	if catLang == "" {
+		catLang = "en"
+	}
+	
+	categoryPath := fmt.Sprintf("/%s/category/%s", catLang, category.Slug)
+	data := sg.createBaseTemplateData(catLang, categoryPath)
 
 	// Set category-specific data
 	data.Title = category.Name
@@ -966,11 +989,11 @@ func (sg *StaticGenerator) GenerateCategoryPage(ctx context.Context, category *m
 	data.SEOTitle = fmt.Sprintf("%s - Category - %s", category.Name, sg.siteName)
 	data.SEODescription = category.Description
 	data.SEOKeywords = []string{category.Name, "category", "articles"}
-	data.CanonicalURL = sg.baseURL + "/category/" + category.Slug
+	data.CanonicalURL = fmt.Sprintf("%s/%s/category/%s", sg.baseURL, catLang, category.Slug)
 
 	if page > 1 {
 		data.SEOTitle = fmt.Sprintf("%s - Page %d - Category - %s", category.Name, page, sg.siteName)
-		data.CanonicalURL = fmt.Sprintf("%s/category/%s/page-%d", sg.baseURL, category.Slug, page)
+		data.CanonicalURL = fmt.Sprintf("%s/%s/category/%s/page-%d", sg.baseURL, catLang, category.Slug, page)
 	}
 
 	data.Category = category
@@ -1047,8 +1070,13 @@ func (sg *StaticGenerator) GenerateTagPage(ctx context.Context, tag *models.Tag,
 	}
 
 	// Create base template data
-	tagPath := "/tag/" + tag.Slug
-	language := "en" // Default language
+	// Use tag's language for URL (SEO best practice)
+	tagLang := tag.LanguageCode
+	if tagLang == "" {
+		tagLang = "en"
+	}
+	tagPath := "/" + tagLang + "/tag/" + tag.Slug
+	language := tagLang
 	data := sg.createBaseTemplateData(language, tagPath)
 
 	// Set tag-specific data
@@ -1057,11 +1085,11 @@ func (sg *StaticGenerator) GenerateTagPage(ctx context.Context, tag *models.Tag,
 	data.SEOTitle = fmt.Sprintf("%s - Tag - %s", tag.Name, sg.siteName)
 	data.SEODescription = tag.Description
 	data.SEOKeywords = append([]string{tag.Name, "tag", "articles"}, tag.Keywords...)
-	data.CanonicalURL = sg.baseURL + "/tag/" + tag.Slug
+	data.CanonicalURL = fmt.Sprintf("%s/%s/tag/%s", sg.baseURL, tagLang, tag.Slug)
 
 	if page > 1 {
 		data.SEOTitle = fmt.Sprintf("%s - Page %d - Tag - %s", tag.Name, page, sg.siteName)
-		data.CanonicalURL = fmt.Sprintf("%s/tag/%s/page-%d", sg.baseURL, tag.Slug, page)
+		data.CanonicalURL = fmt.Sprintf("%s/%s/tag/%s/page-%d", sg.baseURL, tagLang, tag.Slug, page)
 	}
 
 	data.Tag = tag
@@ -1768,10 +1796,15 @@ func (sg *StaticGenerator) generateHomepageSchema(articles []models.Article) str
 	if len(articles) > 0 {
 		var articleSchemas []map[string]interface{}
 		for _, article := range articles {
+			// Use article's language for URL (SEO best practice)
+			articleLang := article.LanguageCode
+			if articleLang == "" {
+				articleLang = "en"
+			}
 			articleSchema := map[string]interface{}{
 				"@type":         "NewsArticle",
 				"headline":      article.Title,
-				"url":           sg.baseURL + "/article/" + article.Slug,
+				"url":           fmt.Sprintf("%s/%s/article/%s", sg.baseURL, articleLang, article.Slug),
 				"datePublished": article.PublishedAt,
 				"dateModified":  article.UpdatedAt,
 				"description":   article.Excerpt,
@@ -1791,7 +1824,12 @@ func (sg *StaticGenerator) generateArticleSchema(article *models.Article) string
 		schemaType = article.SEOData.SchemaType
 	}
 
-	articleURL := sg.baseURL + "/article/" + article.Slug
+	// Use article's language for URL (SEO best practice)
+	articleLang := article.LanguageCode
+	if articleLang == "" {
+		articleLang = "en"
+	}
+	articleURL := fmt.Sprintf("%s/%s/article/%s", sg.baseURL, articleLang, article.Slug)
 
 	schema := map[string]interface{}{
 		"@context":            "https://schema.org",
@@ -1881,21 +1919,32 @@ func (sg *StaticGenerator) generateArticleSchema(article *models.Article) string
 }
 
 func (sg *StaticGenerator) generateCategorySchema(category *models.Category, articles []models.Article) string {
+	// Use category's language for URL (SEO best practice)
+	catLang := category.LanguageCode
+	if catLang == "" {
+		catLang = "en"
+	}
+	
 	schema := map[string]interface{}{
 		"@context":    "https://schema.org",
 		"@type":       "CollectionPage",
 		"name":        category.Name,
-		"url":         sg.baseURL + "/category/" + category.Slug,
+		"url":         fmt.Sprintf("%s/%s/category/%s", sg.baseURL, catLang, category.Slug),
 		"description": category.Description,
 	}
 
 	if len(articles) > 0 {
 		var articleSchemas []map[string]interface{}
 		for _, article := range articles {
+			// Use article's language for URL (SEO best practice)
+			articleLang := article.LanguageCode
+			if articleLang == "" {
+				articleLang = "en"
+			}
 			articleSchema := map[string]interface{}{
 				"@type":         "NewsArticle",
 				"headline":      article.Title,
-				"url":           sg.baseURL + "/article/" + article.Slug,
+				"url":           fmt.Sprintf("%s/%s/article/%s", sg.baseURL, articleLang, article.Slug),
 				"datePublished": article.PublishedAt,
 				"dateModified":  article.UpdatedAt,
 				"description":   article.Excerpt,
@@ -1910,11 +1959,17 @@ func (sg *StaticGenerator) generateCategorySchema(category *models.Category, art
 }
 
 func (sg *StaticGenerator) generateTagSchema(tag *models.Tag, articles []models.Article) string {
+	// Use tag's language for URL (SEO best practice)
+	tagLang := tag.LanguageCode
+	if tagLang == "" {
+		tagLang = "en"
+	}
+	
 	schema := map[string]interface{}{
 		"@context":    "https://schema.org",
 		"@type":       "CollectionPage",
 		"name":        tag.Name,
-		"url":         sg.baseURL + "/tag/" + tag.Slug,
+		"url":         fmt.Sprintf("%s/%s/tag/%s", sg.baseURL, tagLang, tag.Slug),
 		"description": tag.Description,
 	}
 
@@ -1925,10 +1980,15 @@ func (sg *StaticGenerator) generateTagSchema(tag *models.Tag, articles []models.
 	if len(articles) > 0 {
 		var articleSchemas []map[string]interface{}
 		for _, article := range articles {
+			// Use article's language for URL (SEO best practice)
+			articleLang := article.LanguageCode
+			if articleLang == "" {
+				articleLang = "en"
+			}
 			articleSchema := map[string]interface{}{
 				"@type":         "NewsArticle",
 				"headline":      article.Title,
-				"url":           sg.baseURL + "/article/" + article.Slug,
+				"url":           fmt.Sprintf("%s/%s/article/%s", sg.baseURL, articleLang, article.Slug),
 				"datePublished": article.PublishedAt,
 				"dateModified":  article.UpdatedAt,
 				"description":   article.Excerpt,

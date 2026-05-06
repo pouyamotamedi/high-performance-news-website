@@ -56,11 +56,16 @@ func (m *MockRSSService) GenerateMainRSSFeed(languageCode string, limit int) ([]
 
 func (m *MockRSSService) GenerateCategoryRSSFeed(categorySlug, languageCode string, limit int) ([]byte, error) {
 	now := time.Now().Format(time.RFC1123Z)
+	// Use language code for URL prefix (SEO best practice)
+	lang := languageCode
+	if lang == "" {
+		lang = "en"
+	}
 	rss := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>High Performance News Website - %s Category</title>
-    <link>http://localhost:8080/category/%s</link>
+    <link>http://localhost:8080/%s/category/%s</link>
     <description>Latest articles from the %s category</description>
     <language>%s</language>
     <lastBuildDate>%s</lastBuildDate>
@@ -68,34 +73,39 @@ func (m *MockRSSService) GenerateCategoryRSSFeed(categorySlug, languageCode stri
     
     <item>
       <title>Sample %s Article 1</title>
-      <link>http://localhost:8080/article/sample-%s-article-1</link>
+      <link>http://localhost:8080/%s/article/sample-%s-article-1</link>
       <description>This is a sample article from the %s category for development mode.</description>
       <pubDate>%s</pubDate>
-      <guid>http://localhost:8080/article/sample-%s-article-1</guid>
+      <guid>http://localhost:8080/%s/article/sample-%s-article-1</guid>
     </item>
     
     <item>
       <title>Sample %s Article 2</title>
-      <link>http://localhost:8080/article/sample-%s-article-2</link>
+      <link>http://localhost:8080/%s/article/sample-%s-article-2</link>
       <description>Another sample article from the %s category for testing purposes.</description>
       <pubDate>%s</pubDate>
-      <guid>http://localhost:8080/article/sample-%s-article-2</guid>
+      <guid>http://localhost:8080/%s/article/sample-%s-article-2</guid>
     </item>
   </channel>
-</rss>`, categorySlug, categorySlug, categorySlug, languageCode, now, categorySlug, 
-		categorySlug, categorySlug, categorySlug, now, categorySlug,
-		categorySlug, categorySlug, categorySlug, now, categorySlug)
+</rss>`, categorySlug, lang, categorySlug, categorySlug, languageCode, now, categorySlug, 
+		categorySlug, lang, categorySlug, categorySlug, now, lang, categorySlug,
+		categorySlug, lang, categorySlug, categorySlug, now, lang, categorySlug)
 
 	return []byte(rss), nil
 }
 
 func (m *MockRSSService) GenerateTagRSSFeed(tagSlug, languageCode string, limit int) ([]byte, error) {
 	now := time.Now().Format(time.RFC1123Z)
+	// Use language code for URL prefix (SEO best practice)
+	lang := languageCode
+	if lang == "" {
+		lang = "en"
+	}
 	rss := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>High Performance News Website - %s Tag</title>
-    <link>http://localhost:8080/tag/%s</link>
+    <link>http://localhost:8080/%s/tag/%s</link>
     <description>Latest articles tagged with %s</description>
     <language>%s</language>
     <lastBuildDate>%s</lastBuildDate>
@@ -103,14 +113,14 @@ func (m *MockRSSService) GenerateTagRSSFeed(tagSlug, languageCode string, limit 
     
     <item>
       <title>Sample Article Tagged with %s</title>
-      <link>http://localhost:8080/article/sample-tagged-article-1</link>
+      <link>http://localhost:8080/%s/article/sample-tagged-article-1</link>
       <description>This is a sample article tagged with %s for development mode.</description>
       <pubDate>%s</pubDate>
-      <guid>http://localhost:8080/article/sample-tagged-article-1</guid>
+      <guid>http://localhost:8080/%s/article/sample-tagged-article-1</guid>
     </item>
   </channel>
-</rss>`, tagSlug, tagSlug, tagSlug, languageCode, now, tagSlug, 
-		tagSlug, tagSlug, now)
+</rss>`, tagSlug, lang, tagSlug, tagSlug, languageCode, now, tagSlug, 
+		tagSlug, lang, tagSlug, now, lang)
 
 	return []byte(rss), nil
 }

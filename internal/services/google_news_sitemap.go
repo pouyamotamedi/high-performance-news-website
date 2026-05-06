@@ -165,7 +165,15 @@ func (g *GoogleNewsSitemapService) buildGoogleNewsSitemap(articles []models.Arti
 
 // buildNewsURL converts an article to Google News sitemap URL entry
 func (g *GoogleNewsSitemapService) buildNewsURL(article models.Article, languageCode string) GoogleNewsURL {
-	articleURL := fmt.Sprintf("%s/article/%s", g.baseURL, article.Slug)
+	// Use article's language for URL (SEO best practice)
+	articleLang := article.LanguageCode
+	if articleLang == "" {
+		articleLang = languageCode
+	}
+	if articleLang == "" {
+		articleLang = "en"
+	}
+	articleURL := fmt.Sprintf("%s/%s/article/%s", g.baseURL, articleLang, article.Slug)
 	
 	// Extract keywords from tags and SEO data
 	keywords := make([]string, 0)

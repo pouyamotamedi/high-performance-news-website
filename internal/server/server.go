@@ -1022,10 +1022,10 @@ func (s *Server) handleArticlesSitemap(c *gin.Context) {
 
 	var urls []string
 
-	// Get all published articles from database
+	// Get all published articles from database with language
 	if s.db != nil {
 		query := `
-			SELECT slug, updated_at 
+			SELECT slug, language_code, updated_at 
 			FROM articles 
 			WHERE status = 'published' AND published_at IS NOT NULL
 			ORDER BY published_at DESC
@@ -1038,14 +1038,20 @@ func (s *Server) handleArticlesSitemap(c *gin.Context) {
 			defer rows.Close()
 			for rows.Next() {
 				var slug string
+				var languageCode sql.NullString
 				var updatedAt time.Time
-				if err := rows.Scan(&slug, &updatedAt); err == nil {
+				if err := rows.Scan(&slug, &languageCode, &updatedAt); err == nil {
+					// Use article's language for URL
+					lang := "en"
+					if languageCode.Valid && languageCode.String != "" {
+						lang = languageCode.String
+					}
 					urls = append(urls, fmt.Sprintf(`  <url>
-    <loc>%s/article/%s</loc>
+    <loc>%s/%s/article/%s</loc>
     <lastmod>%s</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`, baseURL, slug, updatedAt.Format(time.RFC3339)))
+  </url>`, baseURL, lang, slug, updatedAt.Format(time.RFC3339)))
 				}
 			}
 		}
@@ -1069,9 +1075,9 @@ func (s *Server) handleCategoriesSitemap(c *gin.Context) {
 
 	var urls []string
 
-	// Get all categories from database
+	// Get all categories from database with language
 	if s.db != nil {
-		query := `SELECT slug, updated_at FROM categories ORDER BY name`
+		query := `SELECT slug, language_code, updated_at FROM categories ORDER BY name`
 
 		rows, err := s.db.DB.Query(query)
 		if err != nil {
@@ -1080,14 +1086,20 @@ func (s *Server) handleCategoriesSitemap(c *gin.Context) {
 			defer rows.Close()
 			for rows.Next() {
 				var slug string
+				var langCode sql.NullString
 				var updatedAt time.Time
-				if err := rows.Scan(&slug, &updatedAt); err == nil {
+				if err := rows.Scan(&slug, &langCode, &updatedAt); err == nil {
+					// Use category's language for URL (SEO best practice)
+					lang := "en"
+					if langCode.Valid && langCode.String != "" {
+						lang = langCode.String
+					}
 					urls = append(urls, fmt.Sprintf(`  <url>
-    <loc>%s/category/%s</loc>
+    <loc>%s/%s/category/%s</loc>
     <lastmod>%s</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>`, baseURL, slug, updatedAt.Format(time.RFC3339)))
+  </url>`, baseURL, lang, slug, updatedAt.Format(time.RFC3339)))
 				}
 			}
 		}
@@ -1111,9 +1123,9 @@ func (s *Server) handleTagsSitemap(c *gin.Context) {
 
 	var urls []string
 
-	// Get all tags from database
+	// Get all tags from database with language
 	if s.db != nil {
-		query := `SELECT slug, updated_at FROM tags ORDER BY name`
+		query := `SELECT slug, language_code, updated_at FROM tags ORDER BY name`
 
 		rows, err := s.db.DB.Query(query)
 		if err != nil {
@@ -1122,14 +1134,20 @@ func (s *Server) handleTagsSitemap(c *gin.Context) {
 			defer rows.Close()
 			for rows.Next() {
 				var slug string
+				var langCode sql.NullString
 				var updatedAt time.Time
-				if err := rows.Scan(&slug, &updatedAt); err == nil {
+				if err := rows.Scan(&slug, &langCode, &updatedAt); err == nil {
+					// Use tag's language for URL (SEO best practice)
+					lang := "en"
+					if langCode.Valid && langCode.String != "" {
+						lang = langCode.String
+					}
 					urls = append(urls, fmt.Sprintf(`  <url>
-    <loc>%s/tag/%s</loc>
+    <loc>%s/%s/tag/%s</loc>
     <lastmod>%s</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
-  </url>`, baseURL, slug, updatedAt.Format(time.RFC3339)))
+  </url>`, baseURL, lang, slug, updatedAt.Format(time.RFC3339)))
 				}
 			}
 		}
@@ -1842,9 +1860,7 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 	slug := c.Param("slug")
 	log.Printf("handleProductionCategory called with slug: %s", slug)
 
-	data := s.createBaseTemplateData(c)
-
-	// Get real category from database
+	// Get category from database to find its language
 	if s.categoryService != nil {
 		category, err := s.categoryService.GetBySlug(slug)
 		if err != nil {
@@ -1853,94 +1869,17 @@ func (s *Server) handleProductionCategory(c *gin.Context) {
 			return
 		}
 
-		data["Title"] = "Category: " + category.Name
-		data["Category"] = gin.H{
-			"ID":          category.ID,
-			"Name":        category.Name,
-			"Slug":        category.Slug,
-			"Description": category.Description,
+		// Redirect to the correct language-prefixed URL (301 permanent redirect for SEO)
+		categoryLang := category.LanguageCode
+		if categoryLang == "" {
+			categoryLang = "en" // Default to English if not set
 		}
-
-		// Get real articles for this category (including from junction table)
-		articles := []gin.H{}
-		if s.db != nil {
-			query := `
-				SELECT DISTINCT a.id, a.title, a.slug, a.excerpt, a.published_at, a.view_count,
-				       CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END as featured_image,
-				       u.first_name, u.last_name
-				FROM articles a
-				LEFT JOIN users u ON a.author_id = u.id
-				LEFT JOIN images i ON a.featured_image_id = i.id
-				LEFT JOIN article_categories ac ON a.id = ac.article_id
-				WHERE (a.category_id = $1 OR ac.category_id = $1) AND a.status = 'published'
-				ORDER BY a.published_at DESC
-				LIMIT 20
-			`
-
-			rows, err := s.db.DB.Query(query, category.ID)
-			if err != nil {
-				log.Printf("Error fetching articles for category %s: %v", slug, err)
-			} else {
-				defer rows.Close()
-
-				for rows.Next() {
-					var id uint64
-					var title, articleSlug, excerpt string
-					var publishedAt time.Time
-					var viewCount int
-					var featuredImage sql.NullString
-					var firstName, lastName sql.NullString
-
-					err := rows.Scan(&id, &title, &articleSlug, &excerpt, &publishedAt, &viewCount, &featuredImage, &firstName, &lastName)
-					if err != nil {
-						log.Printf("Error scanning article row: %v", err)
-						continue
-					}
-
-					// Format author name
-					author := "Unknown Author"
-					if firstName.Valid && lastName.Valid {
-						author = firstName.String + " " + lastName.String
-					} else if firstName.Valid {
-						author = firstName.String
-					}
-
-					// Prepare article data
-					articleData := gin.H{
-						"ID":      id,
-						"Title":   title,
-						"Slug":    articleSlug,
-						"Excerpt": excerpt,
-						"Author":  author,
-						"TimeAgo": formatTimeAgo(&publishedAt),
-						"Views":   viewCount,
-					}
-
-					// Add featured image if available
-					if featuredImage.Valid && featuredImage.String != "" {
-						articleData["FeaturedImage"] = featuredImage.String
-					}
-
-					articles = append(articles, articleData)
-				}
-			}
-		}
-
-		data["Articles"] = articles
-	} else {
-		c.String(http.StatusNotFound, "Category service not available")
+		correctURL := fmt.Sprintf("/%s/category/%s", categoryLang, slug)
+		c.Redirect(http.StatusMovedPermanently, correctURL)
 		return
 	}
 
-	if s.templateEngine != nil {
-		if html, err := s.templateEngine.Render("category", data); err == nil {
-			c.Header("Content-Type", "text/html; charset=utf-8")
-			c.String(http.StatusOK, html)
-			return
-		}
-	}
-
-	c.String(http.StatusOK, "Category: "+slug+" (Template not available)")
+	c.String(http.StatusNotFound, "Category service not available")
 }
 
 func (s *Server) handleProductionCategories(c *gin.Context) {
@@ -1991,9 +1930,7 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 	slug := c.Param("slug")
 	log.Printf("handleProductionTag called with slug: %s", slug)
 
-	data := s.createBaseTemplateData(c)
-
-	// Get real tag from database
+	// Get tag from database to find its language
 	if s.tagService != nil {
 		tag, err := s.tagService.GetBySlug(slug)
 		if err != nil {
@@ -2002,95 +1939,17 @@ func (s *Server) handleProductionTag(c *gin.Context) {
 			return
 		}
 
-		data["Title"] = "Tag: " + tag.Name
-		data["Tag"] = gin.H{
-			"ID":          tag.ID,
-			"Name":        tag.Name,
-			"Slug":        tag.Slug,
-			"Description": tag.Description,
-			"Color":       tag.Color,
+		// Redirect to the correct language-prefixed URL (301 permanent redirect for SEO)
+		tagLang := tag.LanguageCode
+		if tagLang == "" {
+			tagLang = "en" // Default to English if not set
 		}
-
-		// Get real articles for this tag
-		articles := []gin.H{}
-		if s.db != nil {
-			query := `
-				SELECT DISTINCT a.id, a.title, a.slug, a.excerpt, a.published_at, a.view_count,
-				       CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END as featured_image,
-				       u.first_name, u.last_name
-				FROM articles a
-				LEFT JOIN users u ON a.author_id = u.id
-				LEFT JOIN images i ON a.featured_image_id = i.id
-				JOIN article_tags at ON a.id = at.article_id
-				WHERE at.tag_id = $1 AND a.status = 'published'
-				ORDER BY a.published_at DESC
-				LIMIT 20
-			`
-
-			rows, err := s.db.DB.Query(query, tag.ID)
-			if err != nil {
-				log.Printf("Error fetching articles for tag %s: %v", slug, err)
-			} else {
-				defer rows.Close()
-
-				for rows.Next() {
-					var id uint64
-					var title, articleSlug, excerpt string
-					var publishedAt time.Time
-					var viewCount int
-					var featuredImage sql.NullString
-					var firstName, lastName sql.NullString
-
-					err := rows.Scan(&id, &title, &articleSlug, &excerpt, &publishedAt, &viewCount, &featuredImage, &firstName, &lastName)
-					if err != nil {
-						log.Printf("Error scanning article row: %v", err)
-						continue
-					}
-
-					// Format author name
-					author := "Unknown Author"
-					if firstName.Valid && lastName.Valid {
-						author = firstName.String + " " + lastName.String
-					} else if firstName.Valid {
-						author = firstName.String
-					}
-
-					// Prepare article data
-					articleData := gin.H{
-						"ID":      id,
-						"Title":   title,
-						"Slug":    articleSlug,
-						"Excerpt": excerpt,
-						"Author":  author,
-						"TimeAgo": formatTimeAgo(&publishedAt),
-						"Views":   viewCount,
-					}
-
-					// Add featured image if available
-					if featuredImage.Valid && featuredImage.String != "" {
-						articleData["FeaturedImage"] = featuredImage.String
-					}
-
-					articles = append(articles, articleData)
-				}
-			}
-		}
-
-		data["Articles"] = articles
-	} else {
-		c.String(http.StatusNotFound, "Tag service not available")
+		correctURL := fmt.Sprintf("/%s/tag/%s", tagLang, slug)
+		c.Redirect(http.StatusMovedPermanently, correctURL)
 		return
 	}
 
-	if s.templateEngine != nil {
-		if html, err := s.templateEngine.Render("tag", data); err == nil {
-			c.Header("Content-Type", "text/html; charset=utf-8")
-			c.String(http.StatusOK, html)
-			return
-		}
-	}
-
-	c.String(http.StatusOK, "Tag: "+slug+" (Template not available)")
+	c.String(http.StatusNotFound, "Tag service not available")
 }
 
 func (s *Server) handleProductionTags(c *gin.Context) {
@@ -3661,6 +3520,12 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 					imageData = s.buildResponsiveImageData(*article.FeaturedImageID, article.Title)
 				}
 
+				// Use article's own language for URL (SEO best practice)
+				articleLang := article.LanguageCode
+				if articleLang == "" {
+					articleLang = "en"
+				}
+
 				articleData[i] = gin.H{
 					"ID":            article.ID,
 					"Title":         article.Title,
@@ -3672,7 +3537,7 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 					"Category":      categoryName,
 					"FeaturedImage": article.FeaturedImage,
 					"ImageData":     imageData,
-					"URL":           fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+					"URL":           fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
 				}
 			}
 			data["Articles"] = articleData
@@ -3683,55 +3548,76 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 		data["Articles"] = []gin.H{}
 	}
 
-	// Get categories
+	// Get categories - only show categories in the current language
 	if s.categoryService != nil {
 		categories, err := s.categoryService.GetAll()
 		if err == nil {
-			categoryData := make([]gin.H, len(categories))
-			for i, cat := range categories {
-				categoryData[i] = gin.H{
-					"ID":          cat.ID,
-					"Name":        cat.Name,
-					"Slug":        cat.Slug,
-					"Description": cat.Description,
-					"URL":         fmt.Sprintf("/%s/category/%s", lang, cat.Slug),
-					"Count":       s.getCategoryArticleCount(cat.ID),
+			var filteredCategories []gin.H
+			for _, cat := range categories {
+				catLang := cat.LanguageCode
+				if catLang == "" {
+					catLang = "en"
+				}
+				// Only include categories that match the current language
+				if catLang == lang {
+					filteredCategories = append(filteredCategories, gin.H{
+						"ID":          cat.ID,
+						"Name":        cat.Name,
+						"Slug":        cat.Slug,
+						"Description": cat.Description,
+						"URL":         fmt.Sprintf("/%s/category/%s", catLang, cat.Slug),
+						"Count":       s.getCategoryArticleCount(cat.ID),
+					})
 				}
 			}
-			data["Categories"] = categoryData
+			data["Categories"] = filteredCategories
 		}
 	}
 
-	// Get trending articles
+	// Get trending articles - filter by language
 	if s.articleService != nil {
 		trendingArticles, err := s.articleService.GetTrending(c.Request.Context(), 5, 24)
 		if err == nil && len(trendingArticles) > 0 {
-			trendingData := make([]gin.H, len(trendingArticles))
-			for i, article := range trendingArticles {
-				trendingData[i] = gin.H{
-					"ID":        article.ID,
-					"Title":     article.Title,
-					"Slug":      article.Slug,
-					"ViewCount": article.ViewCount,
-					"TimeAgo":   formatTimeAgo(article.PublishedAt),
-					"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+			var trendingData []gin.H
+			for _, article := range trendingArticles {
+				articleLang := article.LanguageCode
+				if articleLang == "" {
+					articleLang = "en"
+				}
+				// Only include articles in the current language
+				if articleLang == lang {
+					trendingData = append(trendingData, gin.H{
+						"ID":        article.ID,
+						"Title":     article.Title,
+						"Slug":      article.Slug,
+						"ViewCount": article.ViewCount,
+						"TimeAgo":   formatTimeAgo(article.PublishedAt),
+						"URL":       fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
+					})
 				}
 			}
 			data["TrendingArticles"] = trendingData
 		} else {
-			// Fallback: use most viewed articles
-			filters := services.ArticleFilters{Status: "published"}
+			// Fallback: use most viewed articles in the current language
+			filters := services.ArticleFilters{
+				Status:       "published",
+				LanguageCode: lang,
+			}
 			popularArticles, _, err := s.articleService.List(c.Request.Context(), 5, 0, filters, "view_count", "DESC")
 			if err == nil && len(popularArticles) > 0 {
 				trendingData := make([]gin.H, len(popularArticles))
 				for i, article := range popularArticles {
+					articleLang := article.LanguageCode
+					if articleLang == "" {
+						articleLang = "en"
+					}
 					trendingData[i] = gin.H{
 						"ID":        article.ID,
 						"Title":     article.Title,
 						"Slug":      article.Slug,
 						"ViewCount": article.ViewCount,
 						"TimeAgo":   formatTimeAgo(article.PublishedAt),
-						"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+						"URL":       fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
 					}
 				}
 				data["TrendingArticles"] = trendingData
@@ -3743,7 +3629,7 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 		data["TrendingArticles"] = []gin.H{}
 	}
 
-	// Get popular tags
+	// Get popular tags - filter by language
 	if s.tagService != nil {
 		tags, err := s.tagService.GetAll()
 		if err == nil {
@@ -3754,6 +3640,14 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 			}
 			tagList := make([]TagWithCount, 0)
 			for _, tag := range tags {
+				// Only include tags in the current language
+				tagLang := tag.LanguageCode
+				if tagLang == "" {
+					tagLang = "en"
+				}
+				if tagLang != lang {
+					continue
+				}
 				articleCount := s.getTagArticleCount(tag.ID)
 				if articleCount > 0 {
 					tagList = append(tagList, TagWithCount{
@@ -3950,39 +3844,66 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 
 	if s.categoryService != nil {
 		category, err := s.categoryService.GetBySlug(slug)
-		if err == nil {
-			data["Title"] = category.Name
-			data["Category"] = gin.H{
-				"ID":          category.ID,
-				"Name":        category.Name,
-				"Slug":        category.Slug,
-				"Description": category.Description,
-			}
-
-			// Get articles in this category
-			if s.articleService != nil {
-				categoryID := category.ID
-				filters := services.ArticleFilters{
-					Status:     "published",
-					CategoryID: &categoryID,
-				}
-				articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
-
-				articleData := make([]gin.H, len(articles))
-				for i, article := range articles {
-					articleData[i] = gin.H{
-						"ID":        article.ID,
-						"Title":     article.Title,
-						"Slug":      article.Slug,
-						"Excerpt":   article.Excerpt,
-						"TimeAgo":   formatTimeAgo(article.PublishedAt),
-						"ViewCount": article.ViewCount,
-						"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
-					}
-				}
-				data["Articles"] = articleData
-			}
+		if err != nil {
+			// Category not found
+			c.String(http.StatusNotFound, "Category not found")
+			return
 		}
+
+		// Check if the URL language matches the category's language
+		// If not, redirect to the correct language URL (301 permanent redirect for SEO)
+		categoryLang := category.LanguageCode
+		if categoryLang == "" {
+			categoryLang = "en" // Default to English if not set
+		}
+		
+		if lang != categoryLang {
+			// Redirect to the correct language URL
+			correctURL := fmt.Sprintf("/%s/category/%s", categoryLang, slug)
+			c.Redirect(http.StatusMovedPermanently, correctURL)
+			return
+		}
+
+		data["Title"] = category.Name
+		data["Category"] = gin.H{
+			"ID":          category.ID,
+			"Name":        category.Name,
+			"Slug":        category.Slug,
+			"Description": category.Description,
+		}
+
+		// Get articles in this category - filter by same language
+		if s.articleService != nil {
+			categoryID := category.ID
+			filters := services.ArticleFilters{
+				Status:       "published",
+				CategoryID:   &categoryID,
+				LanguageCode: lang, // Only get articles in the same language
+			}
+			articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
+
+			articleData := make([]gin.H, len(articles))
+			for i, article := range articles {
+				// Use article's own language for URL
+				articleLang := article.LanguageCode
+				if articleLang == "" {
+					articleLang = "en"
+				}
+				articleData[i] = gin.H{
+					"ID":        article.ID,
+					"Title":     article.Title,
+					"Slug":      article.Slug,
+					"Excerpt":   article.Excerpt,
+					"TimeAgo":   formatTimeAgo(article.PublishedAt),
+					"ViewCount": article.ViewCount,
+					"URL":       fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
+				}
+			}
+			data["Articles"] = articleData
+		}
+	} else {
+		c.String(http.StatusNotFound, "Category service not available")
+		return
 	}
 
 	if s.templateEngine != nil {
@@ -4008,18 +3929,26 @@ func (s *Server) handleMultilingualCategories(c *gin.Context) {
 	if s.categoryService != nil {
 		categories, err := s.categoryService.GetAll()
 		if err == nil {
-			categoryData := make([]gin.H, len(categories))
-			for i, cat := range categories {
-				categoryData[i] = gin.H{
-					"ID":          cat.ID,
-					"Name":        cat.Name,
-					"Slug":        cat.Slug,
-					"Description": cat.Description,
-					"URL":         fmt.Sprintf("/%s/category/%s", lang, cat.Slug),
-					"Count":       s.getCategoryArticleCount(cat.ID),
+			// Filter categories by language - only show categories in the current language
+			var filteredCategories []gin.H
+			for _, cat := range categories {
+				catLang := cat.LanguageCode
+				if catLang == "" {
+					catLang = "en"
+				}
+				// Only include categories that match the current language
+				if catLang == lang {
+					filteredCategories = append(filteredCategories, gin.H{
+						"ID":          cat.ID,
+						"Name":        cat.Name,
+						"Slug":        cat.Slug,
+						"Description": cat.Description,
+						"URL":         fmt.Sprintf("/%s/category/%s", lang, cat.Slug),
+						"Count":       s.getCategoryArticleCount(cat.ID),
+					})
 				}
 			}
-			data["Categories"] = categoryData
+			data["Categories"] = filteredCategories
 		}
 	}
 
@@ -4045,39 +3974,66 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 
 	if s.tagService != nil {
 		tag, err := s.tagService.GetBySlug(slug)
-		if err == nil {
-			data["Title"] = tag.Name
-			data["Tag"] = gin.H{
-				"ID":          tag.ID,
-				"Name":        tag.Name,
-				"Slug":        tag.Slug,
-				"Description": tag.Description,
-			}
-
-			// Get articles with this tag
-			if s.articleService != nil {
-				tagID := tag.ID
-				filters := services.ArticleFilters{
-					Status: "published",
-					TagID:  &tagID,
-				}
-				articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
-
-				articleData := make([]gin.H, len(articles))
-				for i, article := range articles {
-					articleData[i] = gin.H{
-						"ID":        article.ID,
-						"Title":     article.Title,
-						"Slug":      article.Slug,
-						"Excerpt":   article.Excerpt,
-						"TimeAgo":   formatTimeAgo(article.PublishedAt),
-						"ViewCount": article.ViewCount,
-						"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
-					}
-				}
-				data["Articles"] = articleData
-			}
+		if err != nil {
+			// Tag not found
+			c.String(http.StatusNotFound, "Tag not found")
+			return
 		}
+
+		// Check if the URL language matches the tag's language
+		// If not, redirect to the correct language URL (301 permanent redirect for SEO)
+		tagLang := tag.LanguageCode
+		if tagLang == "" {
+			tagLang = "en" // Default to English if not set
+		}
+		
+		if lang != tagLang {
+			// Redirect to the correct language URL
+			correctURL := fmt.Sprintf("/%s/tag/%s", tagLang, slug)
+			c.Redirect(http.StatusMovedPermanently, correctURL)
+			return
+		}
+
+		data["Title"] = tag.Name
+		data["Tag"] = gin.H{
+			"ID":          tag.ID,
+			"Name":        tag.Name,
+			"Slug":        tag.Slug,
+			"Description": tag.Description,
+		}
+
+		// Get articles with this tag - filter by same language
+		if s.articleService != nil {
+			tagID := tag.ID
+			filters := services.ArticleFilters{
+				Status:       "published",
+				TagID:        &tagID,
+				LanguageCode: lang, // Only get articles in the same language
+			}
+			articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
+
+			articleData := make([]gin.H, len(articles))
+			for i, article := range articles {
+				// Use article's own language for URL
+				articleLang := article.LanguageCode
+				if articleLang == "" {
+					articleLang = "en"
+				}
+				articleData[i] = gin.H{
+					"ID":        article.ID,
+					"Title":     article.Title,
+					"Slug":      article.Slug,
+					"Excerpt":   article.Excerpt,
+					"TimeAgo":   formatTimeAgo(article.PublishedAt),
+					"ViewCount": article.ViewCount,
+					"URL":       fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
+				}
+			}
+			data["Articles"] = articleData
+		}
+	} else {
+		c.String(http.StatusNotFound, "Tag service not available")
+		return
 	}
 
 	if s.templateEngine != nil {
@@ -4103,18 +4059,26 @@ func (s *Server) handleMultilingualTags(c *gin.Context) {
 	if s.tagService != nil {
 		tags, err := s.tagService.GetAll()
 		if err == nil {
-			tagData := make([]gin.H, len(tags))
-			for i, tag := range tags {
-				tagData[i] = gin.H{
-					"ID":          tag.ID,
-					"Name":        tag.Name,
-					"Slug":        tag.Slug,
-					"Description": tag.Description,
-					"URL":         fmt.Sprintf("/%s/tag/%s", lang, tag.Slug),
-					"Count":       s.getTagArticleCount(tag.ID),
+			// Filter tags by language - only show tags in the current language
+			var filteredTags []gin.H
+			for _, tag := range tags {
+				tagLang := tag.LanguageCode
+				if tagLang == "" {
+					tagLang = "en"
+				}
+				// Only include tags that match the current language
+				if tagLang == lang {
+					filteredTags = append(filteredTags, gin.H{
+						"ID":          tag.ID,
+						"Name":        tag.Name,
+						"Slug":        tag.Slug,
+						"Description": tag.Description,
+						"URL":         fmt.Sprintf("/%s/tag/%s", lang, tag.Slug),
+						"Count":       s.getTagArticleCount(tag.ID),
+					})
 				}
 			}
-			data["Tags"] = tagData
+			data["Tags"] = filteredTags
 		}
 	}
 
@@ -4139,11 +4103,20 @@ func (s *Server) handleMultilingualLatest(c *gin.Context) {
 	s.addMultilingualData(data, lang, "/latest")
 
 	if s.articleService != nil {
-		filters := services.ArticleFilters{Status: "published"}
+		// Filter by language to show only articles in the current language
+		filters := services.ArticleFilters{
+			Status:       "published",
+			LanguageCode: lang,
+		}
 		articles, _, _ := s.articleService.List(c.Request.Context(), 20, 0, filters, "published_at", "DESC")
 
 		articleData := make([]gin.H, len(articles))
 		for i, article := range articles {
+			// Use article's own language for URL
+			articleLang := article.LanguageCode
+			if articleLang == "" {
+				articleLang = "en"
+			}
 			articleData[i] = gin.H{
 				"ID":        article.ID,
 				"Title":     article.Title,
@@ -4151,7 +4124,7 @@ func (s *Server) handleMultilingualLatest(c *gin.Context) {
 				"Excerpt":   article.Excerpt,
 				"TimeAgo":   formatTimeAgo(article.PublishedAt),
 				"ViewCount": article.ViewCount,
-				"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+				"URL":       fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
 			}
 		}
 		data["Articles"] = articleData
@@ -4178,18 +4151,27 @@ func (s *Server) handleMultilingualTrending(c *gin.Context) {
 	s.addMultilingualData(data, lang, "/trending")
 
 	if s.articleService != nil {
+		// Get trending articles - ideally should filter by language too
 		articles, _ := s.articleService.GetTrending(c.Request.Context(), 20, 24)
 
-		articleData := make([]gin.H, len(articles))
-		for i, article := range articles {
-			articleData[i] = gin.H{
-				"ID":        article.ID,
-				"Title":     article.Title,
-				"Slug":      article.Slug,
-				"Excerpt":   article.Excerpt,
-				"TimeAgo":   formatTimeAgo(article.PublishedAt),
-				"ViewCount": article.ViewCount,
-				"URL":       fmt.Sprintf("/%s/article/%s", lang, article.Slug),
+		// Filter by language and build article data
+		var articleData []gin.H
+		for _, article := range articles {
+			articleLang := article.LanguageCode
+			if articleLang == "" {
+				articleLang = "en"
+			}
+			// Only include articles in the current language
+			if articleLang == lang {
+				articleData = append(articleData, gin.H{
+					"ID":        article.ID,
+					"Title":     article.Title,
+					"Slug":      article.Slug,
+					"Excerpt":   article.Excerpt,
+					"TimeAgo":   formatTimeAgo(article.PublishedAt),
+					"ViewCount": article.ViewCount,
+					"URL":       fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
+				})
 			}
 		}
 		data["Articles"] = articleData

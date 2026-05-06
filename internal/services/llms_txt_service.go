@@ -274,13 +274,19 @@ func (l *LLMsTxtService) generateCategoryInfo() ([]CategoryInfo, error) {
 			articleCount = 0 // Continue with 0 if error
 		}
 		
+		// Use category's language for URL (SEO best practice)
+		catLang := cat.LanguageCode
+		if catLang == "" {
+			catLang = "en"
+		}
+		
 		categoryInfos[i] = CategoryInfo{
 			ID:           cat.ID,
 			Name:         cat.Name,
 			Slug:         cat.Slug,
 			Description:  cat.Description,
 			ArticleCount: articleCount,
-			URL:          fmt.Sprintf("%s/category/%s", l.siteConfig.SiteURL, cat.Slug),
+			URL:          fmt.Sprintf("%s/%s/category/%s", l.siteConfig.SiteURL, catLang, cat.Slug),
 		}
 	}
 	
@@ -308,7 +314,7 @@ func (l *LLMsTxtService) generateTagInfo() ([]TagInfo, error) {
 			Description:  tag.Description,
 			Keywords:     tag.Keywords,
 			ArticleCount: articleCount,
-			URL:          fmt.Sprintf("%s/tag/%s", l.siteConfig.SiteURL, tag.Slug),
+			URL:          fmt.Sprintf("%s/en/tag/%s", l.siteConfig.SiteURL, tag.Slug),
 		}
 	}
 	
@@ -403,7 +409,14 @@ func (l *LLMsTxtService) convertToArticleSummaries(articles []*models.Article) (
 				}
 				return time.Time{}
 			}(),
-			URL:         fmt.Sprintf("%s/article/%s", l.siteConfig.SiteURL, article.Slug),
+			URL: func() string {
+				// Use article's language for URL (SEO best practice)
+				lang := article.LanguageCode
+				if lang == "" {
+					lang = "en"
+				}
+				return fmt.Sprintf("%s/%s/article/%s", l.siteConfig.SiteURL, lang, article.Slug)
+			}(),
 			ViewCount:   article.ViewCount,
 		}
 	}
