@@ -15,14 +15,66 @@ body.ar-lang {
   text-align: right;
 }
 
-/* Typography adjustments */
+/* Typography adjustments for Arabic */
 .rtl-dir h1,
 .rtl-dir h2,
 .rtl-dir h3,
 .rtl-dir h4,
 .rtl-dir h5,
-.rtl-dir h6 {
+.rtl-dir h6,
+html[dir="rtl"] h1,
+html[dir="rtl"] h2,
+html[dir="rtl"] h3,
+html[dir="rtl"] h4,
+html[dir="rtl"] h5,
+html[dir="rtl"] h6 {
   text-align: right;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+}
+
+/* Make Arabic headings more prominent */
+html[dir="rtl"] h1,
+.rtl-dir h1 {
+  font-size: 2.5rem !important;
+  font-weight: 800 !important;
+}
+
+html[dir="rtl"] h2,
+.rtl-dir h2 {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+}
+
+html[dir="rtl"] h3,
+.rtl-dir h3 {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+}
+
+/* Article page Arabic headings */
+html[dir="rtl"] .article-title,
+.rtl-dir .article-title {
+  font-size: 2.25rem !important;
+  font-weight: 800 !important;
+  line-height: 1.4 !important;
+}
+
+html[dir="rtl"] .article-content h1,
+html[dir="rtl"] .article-content h2,
+html[dir="rtl"] .article-content h3,
+.rtl-dir .article-content h1,
+.rtl-dir .article-content h2,
+.rtl-dir .article-content h3 {
+  font-weight: 700 !important;
+  margin-top: 1.5em !important;
+  margin-bottom: 0.75em !important;
+}
+
+html[dir="rtl"] .article-content p,
+.rtl-dir .article-content p {
+  font-size: 1.125rem !important;
+  line-height: 1.8 !important;
 }
 
 .rtl-dir p {

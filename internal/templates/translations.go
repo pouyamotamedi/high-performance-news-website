@@ -49,6 +49,18 @@ var Translations = map[string]map[string]string{
 		"all_rights":     "All rights reserved",
 		"privacy_policy": "Privacy Policy",
 		"terms":          "Terms of Service",
+		"quick_links":    "Quick Links",
+		"legal":          "Legal",
+		"sitemap":        "Sitemap",
+
+		// Category/Tag pages
+		"articles":       "articles",
+		"articles_in":    "Articles in",
+		"articles_tagged": "Articles tagged with",
+		"all_categories": "All Categories",
+		"all_tags":       "All Tags",
+		"browse_categories": "Browse all available news categories",
+		"browse_tags":    "Browse all available news tags",
 
 		// Misc
 		"loading":        "Loading...",
@@ -56,7 +68,6 @@ var Translations = map[string]map[string]string{
 		"back":           "Back",
 		"next":           "Next",
 		"previous":       "Previous",
-		"articles":       "articles",
 	},
 	"de": {
 		// Navigation
@@ -105,6 +116,18 @@ var Translations = map[string]map[string]string{
 		"all_rights":     "Alle Rechte vorbehalten",
 		"privacy_policy": "Datenschutz",
 		"terms":          "Nutzungsbedingungen",
+		"quick_links":    "Schnellzugriff",
+		"legal":          "Rechtliches",
+		"sitemap":        "Sitemap",
+
+		// Category/Tag pages
+		"articles":       "Artikel",
+		"articles_in":    "Artikel in",
+		"articles_tagged": "Artikel mit Tag",
+		"all_categories": "Alle Kategorien",
+		"all_tags":       "Alle Schlagwörter",
+		"browse_categories": "Durchsuchen Sie alle verfügbaren Nachrichtenkategorien",
+		"browse_tags":    "Durchsuchen Sie alle verfügbaren Nachrichten-Tags",
 
 		// Misc
 		"loading":        "Laden...",
@@ -112,7 +135,6 @@ var Translations = map[string]map[string]string{
 		"back":           "Zurück",
 		"next":           "Weiter",
 		"previous":       "Zurück",
-		"articles":       "Artikel",
 	},
 	"fr": {
 		// Navigation
@@ -161,6 +183,18 @@ var Translations = map[string]map[string]string{
 		"all_rights":     "Tous droits réservés",
 		"privacy_policy": "Politique de confidentialité",
 		"terms":          "Conditions d'utilisation",
+		"quick_links":    "Liens rapides",
+		"legal":          "Mentions légales",
+		"sitemap":        "Plan du site",
+
+		// Category/Tag pages
+		"articles":       "articles",
+		"articles_in":    "Articles dans",
+		"articles_tagged": "Articles avec le tag",
+		"all_categories": "Toutes les catégories",
+		"all_tags":       "Tous les tags",
+		"browse_categories": "Parcourir toutes les catégories d'actualités disponibles",
+		"browse_tags":    "Parcourir tous les tags d'actualités disponibles",
 
 		// Misc
 		"loading":        "Chargement...",
@@ -168,7 +202,6 @@ var Translations = map[string]map[string]string{
 		"back":           "Retour",
 		"next":           "Suivant",
 		"previous":       "Précédent",
-		"articles":       "articles",
 	},
 	"es": {
 		// Navigation
@@ -217,6 +250,18 @@ var Translations = map[string]map[string]string{
 		"all_rights":     "Todos los derechos reservados",
 		"privacy_policy": "Política de privacidad",
 		"terms":          "Términos de servicio",
+		"quick_links":    "Enlaces rápidos",
+		"legal":          "Legal",
+		"sitemap":        "Mapa del sitio",
+
+		// Category/Tag pages
+		"articles":       "artículos",
+		"articles_in":    "Artículos en",
+		"articles_tagged": "Artículos con etiqueta",
+		"all_categories": "Todas las categorías",
+		"all_tags":       "Todas las etiquetas",
+		"browse_categories": "Explorar todas las categorías de noticias disponibles",
+		"browse_tags":    "Explorar todas las etiquetas de noticias disponibles",
 
 		// Misc
 		"loading":        "Cargando...",
@@ -224,7 +269,6 @@ var Translations = map[string]map[string]string{
 		"back":           "Atrás",
 		"next":           "Siguiente",
 		"previous":       "Anterior",
-		"articles":       "artículos",
 	},
 	"ar": {
 		// Navigation
@@ -273,6 +317,18 @@ var Translations = map[string]map[string]string{
 		"all_rights":     "جميع الحقوق محفوظة",
 		"privacy_policy": "سياسة الخصوصية",
 		"terms":          "شروط الخدمة",
+		"quick_links":    "روابط سريعة",
+		"legal":          "قانوني",
+		"sitemap":        "خريطة الموقع",
+
+		// Category/Tag pages
+		"articles":       "مقالات",
+		"articles_in":    "مقالات في",
+		"articles_tagged": "مقالات بوسم",
+		"all_categories": "جميع التصنيفات",
+		"all_tags":       "جميع الوسوم",
+		"browse_categories": "تصفح جميع تصنيفات الأخبار المتاحة",
+		"browse_tags":    "تصفح جميع وسوم الأخبار المتاحة",
 
 		// Misc
 		"loading":        "جاري التحميل...",
@@ -280,7 +336,6 @@ var Translations = map[string]map[string]string{
 		"back":           "رجوع",
 		"next":           "التالي",
 		"previous":       "السابق",
-		"articles":       "مقالات",
 	},
 }
 

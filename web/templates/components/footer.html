@@ -40,7 +40,7 @@
             
             <!-- Quick links -->
             <div class="footer-section">
-                <h3 class="footer-title">Quick Links</h3>
+                <h3 class="footer-title">{{t .LanguageCode "quick_links"}}</h3>
                 <ul class="footer-links">
                     <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/" class="footer-link">{{t .LanguageCode "home"}}</a></li>
                     <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/categories" class="footer-link">{{t .LanguageCode "categories"}}</a></li>
@@ -51,12 +51,12 @@
             
             <!-- Legal links -->
             <div class="footer-section">
-                <h3 class="footer-title">Legal</h3>
+                <h3 class="footer-title">{{t .LanguageCode "legal"}}</h3>
                 <ul class="footer-links">
                     <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/privacy" class="footer-link">{{t .LanguageCode "privacy_policy"}}</a></li>
                     <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/terms" class="footer-link">{{t .LanguageCode "terms"}}</a></li>
                     <li><a href="{{if .LanguageCode}}/{{.LanguageCode}}{{end}}/contact" class="footer-link">{{t .LanguageCode "contact"}}</a></li>
-                    <li><a href="/sitemap.xml" class="footer-link">Sitemap</a></li>
+                    <li><a href="/sitemap.xml" class="footer-link">{{t .LanguageCode "sitemap"}}</a></li>
                 </ul>
             </div>
             

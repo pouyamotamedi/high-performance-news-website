@@ -39,13 +39,13 @@
             <div class="categories-grid">
                 {{range .Categories}}
                 <div class="category-card">
-                    <a href="{{if .URL}}{{.URL}}{{else}}/{{$.CurrentLanguage}}/category/{{.Slug}}{{end}}" class="category-link">
+                    <a href="{{if .URL}}{{.URL}}{{else}}/{{$.LanguageCode}}/category/{{.Slug}}{{end}}" class="category-link">
                         <h3 class="category-name">{{.Name}}</h3>
                         {{if .Description}}
                         <p class="category-description">{{.Description}}</p>
                         {{end}}
                         {{if .Count}}
-                        <span class="category-count">{{.Count}} articles</span>
+                        <span class="category-count">{{.Count}} {{t $.LanguageCode "articles"}}</span>
                         {{end}}
                     </a>
                 </div>
@@ -62,9 +62,9 @@
             <header class="section-header">
                 <h2 class="section-title">
                     {{if .Category}}
-                        Articles in {{.Category.Name}}
+                        {{t .LanguageCode "articles_in"}} {{.Category.Name}}
                     {{else}}
-                        Articles
+                        {{t .LanguageCode "articles"}}
                     {{end}}
                 </h2>
             </header>
@@ -74,7 +74,7 @@
                 <article class="article-card">
                     {{if .FeaturedImage}}
                     <div class="article-image">
-                        <a href="{{if .URL}}{{.URL}}{{else}}/{{$.CurrentLanguage}}/article/{{.Slug}}{{end}}">
+                        <a href="{{if .URL}}{{.URL}}{{else}}/{{$.LanguageCode}}/article/{{.Slug}}{{end}}">
                             <img src="{{.FeaturedImage}}" alt="{{.Title}}" class="featured-image">
                         </a>
                     </div>
@@ -82,7 +82,7 @@
                     <div class="article-content">
                         <header class="article-header">
                             <h3 class="article-title">
-                                <a href="{{if .URL}}{{.URL}}{{else}}/{{$.CurrentLanguage}}/article/{{.Slug}}{{end}}" class="title-link">{{.Title}}</a>
+                                <a href="{{if .URL}}{{.URL}}{{else}}/{{$.LanguageCode}}/article/{{.Slug}}{{end}}" class="title-link">{{.Title}}</a>
                             </h3>
                             {{if .Excerpt}}
                             <p class="article-excerpt">{{.Excerpt}}</p>

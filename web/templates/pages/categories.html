@@ -11,8 +11,8 @@
     <!-- Page header -->
     <section class="page-header">
         <div class="page-container">
-            <h1 class="page-title">{{if eq .LanguageCode "ar"}}جميع الفئات{{else if eq .LanguageCode "de"}}Alle Kategorien{{else if eq .LanguageCode "fr"}}Toutes les catégories{{else if eq .LanguageCode "es"}}Todas las categorías{{else}}All Categories{{end}}</h1>
-            <p class="page-description">{{if eq .LanguageCode "ar"}}تصفح جميع فئات الأخبار المتاحة{{else if eq .LanguageCode "de"}}Durchsuchen Sie alle verfügbaren Nachrichtenkategorien{{else if eq .LanguageCode "fr"}}Parcourir toutes les catégories d'actualités disponibles{{else if eq .LanguageCode "es"}}Explorar todas las categorías de noticias disponibles{{else}}Browse all available news categories{{end}}</p>
+            <h1 class="page-title">{{t .LanguageCode "all_categories"}}</h1>
+            <p class="page-description">{{t .LanguageCode "browse_categories"}}</p>
         </div>
     </section>
     
@@ -25,7 +25,7 @@
                     <a href="{{.URL}}" class="category-link">
                         <h3 class="category-name">{{.Name}}</h3>
                         <p class="category-description">{{.Description}}</p>
-                        <span class="category-count">{{.Count}} {{if eq $.LanguageCode "ar"}}مقالة{{else if eq $.LanguageCode "de"}}Artikel{{else if eq $.LanguageCode "fr"}}articles{{else if eq $.LanguageCode "es"}}artículos{{else}}articles{{end}}</span>
+                        <span class="category-count">{{.Count}} {{t $.LanguageCode "articles"}}</span>
                     </a>
                 </div>
                 {{end}}
