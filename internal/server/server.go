@@ -4697,12 +4697,33 @@ func (s *Server) handleMultilingualSearch(c *gin.Context) {
 func (s *Server) handleMultilingualAbout(c *gin.Context) {
 	lang := c.Request.URL.Path[1:3]
 
+	// Translated titles
+	titles := map[string]string{
+		"en": "About Us",
+		"de": "Über uns",
+		"fr": "À propos",
+		"es": "Sobre nosotros",
+		"ar": "من نحن",
+	}
+
 	data := s.createBaseTemplateData(c)
-	data["Title"] = "About Us"
+	data["Title"] = titles[lang]
+	if data["Title"] == "" {
+		data["Title"] = titles["en"]
+	}
 	data["PageType"] = "about"
+	data["Lang"] = lang
 	s.addMultilingualData(data, lang, "/about")
 
 	if s.templateEngine != nil {
+		// Try language-specific template first, then fall back to default
+		templateName := "about-" + lang
+		if html, err := s.templateEngine.Render(templateName, data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+		// Fallback to default about template
 		if html, err := s.templateEngine.Render("about", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
 			c.String(http.StatusOK, html)
@@ -4717,12 +4738,33 @@ func (s *Server) handleMultilingualAbout(c *gin.Context) {
 func (s *Server) handleMultilingualContact(c *gin.Context) {
 	lang := c.Request.URL.Path[1:3]
 
+	// Translated titles
+	titles := map[string]string{
+		"en": "Contact Us",
+		"de": "Kontakt",
+		"fr": "Contactez-nous",
+		"es": "Contáctenos",
+		"ar": "اتصل بنا",
+	}
+
 	data := s.createBaseTemplateData(c)
-	data["Title"] = "Contact Us"
+	data["Title"] = titles[lang]
+	if data["Title"] == "" {
+		data["Title"] = titles["en"]
+	}
 	data["PageType"] = "contact"
+	data["Lang"] = lang
 	s.addMultilingualData(data, lang, "/contact")
 
 	if s.templateEngine != nil {
+		// Try language-specific template first, then fall back to default
+		templateName := "contact-" + lang
+		if html, err := s.templateEngine.Render(templateName, data); err == nil {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, html)
+			return
+		}
+		// Fallback to default contact template
 		if html, err := s.templateEngine.Render("contact", data); err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
 			c.String(http.StatusOK, html)

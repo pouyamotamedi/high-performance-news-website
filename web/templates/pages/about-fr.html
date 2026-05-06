@@ -1,0 +1,54 @@
+{{define "about-fr.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/page.css">
+{{end}}
+
+{{define "content"}}
+<div class="about-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">À propos</h1>
+            <p class="page-description">En savoir plus sur notre site d'actualités haute performance</p>
+        </div>
+    </section>
+    
+    <!-- About content -->
+    <section class="content-section">
+        <div class="section-container">
+            <div class="content">
+                <h2>Notre mission</h2>
+                <p>Nous nous engageons à fournir une couverture d'actualités rapide, fiable et complète avec des performances de pointe et une expérience utilisateur exceptionnelle.</p>
+                
+                <h2>Ce que nous offrons</h2>
+                <ul>
+                    <li>Mises à jour d'actualités en temps réel</li>
+                    <li>Flux RSS pour toutes les catégories et tags</li>
+                    <li>Intégration Google Actualités</li>
+                    <li>Diffusion de contenu haute performance</li>
+                    <li>Expérience optimisée pour mobile</li>
+                </ul>
+                
+                <h2>Technologie</h2>
+                <p>Notre site web est construit avec des technologies modernes, notamment :</p>
+                <ul>
+                    <li>Backend Go pour haute performance</li>
+                    <li>Base de données PostgreSQL avec pooling de connexions</li>
+                    <li>DragonflyDB pour la mise en cache</li>
+                    <li>Design web responsive</li>
+                    <li>Optimisation SEO</li>
+                </ul>
+                
+                <h2>Informations de contact</h2>
+                <p>Pour plus d'informations, veuillez visiter notre <a href="/fr/contact">page de contact</a>.</p>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+{{end}}

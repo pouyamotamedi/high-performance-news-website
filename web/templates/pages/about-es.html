@@ -1,0 +1,54 @@
+{{define "about-es.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/page.css">
+{{end}}
+
+{{define "content"}}
+<div class="about-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">Sobre nosotros</h1>
+            <p class="page-description">Conozca más sobre nuestro sitio de noticias de alto rendimiento</p>
+        </div>
+    </section>
+    
+    <!-- About content -->
+    <section class="content-section">
+        <div class="section-container">
+            <div class="content">
+                <h2>Nuestra misión</h2>
+                <p>Estamos dedicados a proporcionar cobertura de noticias rápida, confiable y completa con rendimiento de vanguardia y experiencia de usuario excepcional.</p>
+                
+                <h2>Lo que ofrecemos</h2>
+                <ul>
+                    <li>Actualizaciones de noticias en tiempo real</li>
+                    <li>Feeds RSS para todas las categorías y etiquetas</li>
+                    <li>Integración con Google News</li>
+                    <li>Entrega de contenido de alto rendimiento</li>
+                    <li>Experiencia optimizada para móviles</li>
+                </ul>
+                
+                <h2>Tecnología</h2>
+                <p>Nuestro sitio web está construido con tecnologías modernas que incluyen:</p>
+                <ul>
+                    <li>Backend Go para alto rendimiento</li>
+                    <li>Base de datos PostgreSQL con pooling de conexiones</li>
+                    <li>DragonflyDB para caché</li>
+                    <li>Diseño web responsive</li>
+                    <li>Optimización SEO</li>
+                </ul>
+                
+                <h2>Información de contacto</h2>
+                <p>Para más información, visite nuestra <a href="/es/contact">página de contacto</a>.</p>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+{{end}}

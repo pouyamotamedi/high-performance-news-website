@@ -211,13 +211,16 @@ func (s *ArticleService) GetAvailableTranslations(ctx context.Context, articleID
 		return nil, fmt.Errorf("failed to get article: %w", err)
 	}
 	
-	// If no translation group, return just this article
-	if article.TranslationGroupID == nil {
-		return []models.Article{*article}, nil
+	// Use translation_group_id if available, otherwise use article's own ID
+	// This handles the case where the article is the "master" (no translation_group_id)
+	// but other articles reference it via their translation_group_id
+	groupID := articleID
+	if article.TranslationGroupID != nil {
+		groupID = *article.TranslationGroupID
 	}
 	
 	// Get all articles in the same translation group
-	return s.repo.GetByTranslationGroup(ctx, *article.TranslationGroupID)
+	return s.repo.GetByTranslationGroup(ctx, groupID)
 }
 
 // GetAvailableTranslationsBySlug returns all available translations for an article by slug

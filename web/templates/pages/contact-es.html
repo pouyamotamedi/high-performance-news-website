@@ -1,0 +1,80 @@
+{{define "contact-es.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/page.css">
+{{end}}
+
+{{define "content"}}
+<div class="contact-page">
+    <!-- Page header -->
+    <section class="page-header">
+        <div class="page-container">
+            <h1 class="page-title">Contáctenos</h1>
+            <p class="page-description">Póngase en contacto con nuestro equipo de noticias</p>
+        </div>
+    </section>
+    
+    <!-- Contact content -->
+    <section class="content-section">
+        <div class="section-container">
+            <div class="content">
+                <div class="contact-info">
+                    <h2>Contáctenos</h2>
+                    <p>Nos encantaría saber de usted. Envíenos un mensaje y le responderemos lo antes posible.</p>
+                    
+                    <div class="contact-methods">
+                        <div class="contact-method">
+                            <h3>Correo electrónico</h3>
+                            <p>news@example.com</p>
+                        </div>
+                        
+                        <div class="contact-method">
+                            <h3>Teléfono</h3>
+                            <p>+1 (555) 123-4567</p>
+                        </div>
+                        
+                        <div class="contact-method">
+                            <h3>Dirección</h3>
+                            <p>123 News Street<br>
+                            Media City, MC 12345<br>
+                            Estados Unidos</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="contact-form">
+                    <h2>Envíenos un mensaje</h2>
+                    <form class="form">
+                        <div class="form-group">
+                            <label for="name">Nombre</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Correo electrónico</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="subject">Asunto</label>
+                            <input type="text" id="subject" name="subject" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="message">Mensaje</label>
+                            <textarea id="message" name="message" rows="5" required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="submit-button">Enviar mensaje</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{{end}}
+
+{{define "scripts"}}
+{{end}}
