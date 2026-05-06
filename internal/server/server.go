@@ -3253,8 +3253,134 @@ func (s *Server) getArticleTagsForLanguage(articleID uint64, lang string) ([]gin
 	return tags, nil
 }
 
+// getAvailableLanguagesForCategory returns language info for the language switcher for category pages
+// It returns URLs to the translated versions of the category
+func (s *Server) getAvailableLanguagesForCategory(category *models.Category) []map[string]interface{} {
+	languageInfo := map[string]struct {
+		Name       string
+		NativeName string
+		Direction  string
+	}{
+		"en": {"English", "English", "ltr"},
+		"de": {"German", "Deutsch", "ltr"},
+		"fr": {"French", "Français", "ltr"},
+		"es": {"Spanish", "Español", "ltr"},
+		"ar": {"Arabic", "العربية", "rtl"},
+	}
+
+	var result []map[string]interface{}
+	
+	// If category has no translation group, only return current language
+	if category.TranslationGroupID == nil {
+		info := languageInfo[category.LanguageCode]
+		result = append(result, map[string]interface{}{
+			"Code":       category.LanguageCode,
+			"Name":       info.Name,
+			"NativeName": info.NativeName,
+			"Direction":  info.Direction,
+			"URL":        "/" + category.LanguageCode + "/category/" + category.Slug,
+		})
+		return result
+	}
+	
+	// Get all translations
+	translations, err := s.categoryService.GetAllTranslations(*category.TranslationGroupID)
+	if err != nil {
+		// Fallback to current category only
+		info := languageInfo[category.LanguageCode]
+		result = append(result, map[string]interface{}{
+			"Code":       category.LanguageCode,
+			"Name":       info.Name,
+			"NativeName": info.NativeName,
+			"Direction":  info.Direction,
+			"URL":        "/" + category.LanguageCode + "/category/" + category.Slug,
+		})
+		return result
+	}
+	
+	for _, trans := range translations {
+		info, ok := languageInfo[trans.LanguageCode]
+		if !ok {
+			continue
+		}
+		
+		result = append(result, map[string]interface{}{
+			"Code":       trans.LanguageCode,
+			"Name":       info.Name,
+			"NativeName": info.NativeName,
+			"Direction":  info.Direction,
+			"URL":        "/" + trans.LanguageCode + "/category/" + trans.Slug,
+		})
+	}
+	
+	return result
+}
+
+// getAvailableLanguagesForTag returns language info for the language switcher for tag pages
+// It returns URLs to the translated versions of the tag
+func (s *Server) getAvailableLanguagesForTag(tag *models.Tag) []map[string]interface{} {
+	languageInfo := map[string]struct {
+		Name       string
+		NativeName string
+		Direction  string
+	}{
+		"en": {"English", "English", "ltr"},
+		"de": {"German", "Deutsch", "ltr"},
+		"fr": {"French", "Français", "ltr"},
+		"es": {"Spanish", "Español", "ltr"},
+		"ar": {"Arabic", "العربية", "rtl"},
+	}
+
+	var result []map[string]interface{}
+	
+	// If tag has no translation group, only return current language
+	if tag.TranslationGroupID == nil {
+		info := languageInfo[tag.LanguageCode]
+		result = append(result, map[string]interface{}{
+			"Code":       tag.LanguageCode,
+			"Name":       info.Name,
+			"NativeName": info.NativeName,
+			"Direction":  info.Direction,
+			"URL":        "/" + tag.LanguageCode + "/tag/" + tag.Slug,
+		})
+		return result
+	}
+	
+	// Get all translations
+	translations, err := s.tagService.GetAllTranslations(*tag.TranslationGroupID)
+	if err != nil {
+		// Fallback to current tag only
+		info := languageInfo[tag.LanguageCode]
+		result = append(result, map[string]interface{}{
+			"Code":       tag.LanguageCode,
+			"Name":       info.Name,
+			"NativeName": info.NativeName,
+			"Direction":  info.Direction,
+			"URL":        "/" + tag.LanguageCode + "/tag/" + tag.Slug,
+		})
+		return result
+	}
+	
+	for _, trans := range translations {
+		info, ok := languageInfo[trans.LanguageCode]
+		if !ok {
+			continue
+		}
+		
+		result = append(result, map[string]interface{}{
+			"Code":       trans.LanguageCode,
+			"Name":       info.Name,
+			"NativeName": info.NativeName,
+			"Direction":  info.Direction,
+			"URL":        "/" + trans.LanguageCode + "/tag/" + trans.Slug,
+		})
+	}
+	
+	return result
+}
+
 // getAvailableLanguagesForArticle returns language info for the language switcher, only for available translations
-func (s *Server) getAvailableLanguagesForArticle(translations []models.Article, slug string) []map[string]interface{} {
+func (s *Server) getAvailableLanguagesForArticle(translations []models.Article, currentSlug string) []map[string]interface{} {
 	languageInfo := map[string]struct {
 		Name       string
 		NativeName string
@@ -3274,7 +3400,14 @@ func (s *Server) getAvailableLanguagesForArticle(translations []models.Article, 
 			continue
 		}
 
-		url := "/" + trans.LanguageCode + "/article/" + slug
+		// Use the translation's own slug, not the current article's slug
+		// Each translation has its own unique slug
+		articleSlug := trans.Slug
+		if articleSlug == "" {
+			articleSlug = currentSlug // Fallback to current slug if translation slug is empty
+		}
+		
+		url := "/" + trans.LanguageCode + "/article/" + articleSlug
 		result = append(result, map[string]interface{}{
 			"Code":       trans.LanguageCode,
 			"Name":       info.Name,
@@ -3402,6 +3535,7 @@ func (s *Server) getCategoryArticleCount(categoryID uint64) int {
 // considering all categories in the same translation group and filtering by language
 func (s *Server) getCategoryArticleCountByLanguage(categoryID uint64, languageCode string) int {
 	if s.db == nil || s.categoryService == nil {
+		log.Printf("DEBUG getCategoryArticleCountByLanguage: db or categoryService is nil")
 		return 0
 	}
 
@@ -3411,14 +3545,23 @@ func (s *Server) getCategoryArticleCountByLanguage(categoryID uint64, languageCo
 	
 	// Get the category to check its translation group
 	category, err := s.categoryService.GetByID(categoryID)
+	if err != nil {
+		log.Printf("DEBUG getCategoryArticleCountByLanguage: GetByID(%d) error: %v", categoryID, err)
+	}
 	if err == nil && category.TranslationGroupID != nil {
+		log.Printf("DEBUG getCategoryArticleCountByLanguage: category %d has translation_group_id=%d", categoryID, *category.TranslationGroupID)
 		allTranslations, err := s.categoryService.GetAllTranslations(*category.TranslationGroupID)
 		if err == nil {
 			categoryIDs = nil
 			for _, cat := range allTranslations {
 				categoryIDs = append(categoryIDs, cat.ID)
 			}
+			log.Printf("DEBUG getCategoryArticleCountByLanguage: found %d categories in group: %v", len(allTranslations), categoryIDs)
+		} else {
+			log.Printf("DEBUG getCategoryArticleCountByLanguage: GetAllTranslations error: %v", err)
 		}
+	} else if category.TranslationGroupID == nil {
+		log.Printf("DEBUG getCategoryArticleCountByLanguage: category %d has NO translation_group_id", categoryID)
 	}
 
 	// Build query with IN clause
@@ -3441,6 +3584,8 @@ func (s *Server) getCategoryArticleCountByLanguage(categoryID uint64, languageCo
 		AND status = 'published'
 	`, strings.Join(placeholders, ","), len(categoryIDs)+1)
 
+	log.Printf("DEBUG getCategoryArticleCountByLanguage: query=%s, args=%v", query, args)
+
 	var count int
 	err = s.db.DB.QueryRow(query, args...).Scan(&count)
 	if err != nil {
@@ -3448,6 +3593,7 @@ func (s *Server) getCategoryArticleCountByLanguage(categoryID uint64, languageCo
 		return 0
 	}
 
+	log.Printf("DEBUG getCategoryArticleCountByLanguage: category=%d, lang=%s, count=%d", categoryID, languageCode, count)
 	return count
 }
 
@@ -4034,7 +4180,6 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 
 	data := s.createBaseTemplateData(c)
 	data["PageType"] = "category"
-	s.addMultilingualData(data, lang, "/category/"+slug)
 
 	if s.categoryService != nil {
 		// Use GetBySlugAndLanguage to get the category in the correct language
@@ -4052,6 +4197,19 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 			categoryLang = "en" // Default to English if not set
 		}
 		
+		// Override AvailableLanguages with category-specific translations
+		data["AvailableLanguages"] = s.getAvailableLanguagesForCategory(category)
+		
+		// Add other multilingual data
+		data["LanguageCode"] = lang
+		data["LanguageDirection"] = getLanguageDirection(lang)
+		data["LanguageName"] = getLanguageName(lang)
+		data["LanguageNativeName"] = getLanguageNativeName(lang)
+		data["AlternateURLs"] = s.generateAlternateURLs("/category/" + slug)
+		data["CanonicalURL"] = s.generateCanonicalURL(lang, "/category/"+slug)
+		data["IsRTL"] = lang == "ar"
+		data["BaseURL"] = s.config.App.BaseURL
+		data["Navigation"] = s.getNavigationForLanguage(lang)
 		if lang != categoryLang {
 			// Redirect to the correct language URL
 			correctURL := fmt.Sprintf("/%s/category/%s", categoryLang, slug)
@@ -4194,7 +4352,6 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 
 	data := s.createBaseTemplateData(c)
 	data["PageType"] = "tag"
-	s.addMultilingualData(data, lang, "/tag/"+slug)
 
 	if s.tagService != nil {
 		// Use GetBySlugAndLanguage to get the tag in the correct language
@@ -4218,6 +4375,20 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 			c.Redirect(http.StatusMovedPermanently, correctURL)
 			return
 		}
+
+		// Override AvailableLanguages with tag-specific translations
+		data["AvailableLanguages"] = s.getAvailableLanguagesForTag(tag)
+		
+		// Add other multilingual data
+		data["LanguageCode"] = lang
+		data["LanguageDirection"] = getLanguageDirection(lang)
+		data["LanguageName"] = getLanguageName(lang)
+		data["LanguageNativeName"] = getLanguageNativeName(lang)
+		data["AlternateURLs"] = s.generateAlternateURLs("/tag/" + slug)
+		data["CanonicalURL"] = s.generateCanonicalURL(lang, "/tag/"+slug)
+		data["IsRTL"] = lang == "ar"
+		data["BaseURL"] = s.config.App.BaseURL
+		data["Navigation"] = s.getNavigationForLanguage(lang)
 
 		data["Title"] = tag.Name
 		data["Tag"] = gin.H{

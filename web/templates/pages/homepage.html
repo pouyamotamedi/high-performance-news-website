@@ -31,21 +31,37 @@ html, body {
     width: 100% !important;
     overflow-x: hidden !important;
 }
+/* Hero section - clean gradient without box */
 .homepage .hero-section {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
     width: 100% !important;
     max-width: 100% !important;
     border-bottom: 1px solid #e2e8f0;
     overflow-x: hidden !important;
+    padding: 2rem 0;
 }
 /* Dark mode hero */
 [data-theme="dark"] .homepage .hero-section {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
     border-bottom: 1px solid #334155;
 }
 .homepage .hero-section .container,
 .homepage .main-content .container {
     padding: 0 1rem !important;
+}
+/* Hero main card - transparent, no box */
+.homepage .hero-section .hero-main {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+/* Hero image styling */
+.homepage .hero-section .hero-image {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+.homepage .hero-section .hero-img {
+    border-radius: 16px;
 }
 /* Hero text colors for light background */
 .homepage .hero-section .hero-title,
@@ -59,6 +75,18 @@ html, body {
 .homepage .hero-section .hero-date,
 .homepage .hero-section .hero-views {
     color: #64748b !important;
+}
+/* Secondary articles in hero */
+.homepage .hero-section .hero-secondary {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    backdrop-filter: none;
+}
+.homepage .hero-section .hero-secondary:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .homepage .hero-section .secondary-title,
 .homepage .hero-section .secondary-title a,
@@ -81,6 +109,14 @@ html, body {
 [data-theme="dark"] .homepage .hero-section .hero-date,
 [data-theme="dark"] .homepage .hero-section .hero-views {
     color: #94a3b8 !important;
+}
+[data-theme="dark"] .homepage .hero-section .hero-secondary {
+    background: #1e293b !important;
+    border-color: #334155;
+}
+[data-theme="dark"] .homepage .hero-section .hero-secondary:hover {
+    background: #334155 !important;
+    border-color: #475569;
 }
 [data-theme="dark"] .homepage .hero-section .secondary-title,
 [data-theme="dark"] .homepage .hero-section .secondary-title a,
