@@ -358,6 +358,7 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         <main class="admin-main">
             <header class="admin-header">
                 <div class="header-left">
+                    <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" title="Toggle Menu">☰</button>
                     <h1 class="page-title">` + title + `</h1>
                 </div>
                 <div class="header-right">
@@ -400,6 +401,22 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
             document.getElementById('sidebar').classList.toggle('collapsed');
             localStorage.setItem('sidebarCollapsed', document.getElementById('sidebar').classList.contains('collapsed'));
         }
+
+        function toggleMobileSidebar() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+        }
+
+        // Close mobile sidebar when clicking outside
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const mobileBtn = document.querySelector('.mobile-menu-btn');
+            if (window.innerWidth <= 1024 && 
+                sidebar.classList.contains('mobile-open') && 
+                !sidebar.contains(e.target) && 
+                !mobileBtn.contains(e.target)) {
+                sidebar.classList.remove('mobile-open');
+            }
+        });
 
         function toggleSubmenu(element) {
             const navItem = element.closest('.nav-item');

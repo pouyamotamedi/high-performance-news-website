@@ -13,6 +13,11 @@ func (s *Server) renderManageArticles(c *gin.Context) {
             .articles-table th, .articles-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
             .articles-table th { background-color: #f9fafb; font-weight: 600; }
             .articles-table tr:hover { background-color: #f9fafb; }
+            .articles-table tr.translation-row { background-color: #f8fafc; }
+            .articles-table tr.translation-row td:first-child { padding-left: 2.5rem; }
+            .translation-indicator { color: #6b7280; font-size: 0.8rem; margin-right: 0.5rem; }
+            .language-badge { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 4px; font-size: 0.7rem; font-weight: 500; background-color: #e0e7ff; color: #3730a3; margin-left: 0.5rem; }
+            .expand-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem; margin-right: 0.5rem; }
             .status-badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; }
             .status-draft { background-color: #fef3c7; color: #92400e; }
             .status-published { background-color: #d1fae5; color: #065f46; }
@@ -23,17 +28,19 @@ func (s *Server) renderManageArticles(c *gin.Context) {
             .btn-edit { background-color: #3b82f6; color: white; }
             .btn-delete { background-color: #ef4444; color: white; }
             .btn-view { background-color: #10b981; color: white; }
+            .btn-translate { background-color: #8b5cf6; color: white; }
             .filters { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
             .filter-group { display: flex; flex-direction: column; gap: 0.25rem; }
             .filter-group label { font-size: 0.875rem; font-weight: 500; }
             .filter-input { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; }
-            .bulk-actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+            .bulk-actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
             .pagination { display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 1rem; }
             .pagination button { padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; background: white; cursor: pointer; border-radius: 4px; }
             .pagination button:hover { background-color: #f3f4f6; }
             .pagination button.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
             .loading { text-align: center; padding: 2rem; color: #6b7280; }
             .no-articles { text-align: center; padding: 2rem; color: #6b7280; }
+            .translation-count { font-size: 0.75rem; color: #6b7280; margin-left: 0.5rem; }
         </style>
 
         <div class="dashboard-card">
@@ -97,10 +104,12 @@ func (s *Server) renderManageArticles(c *gin.Context) {
         <script>
             let articles = [];
             let filteredArticles = [];
+            let groupedArticles = [];
             let categories = [];
             let authors = [];
             let currentPage = 1;
             let articlesPerPage = 20;
+            let expandedGroups = new Set();
 
             document.addEventListener('DOMContentLoaded', function() {
                 loadArticles();
@@ -121,6 +130,7 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                         const data = await response.json();
                         articles = data.articles || [];
                         filteredArticles = [...articles];
+                        groupArticlesByTranslation();
                         renderArticles();
                         renderPagination();
                     } else {
@@ -131,6 +141,91 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                     document.getElementById('articlesContainer').innerHTML = 
                         '<div class="no-articles">Error loading articles: ' + error.message + '</div>';
                 }
+            }
+
+            // Group articles by translation_group_id
+            function groupArticlesByTranslation() {
+                const groups = {};
+                const standalone = [];
+                
+                filteredArticles.forEach(article => {
+                    // Determine the group ID - use translation_group_id if set, otherwise use article ID
+                    const groupId = article.translation_group_id || article.id;
+                    
+                    if (!groups[groupId]) {
+                        groups[groupId] = {
+                            main: null,
+                            translations: []
+                        };
+                    }
+                    
+                    // If this article IS the group (its ID equals the groupId), it's the main article
+                    // Or if it has no translation_group_id, it's standalone/main
+                    if (!article.translation_group_id || article.id === article.translation_group_id) {
+                        groups[groupId].main = article;
+                    } else {
+                        groups[groupId].translations.push(article);
+                    }
+                });
+                
+                // Convert to array and sort
+                groupedArticles = [];
+                Object.keys(groups).forEach(groupId => {
+                    const group = groups[groupId];
+                    
+                    // If there's no main article, use the first translation as main
+                    if (!group.main && group.translations.length > 0) {
+                        // Find the English version or the first one
+                        const englishIdx = group.translations.findIndex(a => a.language_code === 'en');
+                        if (englishIdx >= 0) {
+                            group.main = group.translations.splice(englishIdx, 1)[0];
+                        } else {
+                            group.main = group.translations.shift();
+                        }
+                    }
+                    
+                    if (group.main) {
+                        groupedArticles.push({
+                            main: group.main,
+                            translations: group.translations,
+                            groupId: groupId
+                        });
+                    }
+                });
+                
+                // Sort by created date (newest first)
+                groupedArticles.sort((a, b) => new Date(b.main.created_at) - new Date(a.main.created_at));
+            }
+
+            function toggleTranslations(groupId) {
+                if (expandedGroups.has(groupId)) {
+                    expandedGroups.delete(groupId);
+                } else {
+                    expandedGroups.add(groupId);
+                }
+                renderArticles();
+            }
+
+            function getLanguageFlag(langCode) {
+                const flags = {
+                    'en': '🇬🇧',
+                    'de': '🇩🇪',
+                    'fr': '🇫🇷',
+                    'es': '🇪🇸',
+                    'ar': '🇸🇦'
+                };
+                return flags[langCode] || '🌐';
+            }
+
+            function getLanguageName(langCode) {
+                const names = {
+                    'en': 'English',
+                    'de': 'Deutsch',
+                    'fr': 'Français',
+                    'es': 'Español',
+                    'ar': 'العربية'
+                };
+                return names[langCode] || langCode;
             }
 
             async function loadCategories() {
@@ -175,36 +270,39 @@ func (s *Server) renderManageArticles(c *gin.Context) {
             function renderArticles() {
                 const container = document.getElementById('articlesContainer');
                 
-                if (filteredArticles.length === 0) {
+                if (groupedArticles.length === 0) {
                     container.innerHTML = '<div class="no-articles">No articles found</div>';
                     return;
                 }
 
                 const startIndex = (currentPage - 1) * articlesPerPage;
                 const endIndex = startIndex + articlesPerPage;
-                const pageArticles = filteredArticles.slice(startIndex, endIndex);
+                const pageGroups = groupedArticles.slice(startIndex, endIndex);
 
                 let html = '<table class="articles-table">';
                 html += '<thead><tr>';
                 html += '<th><input type="checkbox" id="selectAllPage" onchange="toggleSelectAllPage()"></th>';
                 html += '<th>Title</th>';
+                html += '<th>Language</th>';
                 html += '<th>Status</th>';
                 html += '<th>Category</th>';
-                html += '<th>Author</th>';
                 html += '<th>Created</th>';
                 html += '<th>Views</th>';
                 html += '<th>Actions</th>';
                 html += '</tr></thead><tbody>';
 
-                pageArticles.forEach(article => {
+                pageGroups.forEach(group => {
+                    const article = group.main;
+                    const hasTranslations = group.translations.length > 0;
+                    const isExpanded = expandedGroups.has(group.groupId);
                     const statusClass = 'status-' + article.status;
                     const createdDate = new Date(article.created_at).toLocaleDateString();
+                    
                     // Display all categories for the article
                     let categoryNames = [];
                     if (article.categories && article.categories.length > 0) {
                         categoryNames = article.categories.map(cat => cat.name);
                     } else {
-                        // Fallback to primary category for backward compatibility
                         const primaryCategory = categories.find(c => c.id === article.category_id);
                         if (primaryCategory) {
                             categoryNames = [primaryCategory.name];
@@ -212,19 +310,29 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                     }
                     const categoryDisplay = categoryNames.length > 0 ? categoryNames.join(', ') : 'Unknown';
                     
-                    html += '<tr>';
+                    // Main article row
+                    html += '<tr data-group-id="' + group.groupId + '">';
                     html += '<td><input type="checkbox" class="article-checkbox" value="' + article.id + '"></td>';
-                    html += '<td><strong>' + escapeHtml(article.title) + '</strong><br><small>' + escapeHtml(article.slug) + '</small></td>';
+                    html += '<td>';
+                    if (hasTranslations) {
+                        html += '<button class="expand-btn" onclick="toggleTranslations(\'' + group.groupId + '\')" title="' + (isExpanded ? 'Collapse' : 'Expand') + ' translations">' + (isExpanded ? '▼' : '▶') + '</button>';
+                    } else {
+                        html += '<span style="display: inline-block; width: 1.5rem;"></span>';
+                    }
+                    html += '<strong>' + escapeHtml(article.title) + '</strong>';
+                    if (hasTranslations) {
+                        html += '<span class="translation-count">(' + (group.translations.length + 1) + ' languages)</span>';
+                    }
+                    html += '<br><small style="margin-left: 1.5rem;">' + escapeHtml(article.slug) + '</small></td>';
+                    html += '<td><span class="language-badge">' + getLanguageFlag(article.language_code || 'en') + ' ' + getLanguageName(article.language_code || 'en') + '</span></td>';
                     html += '<td><span class="status-badge ' + statusClass + '">' + article.status.toUpperCase() + '</span></td>';
                     html += '<td>' + escapeHtml(categoryDisplay) + '</td>';
-                    html += '<td>Author ' + article.author_id + '</td>';
                     html += '<td>' + createdDate + '</td>';
                     html += '<td>' + (article.view_count || 0) + '</td>';
                     html += '<td>';
                     html += '<button onclick="viewArticle(\'' + article.slug + '\')" class="action-btn btn-view" title="View Article">👁️</button>';
                     html += '<button onclick="editArticle(' + article.id + ')" class="action-btn btn-edit" title="Edit Article">✏️</button>';
                     
-                    // Show different buttons based on article status
                     if (article.status === 'archived') {
                         html += '<button onclick="unarchiveArticle(' + article.id + ')" class="action-btn" style="background-color: #10b981; color: white;" title="Un-archive Article">📤</button>';
                     } else {
@@ -234,6 +342,39 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                     html += '<button onclick="' + (article.status === 'deleted' ? 'restoreArticle' : 'deleteArticle') + '(' + article.id + ')" class="action-btn ' + (article.status === 'deleted' ? '' : 'btn-delete') + '" style="' + (article.status === 'deleted' ? 'background-color: #10b981; color: white;' : '') + '" title="' + (article.status === 'deleted' ? 'Restore Article' : 'Move to Trash') + '">' + (article.status === 'deleted' ? '↩️' : '🗑️') + '</button>';
                     html += '</td>';
                     html += '</tr>';
+                    
+                    // Translation rows (if expanded)
+                    if (hasTranslations && isExpanded) {
+                        group.translations.forEach(translation => {
+                            const transStatusClass = 'status-' + translation.status;
+                            const transCreatedDate = new Date(translation.created_at).toLocaleDateString();
+                            
+                            html += '<tr class="translation-row" data-parent-group="' + group.groupId + '">';
+                            html += '<td><input type="checkbox" class="article-checkbox" value="' + translation.id + '"></td>';
+                            html += '<td>';
+                            html += '<span class="translation-indicator">↳</span>';
+                            html += '<strong>' + escapeHtml(translation.title) + '</strong>';
+                            html += '<br><small style="margin-left: 1.5rem;">' + escapeHtml(translation.slug) + '</small></td>';
+                            html += '<td><span class="language-badge">' + getLanguageFlag(translation.language_code) + ' ' + getLanguageName(translation.language_code) + '</span></td>';
+                            html += '<td><span class="status-badge ' + transStatusClass + '">' + translation.status.toUpperCase() + '</span></td>';
+                            html += '<td>-</td>';
+                            html += '<td>' + transCreatedDate + '</td>';
+                            html += '<td>' + (translation.view_count || 0) + '</td>';
+                            html += '<td>';
+                            html += '<button onclick="viewArticle(\'' + translation.slug + '\')" class="action-btn btn-view" title="View Article">👁️</button>';
+                            html += '<button onclick="editArticle(' + translation.id + ')" class="action-btn btn-edit" title="Edit Article">✏️</button>';
+                            
+                            if (translation.status === 'archived') {
+                                html += '<button onclick="unarchiveArticle(' + translation.id + ')" class="action-btn" style="background-color: #10b981; color: white;" title="Un-archive">📤</button>';
+                            } else {
+                                html += '<button onclick="archiveArticle(' + translation.id + ')" class="action-btn" style="background-color: #f59e0b; color: white;" title="Archive">📦</button>';
+                            }
+                            
+                            html += '<button onclick="' + (translation.status === 'deleted' ? 'restoreArticle' : 'deleteArticle') + '(' + translation.id + ')" class="action-btn ' + (translation.status === 'deleted' ? '' : 'btn-delete') + '" style="' + (translation.status === 'deleted' ? 'background-color: #10b981; color: white;' : '') + '" title="' + (translation.status === 'deleted' ? 'Restore' : 'Move to Trash') + '">' + (translation.status === 'deleted' ? '↩️' : '🗑️') + '</button>';
+                            html += '</td>';
+                            html += '</tr>';
+                        });
+                    }
                 });
 
                 html += '</tbody></table>';
@@ -242,7 +383,7 @@ func (s *Server) renderManageArticles(c *gin.Context) {
 
             function renderPagination() {
                 const container = document.getElementById('paginationContainer');
-                const totalPages = Math.ceil(filteredArticles.length / articlesPerPage);
+                const totalPages = Math.ceil(groupedArticles.length / articlesPerPage);
                 
                 if (totalPages <= 1) {
                     container.style.display = 'none';
@@ -300,6 +441,7 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                 });
 
                 currentPage = 1;
+                groupArticlesByTranslation();
                 renderArticles();
                 renderPagination();
             }
