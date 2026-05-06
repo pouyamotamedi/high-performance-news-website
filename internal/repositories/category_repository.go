@@ -64,14 +64,16 @@ func (r *CategoryRepository) Create(category *models.Category) (*models.Category
 // GetByID retrieves a category by ID
 func (r *CategoryRepository) GetByID(ctx context.Context, id uint64) (*models.Category, error) {
 	query := `
-		SELECT id, name, slug, description, parent_id, sort_order, image_url, image_alt_text, created_at
+		SELECT id, name, slug, description, parent_id, sort_order, image_url, image_alt_text, created_at, language_code, translation_group_id
 		FROM categories 
 		WHERE id = $1`
 
 	category := &models.Category{}
+	var translationGroupID sql.NullInt64
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&category.ID, &category.Name, &category.Slug, &category.Description,
 		&category.ParentID, &category.SortOrder, &category.ImageURL, &category.ImageAltText, &category.CreatedAt,
+		&category.LanguageCode, &translationGroupID,
 	)
 
 	if err != nil {
@@ -79,6 +81,11 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id uint64) (*models.Ca
 			return nil, &models.NotFoundError{Resource: "category", ID: strconv.FormatUint(id, 10)}
 		}
 		return nil, fmt.Errorf("failed to get category: %w", err)
+	}
+
+	if translationGroupID.Valid {
+		val := uint64(translationGroupID.Int64)
+		category.TranslationGroupID = &val
 	}
 
 	return category, nil

@@ -71,14 +71,15 @@ func (r *TagRepository) Create(tag *models.Tag) (*models.Tag, error) {
 
 // GetByID retrieves a tag by ID
 func (r *TagRepository) GetByID(ctx context.Context, id uint64) (*models.Tag, error) {
-	query := `SELECT id, name, slug, description, keywords, color, created_at, language_code
+	query := `SELECT id, name, slug, description, keywords, color, created_at, language_code, translation_group_id
 		FROM tags WHERE id = $1`
 
 	tag := &models.Tag{}
 	var keywordsJSON []byte
+	var translationGroupID sql.NullInt64
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&tag.ID, &tag.Name, &tag.Slug, &tag.Description,
-		&keywordsJSON, &tag.Color, &tag.CreatedAt, &tag.LanguageCode,
+		&keywordsJSON, &tag.Color, &tag.CreatedAt, &tag.LanguageCode, &translationGroupID,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -91,6 +92,11 @@ func (r *TagRepository) GetByID(ctx context.Context, id uint64) (*models.Tag, er
 		if err := json.Unmarshal(keywordsJSON, &tag.Keywords); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal keywords: %w", err)
 		}
+	}
+
+	if translationGroupID.Valid {
+		val := uint64(translationGroupID.Int64)
+		tag.TranslationGroupID = &val
 	}
 
 	return tag, nil

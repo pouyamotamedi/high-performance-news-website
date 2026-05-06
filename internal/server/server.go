@@ -1258,7 +1258,7 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
 				xml += fmt.Sprintf(`
     <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/article/%s"/>`, l, baseURL, l, article.Slug)
 			}
-			
+
 			// x-default points to English if available, otherwise first available language
 			xDefaultLang := "en"
 			hasEnglish := false
@@ -1280,10 +1280,10 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
 	// Add categories - only include hreflang for existing translations
 	if s.categoryService != nil {
 		categories, _ := s.categoryService.GetAll()
-		
+
 		// Group categories by translation_group_id to avoid duplicates
 		processedGroups := make(map[uint64]bool)
-		
+
 		for _, cat := range categories {
 			// Skip if we've already processed this translation group
 			groupID := cat.ID
@@ -1329,7 +1329,7 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
 				xml += fmt.Sprintf(`
     <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/category/%s"/>`, l, baseURL, l, cat.Slug)
 			}
-			
+
 			// x-default
 			xDefaultLang := "en"
 			hasEnglish := false
@@ -1351,10 +1351,10 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
 	// Add tags - only include hreflang for existing translations
 	if s.tagService != nil {
 		tags, _ := s.tagService.GetAll()
-		
+
 		// Group tags by translation_group_id to avoid duplicates
 		processedGroups := make(map[uint64]bool)
-		
+
 		for _, tag := range tags {
 			// Skip if we've already processed this translation group
 			groupID := tag.ID
@@ -1400,7 +1400,7 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
 				xml += fmt.Sprintf(`
     <xhtml:link rel="alternate" hreflang="%s" href="%s/%s/tag/%s"/>`, l, baseURL, l, tag.Slug)
 			}
-			
+
 			// x-default
 			xDefaultLang := "en"
 			hasEnglish := false
@@ -1666,7 +1666,7 @@ func (s *Server) generateAlternateURLsForTranslations(availableLanguages []strin
 
 	var alternates []map[string]string
 	var hasEnglish bool
-	
+
 	for _, lang := range availableLanguages {
 		url := baseURL + "/" + lang + pathTemplate
 		// Clean up double slashes
@@ -1677,7 +1677,7 @@ func (s *Server) generateAlternateURLsForTranslations(availableLanguages []strin
 			"lang": lang,
 			"url":  url,
 		})
-		
+
 		if lang == "en" {
 			hasEnglish = true
 		}
@@ -1688,11 +1688,11 @@ func (s *Server) generateAlternateURLsForTranslations(availableLanguages []strin
 	if !hasEnglish && len(availableLanguages) > 0 {
 		xDefaultLang = availableLanguages[0]
 	}
-	
+
 	xDefaultURL := baseURL + "/" + xDefaultLang + pathTemplate
 	xDefaultURL = strings.ReplaceAll(xDefaultURL, "//", "/")
 	xDefaultURL = strings.Replace(xDefaultURL, ":/", "://", 1)
-	
+
 	alternates = append(alternates, map[string]string{
 		"lang": "x-default",
 		"url":  xDefaultURL,
@@ -3269,7 +3269,7 @@ func (s *Server) getAvailableLanguagesForCategory(category *models.Category) []m
 	}
 
 	var result []map[string]interface{}
-	
+
 	// If category has no translation group, only return current language
 	if category.TranslationGroupID == nil {
 		info := languageInfo[category.LanguageCode]
@@ -3282,7 +3282,7 @@ func (s *Server) getAvailableLanguagesForCategory(category *models.Category) []m
 		})
 		return result
 	}
-	
+
 	// Get all translations
 	translations, err := s.categoryService.GetAllTranslations(*category.TranslationGroupID)
 	if err != nil {
@@ -3297,13 +3297,13 @@ func (s *Server) getAvailableLanguagesForCategory(category *models.Category) []m
 		})
 		return result
 	}
-	
+
 	for _, trans := range translations {
 		info, ok := languageInfo[trans.LanguageCode]
 		if !ok {
 			continue
 		}
-		
+
 		result = append(result, map[string]interface{}{
 			"Code":       trans.LanguageCode,
 			"Name":       info.Name,
@@ -3312,7 +3312,7 @@ func (s *Server) getAvailableLanguagesForCategory(category *models.Category) []m
 			"URL":        "/" + trans.LanguageCode + "/category/" + trans.Slug,
 		})
 	}
-	
+
 	return result
 }
 
@@ -3332,7 +3332,7 @@ func (s *Server) getAvailableLanguagesForTag(tag *models.Tag) []map[string]inter
 	}
 
 	var result []map[string]interface{}
-	
+
 	// If tag has no translation group, only return current language
 	if tag.TranslationGroupID == nil {
 		info := languageInfo[tag.LanguageCode]
@@ -3345,7 +3345,7 @@ func (s *Server) getAvailableLanguagesForTag(tag *models.Tag) []map[string]inter
 		})
 		return result
 	}
-	
+
 	// Get all translations
 	translations, err := s.tagService.GetAllTranslations(*tag.TranslationGroupID)
 	if err != nil {
@@ -3360,13 +3360,13 @@ func (s *Server) getAvailableLanguagesForTag(tag *models.Tag) []map[string]inter
 		})
 		return result
 	}
-	
+
 	for _, trans := range translations {
 		info, ok := languageInfo[trans.LanguageCode]
 		if !ok {
 			continue
 		}
-		
+
 		result = append(result, map[string]interface{}{
 			"Code":       trans.LanguageCode,
 			"Name":       info.Name,
@@ -3375,7 +3375,7 @@ func (s *Server) getAvailableLanguagesForTag(tag *models.Tag) []map[string]inter
 			"URL":        "/" + trans.LanguageCode + "/tag/" + trans.Slug,
 		})
 	}
-	
+
 	return result
 }
 
@@ -3406,7 +3406,7 @@ func (s *Server) getAvailableLanguagesForArticle(translations []models.Article, 
 		if articleSlug == "" {
 			articleSlug = currentSlug // Fallback to current slug if translation slug is empty
 		}
-		
+
 		url := "/" + trans.LanguageCode + "/article/" + articleSlug
 		result = append(result, map[string]interface{}{
 			"Code":       trans.LanguageCode,
@@ -3542,7 +3542,7 @@ func (s *Server) getCategoryArticleCountByLanguage(categoryID uint64, languageCo
 	// Get all category IDs in the same translation group
 	var categoryIDs []uint64
 	categoryIDs = append(categoryIDs, categoryID)
-	
+
 	// Get the category to check its translation group
 	category, err := s.categoryService.GetByID(categoryID)
 	if err != nil {
@@ -3568,7 +3568,7 @@ func (s *Server) getCategoryArticleCountByLanguage(categoryID uint64, languageCo
 	if len(categoryIDs) == 0 {
 		return 0
 	}
-	
+
 	placeholders := make([]string, len(categoryIDs))
 	args := make([]interface{}, len(categoryIDs)+1)
 	for i, id := range categoryIDs {
@@ -3757,6 +3757,61 @@ func (s *Server) getTagArticleCount(tagID uint64) int {
 	return count
 }
 
+// getTagArticleCountByLanguage gets the number of published articles for a tag
+// considering all tags in the same translation group and filtering by language
+func (s *Server) getTagArticleCountByLanguage(tagID uint64, languageCode string) int {
+	if s.db == nil || s.tagService == nil {
+		return 0
+	}
+
+	// Get all tag IDs in the same translation group
+	var tagIDs []uint64
+	tagIDs = append(tagIDs, tagID)
+
+	// Get the tag to check its translation group
+	tag, err := s.tagService.GetByID(tagID)
+	if err == nil && tag.TranslationGroupID != nil {
+		allTranslations, err := s.tagService.GetAllTranslations(*tag.TranslationGroupID)
+		if err == nil {
+			tagIDs = nil
+			for _, t := range allTranslations {
+				tagIDs = append(tagIDs, t.ID)
+			}
+		}
+	}
+
+	// Build query with IN clause
+	if len(tagIDs) == 0 {
+		return 0
+	}
+
+	placeholders := make([]string, len(tagIDs))
+	args := make([]interface{}, len(tagIDs)+1)
+	for i, id := range tagIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	args[len(tagIDs)] = languageCode
+
+	query := fmt.Sprintf(`
+		SELECT COUNT(DISTINCT a.id) 
+		FROM articles a 
+		JOIN article_tags at ON a.id = at.article_id 
+		WHERE at.tag_id IN (%s) 
+		AND a.language_code = $%d 
+		AND a.status = 'published'
+	`, strings.Join(placeholders, ","), len(tagIDs)+1)
+
+	var count int
+	err = s.db.DB.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		log.Printf("Error getting article count for tag %d (lang=%s): %v", tagID, languageCode, err)
+		return 0
+	}
+
+	return count
+}
+
 // Helper function to format time ago
 func formatTimeAgo(t *time.Time) string {
 	if t == nil {
@@ -3807,11 +3862,11 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 
 	// Create template data with multilingual support
 	data := s.createBaseTemplateData(c)
-	
+
 	// Get site name and description from theme (already set in createBaseTemplateData)
 	siteName := data["SiteName"].(string)
 	siteDescription := data["SiteDescription"].(string)
-	
+
 	// Set page title based on language
 	homeTitles := map[string]string{
 		"en": "Home",
@@ -4073,7 +4128,7 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 	if articleLang == "" {
 		articleLang = "en" // Default to English if not set
 	}
-	
+
 	if lang != articleLang {
 		// Redirect to the correct language URL
 		correctURL := fmt.Sprintf("/%s/article/%s", articleLang, slug)
@@ -4132,26 +4187,31 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 	data["Title"] = article.Title
 	data["PageType"] = "article"
 	data["Article"] = articleData
-	
+
 	// Get available translations for correct hreflang tags
 	availableTranslations, err := s.articleService.GetAvailableTranslations(c.Request.Context(), article.ID)
+	log.Printf("DEBUG handleMultilingualArticle: article=%s (ID=%d), lang=%s, availableTranslations=%d, err=%v",
+		slug, article.ID, lang, len(availableTranslations), err)
 	if err == nil && len(availableTranslations) > 0 {
 		// Build list of available languages
 		var availableLangs []string
 		for _, trans := range availableTranslations {
 			availableLangs = append(availableLangs, trans.LanguageCode)
+			log.Printf("DEBUG: translation found: lang=%s, slug=%s", trans.LanguageCode, trans.Slug)
 		}
 		// Use the new method that only includes existing translations
 		data["AlternateURLs"] = s.generateAlternateURLsForTranslations(availableLangs, "/article/"+slug)
 		data["AvailableLanguages"] = s.getAvailableLanguagesForArticle(availableTranslations, slug)
+		log.Printf("DEBUG: AvailableLanguages set with %d languages", len(availableTranslations))
 	} else {
 		// Fallback to current article's language only
 		data["AlternateURLs"] = s.generateAlternateURLsForTranslations([]string{lang}, "/article/"+slug)
 		// Create a minimal translation list with just the current article
-		currentArticleAsTrans := []models.Article{{LanguageCode: lang}}
+		currentArticleAsTrans := []models.Article{{LanguageCode: lang, Slug: slug}}
 		data["AvailableLanguages"] = s.getAvailableLanguagesForArticle(currentArticleAsTrans, slug)
+		log.Printf("DEBUG: AvailableLanguages fallback with 1 language: %s", lang)
 	}
-	
+
 	// Add other multilingual data
 	data["LanguageCode"] = lang
 	data["LanguageDirection"] = getLanguageDirection(lang)
@@ -4196,10 +4256,10 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 		if categoryLang == "" {
 			categoryLang = "en" // Default to English if not set
 		}
-		
+
 		// Override AvailableLanguages with category-specific translations
 		data["AvailableLanguages"] = s.getAvailableLanguagesForCategory(category)
-		
+
 		// Add other multilingual data
 		data["LanguageCode"] = lang
 		data["LanguageDirection"] = getLanguageDirection(lang)
@@ -4233,11 +4293,11 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 			// Get the translation group ID for this category
 			var categoryIDs []uint64
 			categoryIDs = append(categoryIDs, category.ID)
-			
+
 			// Debug logging
-			log.Printf("DEBUG handleMultilingualCategory: category=%s (ID=%d), lang=%s, TranslationGroupID=%v", 
+			log.Printf("DEBUG handleMultilingualCategory: category=%s (ID=%d), lang=%s, TranslationGroupID=%v",
 				slug, category.ID, lang, category.TranslationGroupID)
-			
+
 			// If category has a translation group, get all category IDs in that group
 			if category.TranslationGroupID != nil {
 				log.Printf("DEBUG: Getting all translations for group ID: %d", *category.TranslationGroupID)
@@ -4254,7 +4314,7 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 			} else {
 				log.Printf("DEBUG: Category has no TranslationGroupID, using only category ID: %d", category.ID)
 			}
-			
+
 			// Query articles that belong to ANY of these categories AND have the correct language
 			log.Printf("DEBUG: Querying articles with categoryIDs=%v and language=%s", categoryIDs, lang)
 			articles, err := s.getArticlesByCategoryIDsAndLanguage(c.Request.Context(), categoryIDs, lang, 20)
@@ -4326,7 +4386,7 @@ func (s *Server) handleMultilingualCategories(c *gin.Context) {
 						"Slug":        cat.Slug,
 						"Description": cat.Description,
 						"URL":         fmt.Sprintf("/%s/category/%s", lang, cat.Slug),
-						"Count":       s.getCategoryArticleCount(cat.ID),
+						"Count":       s.getCategoryArticleCountByLanguage(cat.ID, lang),
 					})
 				}
 			}
@@ -4368,7 +4428,7 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 		if tagLang == "" {
 			tagLang = "en" // Default to English if not set
 		}
-		
+
 		if lang != tagLang {
 			// Redirect to the correct language URL
 			correctURL := fmt.Sprintf("/%s/tag/%s", tagLang, slug)
@@ -4378,7 +4438,7 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 
 		// Override AvailableLanguages with tag-specific translations
 		data["AvailableLanguages"] = s.getAvailableLanguagesForTag(tag)
-		
+
 		// Add other multilingual data
 		data["LanguageCode"] = lang
 		data["LanguageDirection"] = getLanguageDirection(lang)
@@ -4406,7 +4466,7 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 			// Get the translation group ID for this tag
 			var tagIDs []uint64
 			tagIDs = append(tagIDs, tag.ID)
-			
+
 			// If tag has a translation group, get all tag IDs in that group
 			if tag.TranslationGroupID != nil {
 				allTranslations, err := s.tagService.GetAllTranslations(*tag.TranslationGroupID)
@@ -4417,7 +4477,7 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 					}
 				}
 			}
-			
+
 			// Query articles that have ANY of these tags AND have the correct language
 			articles, err := s.getArticlesByTagIDsAndLanguage(c.Request.Context(), tagIDs, lang, 20)
 			if err != nil {
@@ -4487,7 +4547,7 @@ func (s *Server) handleMultilingualTags(c *gin.Context) {
 						"Slug":        tag.Slug,
 						"Description": tag.Description,
 						"URL":         fmt.Sprintf("/%s/tag/%s", lang, tag.Slug),
-						"Count":       s.getTagArticleCount(tag.ID),
+						"Count":       s.getTagArticleCountByLanguage(tag.ID, lang),
 					})
 				}
 			}
