@@ -1054,16 +1054,16 @@
                     </div>
                     <div class="stat-item-enhanced">
                         <img src="/static/icons/phosphor/eye.svg" alt="" class="stat-icon">
-                        <span>{{.Article.ViewCount}} views</span>
+                        <span>{{.Article.ViewCount}} {{t .LanguageCode "views"}}</span>
                     </div>
                     <div class="stat-item-enhanced">
                         <img src="/static/icons/phosphor/chat-circle.svg" alt="" class="stat-icon">
-                        <span>{{.Article.CommentCount}} comments</span>
+                        <span>{{.Article.CommentCount}} {{if eq .Article.CommentCount 1}}{{t .LanguageCode "comment"}}{{else}}{{t .LanguageCode "comment_plural"}}{{end}}</span>
                     </div>
                     {{if .Article.ReadTime}}
                     <div class="stat-item-enhanced">
                         <img src="/static/icons/phosphor/clock.svg" alt="" class="stat-icon">
-                        <span>{{.Article.ReadTime}} min read</span>
+                        <span>{{.Article.ReadTime}} {{t .LanguageCode "min_read"}}</span>
                     </div>
                     {{end}}
                     
@@ -1146,7 +1146,7 @@
     <aside class="article-sidebar">
         <!-- Table of Contents -->
         <div class="sidebar-widget toc-widget">
-            <h3 class="widget-title">Table of Contents</h3>
+            <h3 class="widget-title">{{t .LanguageCode "table_of_contents"}}</h3>
             <nav class="table-of-contents" id="tableOfContents">
                 <ul class="toc-list" id="tocList">
                     <!-- Generated dynamically by JavaScript -->
@@ -1156,7 +1156,7 @@
 
         <!-- Author Bio -->
         <div class="sidebar-widget">
-            <h3 class="widget-title">About the Author</h3>
+            <h3 class="widget-title">{{t .LanguageCode "about_author"}}</h3>
             <div class="author-card-enhanced">
                 {{if .Article.Author.Avatar}}
                 <img src="{{.Article.Author.Avatar}}" alt="{{.Article.Author.FirstName}}" class="author-card-avatar">
@@ -1176,7 +1176,7 @@
         <!-- Popular Articles -->
         {{if .PopularArticles}}
         <div class="sidebar-widget">
-            <h3 class="widget-title">Popular Articles</h3>
+            <h3 class="widget-title">{{t .LanguageCode "popular_articles"}}</h3>
             <div class="popular-list">
                 {{range .PopularArticles}}
                 <article class="popular-item">
@@ -1188,7 +1188,7 @@
                             <a href="/article/{{.Slug}}">{{.Title}}</a>
                         </h4>
                         <div class="popular-meta">
-                            {{.ViewCount}} views • {{formatDate .PublishedAt}}
+                            {{.ViewCount}} {{t $.LanguageCode "views"}} • {{formatDate .PublishedAt}}
                         </div>
                     </div>
                 </article>
@@ -1199,16 +1199,16 @@
 
         <!-- Newsletter Signup -->
         <div class="sidebar-widget">
-            <h3 class="widget-title">Stay Updated</h3>
+            <h3 class="widget-title">{{t .LanguageCode "stay_updated"}}</h3>
             <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-4);">
-                Get the latest articles delivered to your inbox.
+                {{t .LanguageCode "get_latest_articles"}}
             </p>
             <form class="newsletter-form" id="newsletterForm">
-                <input type="email" class="newsletter-input" placeholder="Enter your email" required>
-                <button type="submit" class="newsletter-submit">Subscribe</button>
+                <input type="email" class="newsletter-input" placeholder="{{t .LanguageCode "email"}}" required>
+                <button type="submit" class="newsletter-submit">{{t .LanguageCode "subscribe"}}</button>
             </form>
             <p style="color: var(--color-text-muted); font-size: var(--text-xs);">
-                We respect your privacy. Unsubscribe at any time.
+                {{t .LanguageCode "privacy_note"}}
             </p>
         </div>
 
@@ -1216,9 +1216,9 @@
         {{if .CategoryArticles}}
         <div class="sidebar-widget">
             {{if .Article.Categories}}
-            <h3 class="widget-title">More in {{(index .Article.Categories 0).Name}}</h3>
+            <h3 class="widget-title">{{t .LanguageCode "more_in"}} {{(index .Article.Categories 0).Name}}</h3>
             {{else if .Article.Category}}
-            <h3 class="widget-title">More in {{.Article.Category.Name}}</h3>
+            <h3 class="widget-title">{{t .LanguageCode "more_in"}} {{.Article.Category.Name}}</h3>
             {{end}}
             <div class="popular-list">
                 {{range .CategoryArticles}}
@@ -1228,7 +1228,7 @@
                             <a href="/article/{{.Slug}}">{{.Title}}</a>
                         </h4>
                         <div class="popular-meta">
-                            {{formatDate .PublishedAt}} • {{.ViewCount}} views
+                            {{formatDate .PublishedAt}} • {{.ViewCount}} {{t $.LanguageCode "views"}}
                         </div>
                     </div>
                 </article>
@@ -1237,12 +1237,12 @@
             {{if .Article.Categories}}
             <a href="/category/{{(index .Article.Categories 0).Slug}}" class="category-badge-enhanced"
                 style="margin-top: var(--space-4);">
-                View all in {{(index .Article.Categories 0).Name}} →
+                {{t .LanguageCode "view_all"}} {{(index .Article.Categories 0).Name}} →
             </a>
             {{else if .Article.Category}}
             <a href="/category/{{.Article.Category.Slug}}" class="category-badge-enhanced"
                 style="margin-top: var(--space-4);">
-                View all in {{.Article.Category.Name}} →
+                {{t .LanguageCode "view_all"}} {{.Article.Category.Name}} →
             </a>
             {{end}}
         </div>
@@ -1257,7 +1257,7 @@
         <div class="next-article-card">
             <span class="next-article-label">
                 <img src="/static/icons/phosphor/arrow-right.svg" alt="" class="next-icon">
-                Continue Reading
+                {{t .LanguageCode "continue_reading"}}
             </span>
             <div class="next-article-content">
                 {{if .NextArticle.FeaturedImage}}
@@ -1274,7 +1274,7 @@
                     {{end}}
                     <div class="next-article-meta">
                         <span>{{.NextArticle.TimeAgo}}</span>
-                        {{if .NextArticle.ReadTime}}<span>{{.NextArticle.ReadTime}} min read</span>{{end}}
+                        {{if .NextArticle.ReadTime}}<span>{{.NextArticle.ReadTime}} {{t .LanguageCode "min_read"}}</span>{{end}}
                     </div>
                 </div>
             </div>
@@ -1289,39 +1289,38 @@
         <div class="comments-header">
             <h2 class="comments-title">
                 <img src="/static/icons/phosphor/chat-circle.svg" alt="" class="comments-icon">
-                Comments <span class="comment-count">{{.Article.CommentCount}} comment{{if ne .Article.CommentCount
-                    1}}s{{end}}</span>
+                {{t .LanguageCode "comments"}} <span class="comment-count">{{.Article.CommentCount}} {{if eq .Article.CommentCount 1}}{{t .LanguageCode "comment"}}{{else}}{{t .LanguageCode "comment_plural"}}{{end}}</span>
             </h2>
         </div>
 
         <!-- Comment Form -->
         <div class="comment-form-section">
-            <h3 class="form-title">Leave a Comment</h3>
+            <h3 class="form-title">{{t .LanguageCode "leave_comment"}}</h3>
             <form id="commentForm" class="comment-form">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="author_name">Name *</label>
+                        <label for="author_name">{{t .LanguageCode "name"}} *</label>
                         <input type="text" id="author_name" name="author_name" required maxlength="100"
-                            placeholder="Your name">
+                            placeholder="{{t .LanguageCode "your_name"}}">
                     </div>
                     <div class="form-group">
-                        <label for="author_email">Email *</label>
+                        <label for="author_email">{{t .LanguageCode "email"}} *</label>
                         <input type="email" id="author_email" name="author_email" required maxlength="255"
-                            placeholder="your@email.com">
-                        <small class="form-help">Your email will not be published</small>
+                            placeholder="{{t .LanguageCode "your_email"}}">
+                        <small class="form-help">{{t .LanguageCode "email_not_published"}}</small>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="content">Comment *</label>
+                    <label for="content">{{t .LanguageCode "comment"}} *</label>
                     <textarea id="content" name="content" required maxlength="2000" rows="4"
-                        placeholder="Share your thoughts..."></textarea>
+                        placeholder="{{t .LanguageCode "your_comment"}}"></textarea>
                     <div class="character-count">
-                        <span id="charCount">0</span>/2000 characters
+                        <span id="charCount">0</span>/2000 {{t .LanguageCode "characters"}}
                     </div>
                 </div>
                 <button type="submit" class="submit-comment-btn">
                     <img src="/static/icons/phosphor/paper-plane-tilt.svg" alt="" class="btn-icon">
-                    Post Comment
+                    {{t .LanguageCode "post_comment"}}
                 </button>
             </form>
         </div>
@@ -1332,7 +1331,7 @@
                 <!-- Comments will be loaded here by JavaScript -->
                 <div class="loading-comments">
                     <img src="/static/icons/phosphor/spinner.svg" alt="" class="loading-icon">
-                    Loading comments...
+                    {{t .LanguageCode "loading_comments"}}
                 </div>
             </div>
         </div>

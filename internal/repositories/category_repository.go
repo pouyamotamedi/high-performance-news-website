@@ -28,8 +28,8 @@ func (r *CategoryRepository) Create(category *models.Category) (*models.Category
 		return nil, err
 	}
 
-	// Check for duplicate category name
-	if err := ValidateCategoryNameUniqueness(r.db, category.Name, 0); err != nil {
+	// Check for duplicate category name within the same language
+	if err := ValidateCategoryNameUniquenessForLanguage(r.db, category.Name, category.LanguageCode, 0); err != nil {
 		return nil, err
 	}
 
@@ -133,8 +133,8 @@ func (r *CategoryRepository) Update(category *models.Category) error {
 		return err
 	}
 
-	// Check for duplicate category name (excluding this category)
-	if err := ValidateCategoryNameUniqueness(r.db, category.Name, category.ID); err != nil {
+	// Check for duplicate category name within the same language (excluding this category)
+	if err := ValidateCategoryNameUniquenessForLanguage(r.db, category.Name, category.LanguageCode, category.ID); err != nil {
 		return err
 	}
 

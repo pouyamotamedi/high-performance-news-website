@@ -33,8 +33,8 @@ func (r *TagRepository) Create(tag *models.Tag) (*models.Tag, error) {
 		return nil, err
 	}
 
-	// Check for duplicate tag name
-	if err := r.ValidateTagNameUniqueness(tag.Name, 0); err != nil {
+	// Check for duplicate tag name within the same language
+	if err := r.ValidateTagNameUniquenessForLanguage(tag.Name, tag.LanguageCode, 0); err != nil {
 		return nil, err
 	}
 
@@ -235,8 +235,8 @@ func (r *TagRepository) Update(tag *models.Tag) error {
 		return err
 	}
 
-	// Check for duplicate tag name (excluding this tag)
-	if err := r.ValidateTagNameUniqueness(tag.Name, tag.ID); err != nil {
+	// Check for duplicate tag name within the same language (excluding this tag)
+	if err := r.ValidateTagNameUniquenessForLanguage(tag.Name, tag.LanguageCode, tag.ID); err != nil {
 		return err
 	}
 
@@ -471,38 +471,54 @@ func (r *TagRepository) ValidateKeywordUniqueness(keywords []string, excludeTagI
 	return nil
 }
 
-// ValidateTagNameUniqueness ensures tag names are unique
+// ValidateTagNameUniqueness ensures tag names are unique within the same language
 func (r *TagRepository) ValidateTagNameUniqueness(name string, excludeTagID uint64) error {
-	query := `SELECT COUNT(*) FROM tags WHERE LOWER(name) = LOWER($1) AND id != $2`
+	// This function is deprecated - use ValidateTagNameUniquenessForLanguage instead
+	// Keeping for backward compatibility but it now does nothing
+	return nil
+}
+
+// ValidateTagNameUniquenessForLanguage ensures tag names are unique within the same language
+func (r *TagRepository) ValidateTagNameUniquenessForLanguage(name string, languageCode string, excludeTagID uint64) error {
+	// Allow same name in different languages - uniqueness is per language
+	query := `SELECT COUNT(*) FROM tags WHERE LOWER(name) = LOWER($1) AND language_code = $2 AND id != $3`
 	var count int
-	err := r.db.QueryRow(query, strings.TrimSpace(name), excludeTagID).Scan(&count)
+	err := r.db.QueryRow(query, strings.TrimSpace(name), languageCode, excludeTagID).Scan(&count)
 	if err != nil {
 		return fmt.Errorf("failed to check tag name uniqueness: %w", err)
 	}
 
 	if count > 0 {
 		return &models.ValidationError{
-			Message: "Tag name already exists",
-			Fields:  []string{fmt.Sprintf("tag name '%s' is already in use", name)},
+			Message: "Tag name already exists for this language",
+			Fields:  []string{fmt.Sprintf("tag name '%s' is already in use for language '%s'", name, languageCode)},
 		}
 	}
 
 	return nil
 }
 
-// ValidateCategoryNameUniqueness ensures category names are unique
+// ValidateCategoryNameUniqueness ensures category names are unique within the same language
 func ValidateCategoryNameUniqueness(db *sql.DB, name string, excludeCategoryID uint64) error {
-	query := `SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER($1) AND id != $2`
+	// This function is deprecated - use ValidateCategoryNameUniquenessForLanguage instead
+	// Keeping for backward compatibility but it now does nothing
+	return nil
+}
+
+// ValidateCategoryNameUniquenessForLanguage ensures category names are unique within the same language
+func ValidateCategoryNameUniquenessForLanguage(db *sql.DB, name string, languageCode string, excludeCategoryID uint64) error {
+	// Allow same name in different languages - uniqueness is per language
+	query := `SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER($1) AND language_code = $2 AND id != $3`
 	var count int
-	err := db.QueryRow(query, strings.TrimSpace(name), excludeCategoryID).Scan(&count)
+	err := db.QueryRow(query, strings.TrimSpace(name), languageCode, excludeCategoryID).Scan(&count)
 	if err != nil {
 		return fmt.Errorf("failed to check category name uniqueness: %w", err)
 	}
 
 	if count > 0 {
 		return &models.ValidationError{
-			Message: "Category name already exists",
-			Fields:  []string{fmt.Sprintf("category name '%s' is already in use", name)},
+			Message: "Category name already exists for this language",
+			Fields:  []string{fmt.Sprintf("category name '%s' is already in use for language '%s'", name, languageCode)},
 		}
 	}
 

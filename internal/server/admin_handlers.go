@@ -433,8 +433,8 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
             }
         });
 
-        // Restore sidebar state
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        // Restore sidebar state only on desktop
+        if (window.innerWidth > 1024 && localStorage.getItem('sidebarCollapsed') === 'true') {
             document.getElementById('sidebar').classList.add('collapsed');
         }
 

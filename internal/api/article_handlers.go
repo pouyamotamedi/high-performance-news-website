@@ -157,6 +157,13 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 		metaDescription = string(metaDescRunes[:160])
 	}
 	
+	// Truncate focus keyword
+	focusKeyword := req.SEOData.FocusKeyword
+	focusKeywordRunes := []rune(focusKeyword)
+	if len(focusKeywordRunes) > 100 {
+		focusKeyword = string(focusKeywordRunes[:100])
+	}
+	
 	article := &models.Article{
 		Title:              req.Title,
 		Slug:               slug,
@@ -169,6 +176,7 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 		// Map SEO fields to individual columns (truncated)
 		MetaTitle:          metaTitle,
 		MetaDescription:    metaDescription,
+		FocusKeyword:       focusKeyword, // Add focus keyword
 		SchemaType:         "NewsArticle", // Default schema type
 		LanguageCode:       req.LanguageCode,
 		TranslationGroupID: req.TranslationGroupID,
