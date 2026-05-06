@@ -3981,7 +3981,8 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 	s.addMultilingualData(data, lang, "/category/"+slug)
 
 	if s.categoryService != nil {
-		category, err := s.categoryService.GetBySlug(slug)
+		// Use GetBySlugAndLanguage to get the category in the correct language
+		category, err := s.categoryService.GetBySlugAndLanguage(slug, lang)
 		if err != nil {
 			// Category not found
 			c.String(http.StatusNotFound, "Category not found")
@@ -4019,23 +4020,35 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 			var categoryIDs []uint64
 			categoryIDs = append(categoryIDs, category.ID)
 			
+			// Debug logging
+			log.Printf("DEBUG handleMultilingualCategory: category=%s (ID=%d), lang=%s, TranslationGroupID=%v", 
+				slug, category.ID, lang, category.TranslationGroupID)
+			
 			// If category has a translation group, get all category IDs in that group
 			if category.TranslationGroupID != nil {
+				log.Printf("DEBUG: Getting all translations for group ID: %d", *category.TranslationGroupID)
 				allTranslations, err := s.categoryService.GetAllTranslations(*category.TranslationGroupID)
 				if err == nil {
 					categoryIDs = nil // Reset
 					for _, cat := range allTranslations {
 						categoryIDs = append(categoryIDs, cat.ID)
 					}
+					log.Printf("DEBUG: Found %d categories in translation group: %v", len(allTranslations), categoryIDs)
+				} else {
+					log.Printf("DEBUG: Error getting translations: %v", err)
 				}
+			} else {
+				log.Printf("DEBUG: Category has no TranslationGroupID, using only category ID: %d", category.ID)
 			}
 			
 			// Query articles that belong to ANY of these categories AND have the correct language
+			log.Printf("DEBUG: Querying articles with categoryIDs=%v and language=%s", categoryIDs, lang)
 			articles, err := s.getArticlesByCategoryIDsAndLanguage(c.Request.Context(), categoryIDs, lang, 20)
 			if err != nil {
 				log.Printf("Error fetching articles for category %s: %v", slug, err)
 				articles = []models.Article{}
 			}
+			log.Printf("DEBUG: Found %d articles", len(articles))
 
 			articleData := make([]gin.H, len(articles))
 			for i, article := range articles {
@@ -4128,7 +4141,8 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 	s.addMultilingualData(data, lang, "/tag/"+slug)
 
 	if s.tagService != nil {
-		tag, err := s.tagService.GetBySlug(slug)
+		// Use GetBySlugAndLanguage to get the tag in the correct language
+		tag, err := s.tagService.GetBySlugAndLanguage(slug, lang)
 		if err != nil {
 			// Tag not found
 			c.String(http.StatusNotFound, "Tag not found")

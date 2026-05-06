@@ -37,10 +37,16 @@ func (ts *TagService) GetByID(id uint64) (*models.Tag, error) {
 	return repo.GetByID(context.Background(), id)
 }
 
-// GetBySlug returns a tag by slug
+// GetBySlug returns a tag by slug (defaults to English)
 func (ts *TagService) GetBySlug(slug string) (*models.Tag, error) {
 	repo := repositories.NewTagRepository(ts.db)
 	return repo.GetBySlug(slug, "en") // Default to English
+}
+
+// GetBySlugAndLanguage returns a tag by slug and language code
+func (ts *TagService) GetBySlugAndLanguage(slug, languageCode string) (*models.Tag, error) {
+	repo := repositories.NewTagRepository(ts.db)
+	return repo.GetBySlug(slug, languageCode)
 }
 
 // Create creates a new tag

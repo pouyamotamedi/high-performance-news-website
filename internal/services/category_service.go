@@ -32,10 +32,16 @@ func (cs *CategoryService) GetByID(id uint64) (*models.Category, error) {
 	return repo.GetByID(context.Background(), id)
 }
 
-// GetBySlug returns a category by slug
+// GetBySlug returns a category by slug (defaults to English)
 func (cs *CategoryService) GetBySlug(slug string) (*models.Category, error) {
 	repo := repositories.NewCategoryRepository(cs.db)
 	return repo.GetBySlug(slug, "en") // Default to English language
+}
+
+// GetBySlugAndLanguage returns a category by slug and language code
+func (cs *CategoryService) GetBySlugAndLanguage(slug, languageCode string) (*models.Category, error) {
+	repo := repositories.NewCategoryRepository(cs.db)
+	return repo.GetBySlug(slug, languageCode)
 }
 
 // Create creates a new category
