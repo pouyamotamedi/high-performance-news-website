@@ -3398,6 +3398,59 @@ func (s *Server) getCategoryArticleCount(categoryID uint64) int {
 	return count
 }
 
+// getCategoryArticleCountByLanguage gets the number of published articles for a category
+// considering all categories in the same translation group and filtering by language
+func (s *Server) getCategoryArticleCountByLanguage(categoryID uint64, languageCode string) int {
+	if s.db == nil || s.categoryService == nil {
+		return 0
+	}
+
+	// Get all category IDs in the same translation group
+	var categoryIDs []uint64
+	categoryIDs = append(categoryIDs, categoryID)
+	
+	// Get the category to check its translation group
+	category, err := s.categoryService.GetByID(categoryID)
+	if err == nil && category.TranslationGroupID != nil {
+		allTranslations, err := s.categoryService.GetAllTranslations(*category.TranslationGroupID)
+		if err == nil {
+			categoryIDs = nil
+			for _, cat := range allTranslations {
+				categoryIDs = append(categoryIDs, cat.ID)
+			}
+		}
+	}
+
+	// Build query with IN clause
+	if len(categoryIDs) == 0 {
+		return 0
+	}
+	
+	placeholders := make([]string, len(categoryIDs))
+	args := make([]interface{}, len(categoryIDs)+1)
+	for i, id := range categoryIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	args[len(categoryIDs)] = languageCode
+
+	query := fmt.Sprintf(`
+		SELECT COUNT(*) FROM articles 
+		WHERE category_id IN (%s) 
+		AND language_code = $%d 
+		AND status = 'published'
+	`, strings.Join(placeholders, ","), len(categoryIDs)+1)
+
+	var count int
+	err = s.db.DB.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		log.Printf("Error getting article count for category %d (lang=%s): %v", categoryID, languageCode, err)
+		return 0
+	}
+
+	return count
+}
+
 // getArticlesByCategoryIDsAndLanguage gets articles that belong to any of the given category IDs
 // and have the specified language code. This is used for multilingual category pages where
 // articles might be assigned to the "master" category but should appear in translated category pages.
@@ -3704,7 +3757,7 @@ func (s *Server) handleMultilingualHomepage(c *gin.Context) {
 						"Slug":        cat.Slug,
 						"Description": cat.Description,
 						"URL":         fmt.Sprintf("/%s/category/%s", catLang, cat.Slug),
-						"Count":       s.getCategoryArticleCount(cat.ID),
+						"Count":       s.getCategoryArticleCountByLanguage(cat.ID, lang),
 					})
 				}
 			}

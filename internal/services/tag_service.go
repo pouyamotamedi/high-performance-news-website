@@ -194,7 +194,7 @@ func (ts *TagService) GetTranslationGroupID(tagID uint64) (uint64, error) {
 // GetAllTranslations returns all translations of a tag (all tags in the same translation group)
 func (ts *TagService) GetAllTranslations(translationGroupID uint64) ([]models.Tag, error) {
 	query := `
-		SELECT id, name, slug, description, keywords, color, created_at, updated_at, 
+		SELECT id, name, slug, description, keywords, color, created_at, 
 		       language_code, translation_group_id
 		FROM tags 
 		WHERE translation_group_id = $1 OR id = $1
@@ -221,7 +221,6 @@ func (ts *TagService) GetAllTranslations(translationGroupID uint64) ([]models.Ta
 			&keywords,
 			&tag.Color,
 			&tag.CreatedAt,
-			&tag.UpdatedAt,
 			&tag.LanguageCode,
 			&translationGrpID,
 		)
@@ -259,7 +258,7 @@ func (ts *TagService) GetCoreTags() ([]models.Tag, error) {
 				) as rn
 			FROM tags
 		)
-		SELECT id, name, slug, description, keywords, color, created_at, updated_at, 
+		SELECT id, name, slug, description, keywords, color, created_at, 
 		       language_code, translation_group_id
 		FROM ranked_tags
 		WHERE rn = 1
@@ -286,7 +285,6 @@ func (ts *TagService) GetCoreTags() ([]models.Tag, error) {
 			&keywords,
 			&tag.Color,
 			&tag.CreatedAt,
-			&tag.UpdatedAt,
 			&tag.LanguageCode,
 			&translationGrpID,
 		)
