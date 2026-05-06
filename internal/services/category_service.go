@@ -161,7 +161,7 @@ func (cs *CategoryService) GetTranslationGroupID(categoryID uint64) (uint64, err
 func (cs *CategoryService) GetAllTranslations(translationGroupID uint64) ([]models.Category, error) {
 	query := `
 		SELECT id, name, slug, description, parent_id, sort_order, image_url, image_alt_text, 
-		       created_at, updated_at, language_code, translation_group_id
+		       created_at, language_code, translation_group_id
 		FROM categories 
 		WHERE translation_group_id = $1 OR id = $1
 		ORDER BY language_code
@@ -189,7 +189,6 @@ func (cs *CategoryService) GetAllTranslations(translationGroupID uint64) ([]mode
 			&imageURL,
 			&imageAltText,
 			&category.CreatedAt,
-			&category.UpdatedAt,
 			&category.LanguageCode,
 			&translationGrpID,
 		)
@@ -238,7 +237,7 @@ func (cs *CategoryService) GetCoreCategories() ([]models.Category, error) {
 			FROM categories
 		)
 		SELECT id, name, slug, description, parent_id, sort_order, image_url, image_alt_text, 
-		       created_at, updated_at, language_code, translation_group_id
+		       created_at, language_code, translation_group_id
 		FROM ranked_categories
 		WHERE rn = 1
 		ORDER BY sort_order, name
@@ -266,7 +265,6 @@ func (cs *CategoryService) GetCoreCategories() ([]models.Category, error) {
 			&imageURL,
 			&imageAltText,
 			&category.CreatedAt,
-			&category.UpdatedAt,
 			&category.LanguageCode,
 			&translationGrpID,
 		)
