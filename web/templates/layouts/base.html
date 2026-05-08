@@ -18,7 +18,7 @@
     <title>{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}</title>
     <meta name="description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}{{.Description}}{{end}}">
     {{if .SEOKeywords}}
-    <meta name="keywords" content="{{join .SEOKeywords ", "}}">
+    <meta name="keywords" content="{{join ", " .SEOKeywords}}">
     {{end}}
     
     <!-- Canonical URL -->
