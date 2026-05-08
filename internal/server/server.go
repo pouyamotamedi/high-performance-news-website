@@ -1451,7 +1451,7 @@ func (s *Server) handleRobotsTxt(c *gin.Context) {
 	robotsTxt := api.GetRobotsTxtContent()
 
 	// Replace {SITE_URL} placeholder with actual site URL
-	siteURL := s.config.SiteURL
+	siteURL := s.config.App.BaseURL
 	if siteURL == "" {
 		// Fallback: construct from request
 		scheme := "https"
