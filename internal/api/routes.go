@@ -659,21 +659,21 @@ func (h *APIHandler) GetSourceAnalytics(c *gin.Context) {
 
 // SEO Settings - simple in-memory storage
 var seoSettings = map[string]interface{}{
-	"site_name":               "High Performance News",
-	"site_tagline":            "Breaking News & Latest Updates",
-	"site_url":                "https://a.10top.shop",
-	"publisher_name":          "High Performance News",
-	"publisher_logo":          "/static/images/logo.png",
-	"default_language":        "fa",
+	"site_name":               "Cryptonlisys",
+	"site_tagline":            "Real-time crypto news, exchange insights, and data-driven guides",
+	"site_url":                "https://cryptonlisys.com",
+	"publisher_name":          "Cryptonlisys",
+	"publisher_logo":          "/static/images/logo.svg",
+	"default_language":        "en",
 	"auto_meta_desc":          true,
 	"enable_schema":           true,
 	"enable_canonical":        true,
-	"home_title":              "High Performance News - Breaking News",
-	"home_desc":               "Get the latest breaking news and updates",
+	"home_title":              "Cryptonlisys - Crypto News & Exchange Reviews",
+	"home_desc":               "Real-time crypto news, exchange insights, and data-driven guides for modern investors",
 	"article_title_template":  "{title} - {site_name}",
 	"category_title_template": "{category} - {site_name}",
 	"default_schema_type":     "NewsArticle",
-	"og_site_name":            "High Performance News",
+	"og_site_name":            "Cryptonlisys",
 	"og_default_image":        "/static/images/og-default.jpg",
 	"fb_app_id":               "",
 	"twitter_site":            "",
@@ -697,7 +697,8 @@ Crawl-delay: 1
 Disallow: /admin/
 Disallow: /api/
 Allow: /api/v1/articles/
-Allow: /static/`
+Allow: /static/
+Allow: /uploads/`
 
 // GetRobotsTxtContent returns the current robots.txt content (exported for server package)
 func GetRobotsTxtContent() string {

@@ -215,6 +215,7 @@
                             <a href="/admin/content/categories" class="nav-link">Categories</a>
                             <a href="/admin/content/tags" class="nav-link">Tags</a>
                             <a href="/admin/content/media" class="nav-link">Media Library</a>
+                            <a href="/admin/content/trash" class="nav-link">Trash</a>
                         </div>
                     </div>
                 </div>
@@ -241,31 +242,70 @@
                         <div class="nav-submenu">
                             <a href="/admin/comments" class="nav-link">Moderate</a>
                             <a href="/admin/comments/analytics" class="nav-link">Analytics</a>
+                            <a href="/admin/comments/settings" class="nav-link">Settings</a>
                         </div>
                     </div>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">SEO & Marketing</div>
+                    <div class="nav-section-title">Management</div>
                     <div class="nav-item">
-                        <a href="/admin/seo" class="nav-link active">
-                            <span class="nav-icon">🔍</span>
-                            <span class="nav-text">SEO Settings</span>
-                        </a>
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">👥</span>
+                            <span class="nav-text">Users</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/users/list" class="nav-link">All Users</a>
+                            <a href="/admin/users/create" class="nav-link">Create User</a>
+                            <a href="/admin/users/roles" class="nav-link">Roles</a>
+                        </div>
                     </div>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">System</div>
                     <div class="nav-item">
                         <a href="/admin/content-ingestion" class="nav-link">
                             <span class="nav-icon">📥</span>
                             <span class="nav-text">Content Ingestion</span>
                         </a>
                     </div>
+                </div>
+                <div class="nav-section">
                     <div class="nav-item">
                         <a href="/admin/analytics" class="nav-link">
                             <span class="nav-icon">📈</span>
                             <span class="nav-text">Analytics</span>
                         </a>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">🔍</span>
+                            <span class="nav-text">SEO</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu open">
+                            <a href="/admin/seo" class="nav-link active">SEO Settings</a>
+                            <a href="/admin/seo/overview" class="nav-link">Overview</a>
+                            <a href="/admin/seo/sitemap" class="nav-link">Sitemap</a>
+                            <a href="/admin/seo/google-news" class="nav-link">Google News</a>
+                            <a href="/admin/seo/schema" class="nav-link">Schema Markup</a>
+                            <a href="/admin/seo/redirects" class="nav-link">Redirects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSubmenu(this)">
+                            <span class="nav-icon">⚙️</span>
+                            <span class="nav-text">Settings</span>
+                            <span class="nav-arrow">›</span>
+                        </div>
+                        <div class="nav-submenu">
+                            <a href="/admin/settings/general" class="nav-link">General</a>
+                            <a href="/admin/settings/performance" class="nav-link">Performance</a>
+                            <a href="/admin/settings/security" class="nav-link">Security</a>
+                            <a href="/admin/settings/backup" class="nav-link">Backup</a>
+                        </div>
                     </div>
                     <div class="nav-item">
                         <a href="/admin/system" class="nav-link">
