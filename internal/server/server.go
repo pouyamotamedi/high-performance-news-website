@@ -3618,8 +3618,10 @@ func (s *Server) getArticlesByCategoryIDsAndLanguage(ctx context.Context, catego
 	query := fmt.Sprintf(`
 		SELECT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
 			   a.status, a.published_at, a.view_count, a.like_count, a.dislike_count,
-			   a.language_code, a.translation_group_id, a.featured_image
+			   a.language_code, a.translation_group_id,
+			   CASE WHEN i.original_url LIKE '/uploads/%%' THEN i.original_url ELSE NULL END as featured_image
 		FROM articles a
+		LEFT JOIN images i ON a.featured_image_id = i.id
 		WHERE a.category_id IN (%s)
 		  AND a.language_code = $%d
 		  AND a.status = 'published'
@@ -3691,9 +3693,11 @@ func (s *Server) getArticlesByTagIDsAndLanguage(ctx context.Context, tagIDs []ui
 	query := fmt.Sprintf(`
 		SELECT DISTINCT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
 			   a.status, a.published_at, a.view_count, a.like_count, a.dislike_count,
-			   a.language_code, a.translation_group_id, a.featured_image
+			   a.language_code, a.translation_group_id,
+			   CASE WHEN i.original_url LIKE '/uploads/%%' THEN i.original_url ELSE NULL END as featured_image
 		FROM articles a
 		JOIN article_tags at ON a.id = at.article_id
+		LEFT JOIN images i ON a.featured_image_id = i.id
 		WHERE at.tag_id IN (%s)
 		  AND a.language_code = $%d
 		  AND a.status = 'published'
