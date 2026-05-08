@@ -4371,11 +4371,15 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 	data["Navigation"] = s.getNavigationForLanguage(lang)
 
 	if s.templateEngine != nil {
-		if html, err := s.templateEngine.Render("article", data); err == nil {
-			c.Header("Content-Type", "text/html; charset=utf-8")
-			c.String(http.StatusOK, html)
+		html, err := s.templateEngine.Render("article", data)
+		if err != nil {
+			log.Printf("ERROR rendering article template: %v", err)
+			c.String(http.StatusInternalServerError, "Template error: "+err.Error())
 			return
 		}
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(http.StatusOK, html)
+		return
 	}
 
 	c.String(http.StatusOK, article.Title)
@@ -4539,11 +4543,15 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 	}
 
 	if s.templateEngine != nil {
-		if html, err := s.templateEngine.Render("category", data); err == nil {
-			c.Header("Content-Type", "text/html; charset=utf-8")
-			c.String(http.StatusOK, html)
+		html, err := s.templateEngine.Render("category", data)
+		if err != nil {
+			log.Printf("ERROR rendering category template: %v", err)
+			c.String(http.StatusInternalServerError, "Template error: "+err.Error())
 			return
 		}
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(http.StatusOK, html)
+		return
 	}
 
 	c.String(http.StatusOK, "Category: "+slug)
@@ -4747,11 +4755,15 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 	}
 
 	if s.templateEngine != nil {
-		if html, err := s.templateEngine.Render("tag", data); err == nil {
-			c.Header("Content-Type", "text/html; charset=utf-8")
-			c.String(http.StatusOK, html)
+		html, err := s.templateEngine.Render("tag", data)
+		if err != nil {
+			log.Printf("ERROR rendering tag template: %v", err)
+			c.String(http.StatusInternalServerError, "Template error: "+err.Error())
 			return
 		}
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(http.StatusOK, html)
+		return
 	}
 
 	c.String(http.StatusOK, "Tag: "+slug)
