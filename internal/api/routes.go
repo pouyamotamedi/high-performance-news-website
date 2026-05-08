@@ -684,11 +684,13 @@ var seoSettings = map[string]interface{}{
 	"rss_delay_hours":         2,
 }
 
+// robotsTxtContent is the default robots.txt template
+// Note: {SITE_URL} will be replaced with actual site URL when served
 var robotsTxtContent = `User-agent: *
 Allow: /
 
-Sitemap: https://a.10top.shop/sitemap.xml
-Sitemap: https://a.10top.shop/sitemap-news.xml
+Sitemap: {SITE_URL}/sitemap.xml
+Sitemap: {SITE_URL}/sitemap-news.xml
 
 Crawl-delay: 1
 

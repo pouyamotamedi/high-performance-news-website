@@ -1450,6 +1450,21 @@ func (s *Server) handleRobotsTxt(c *gin.Context) {
 	// For now, use the shared variable from api package
 	robotsTxt := api.GetRobotsTxtContent()
 
+	// Replace {SITE_URL} placeholder with actual site URL
+	siteURL := s.config.SiteURL
+	if siteURL == "" {
+		// Fallback: construct from request
+		scheme := "https"
+		if c.Request.TLS == nil {
+			// Check X-Forwarded-Proto header for reverse proxy
+			if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
+				scheme = proto
+			}
+		}
+		siteURL = scheme + "://" + c.Request.Host
+	}
+	robotsTxt = strings.Replace(robotsTxt, "{SITE_URL}", siteURL, -1)
+
 	c.Header("Content-Type", "text/plain; charset=utf-8")
 	c.String(http.StatusOK, robotsTxt)
 }
