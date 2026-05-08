@@ -354,6 +354,9 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
             </nav>
         </aside>
 
+        <!-- Mobile Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
         <!-- Main Content -->
         <main class="admin-main">
             <header class="admin-header">
@@ -403,18 +406,38 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         }
 
         function toggleMobileSidebar() {
-            document.getElementById('sidebar').classList.toggle('mobile-open');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const isOpen = sidebar.classList.contains('mobile-open');
+            
+            if (isOpen) {
+                closeMobileSidebar();
+            } else {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('active');
+                document.body.classList.add('sidebar-open');
+            }
+        }
+
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
         }
 
         // Close mobile sidebar when clicking outside
         document.addEventListener('click', function(e) {
             const sidebar = document.getElementById('sidebar');
             const mobileBtn = document.querySelector('.mobile-menu-btn');
+            const overlay = document.getElementById('sidebarOverlay');
             if (window.innerWidth <= 1024 && 
                 sidebar.classList.contains('mobile-open') && 
                 !sidebar.contains(e.target) && 
-                !mobileBtn.contains(e.target)) {
-                sidebar.classList.remove('mobile-open');
+                !mobileBtn.contains(e.target) &&
+                e.target !== overlay) {
+                closeMobileSidebar();
             }
         });
 
@@ -437,8 +460,11 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         // Clear any corrupted state first
         if (window.innerWidth > 1024) {
             const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
             // Remove any mobile classes on desktop
             sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
             
             // Only restore collapsed state if explicitly set
             if (localStorage.getItem('sidebarCollapsed') === 'true') {
@@ -450,18 +476,24 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         } else {
             // On mobile, ensure sidebar starts hidden
             const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
             sidebar.classList.remove('collapsed');
             sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
         }
 
         // Handle window resize - reset sidebar state appropriately
         window.addEventListener('resize', function() {
             const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
             if (window.innerWidth > 1024) {
-                // Desktop: remove mobile classes
+                // Desktop: remove mobile classes and overlay
                 sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
             } else {
-                // Mobile: remove collapsed class, keep mobile-open if it was open
+                // Mobile: remove collapsed class
                 sidebar.classList.remove('collapsed');
             }
         });

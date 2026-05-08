@@ -349,20 +349,40 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                             const transStatusClass = 'status-' + translation.status;
                             const transCreatedDate = new Date(translation.created_at).toLocaleDateString();
                             
-                            // Display categories for translation (same logic as main article)
+                            // Display categories for translation - find category in same language
                             let transCategoryNames = [];
                             if (translation.categories && translation.categories.length > 0) {
                                 transCategoryNames = translation.categories.map(cat => cat.name);
-                            } else {
+                            } else if (translation.category_id) {
+                                // First try to find category by ID
                                 const transPrimaryCategory = categories.find(c => c.id === translation.category_id);
                                 if (transPrimaryCategory) {
                                     transCategoryNames = [transPrimaryCategory.name];
                                 }
                             }
-                            // If still no category, use the main article's category
-                            if (transCategoryNames.length === 0 && categoryNames.length > 0) {
-                                transCategoryNames = categoryNames;
+                            
+                            // If no category found for translation, try to find translated category
+                            // by matching the main article's category with translation's language
+                            if (transCategoryNames.length === 0 && article.category_id) {
+                                const mainCategory = categories.find(c => c.id === article.category_id);
+                                if (mainCategory) {
+                                    // Get the translation group ID - either from the category itself or use its ID
+                                    const groupId = mainCategory.translation_group_id || mainCategory.id;
+                                    
+                                    // Find category with same translation_group_id (or ID equals groupId) and matching translation's language
+                                    const translatedCategory = categories.find(c => 
+                                        (c.translation_group_id === groupId || c.id === groupId) && 
+                                        c.language_code === translation.language_code
+                                    );
+                                    if (translatedCategory) {
+                                        transCategoryNames = [translatedCategory.name];
+                                    } else {
+                                        // Fallback to main category name
+                                        transCategoryNames = [mainCategory.name];
+                                    }
+                                }
                             }
+                            
                             const transCategoryDisplay = transCategoryNames.length > 0 ? transCategoryNames.join(', ') : 'Unknown';
                             
                             html += '<tr class="translation-row" data-parent-group="' + group.groupId + '">';
