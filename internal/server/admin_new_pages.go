@@ -431,6 +431,10 @@ func (s *Server) handleAdminAnalyticsRealtime(c *gin.Context) {
 // SEO
 // ============================================================================
 
+func (s *Server) handleAdminRobotsEditor(c *gin.Context) {
+	c.File("web/templates/admin/robots_editor.html")
+}
+
 func (s *Server) handleAdminSEOSettings(c *gin.Context) {
 	// Serve the SEO settings template file
 	c.File("web/templates/admin/seo_settings.html")

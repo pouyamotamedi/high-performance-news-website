@@ -2697,6 +2697,7 @@ func (s *Server) setupAdminFrontendRoutes() {
 		adminGroup.GET("/seo/google-news", s.handleAdminSEOGoogleNews)
 		adminGroup.GET("/seo/schema", s.handleAdminSEOSchema)
 		adminGroup.GET("/seo/redirects", s.handleAdminSEORedirects)
+		adminGroup.GET("/robots", s.handleAdminRobotsEditor)
 
 		// Appearance
 		adminGroup.GET("/themes", s.handleAdminThemes)
