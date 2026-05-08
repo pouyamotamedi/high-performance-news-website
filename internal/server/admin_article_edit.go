@@ -125,22 +125,62 @@ async function loadArticleCategories() {
             // Clear existing categories
             selectedCategories = [];
             
+            // Get article's language
+            const articleLang = article.language_code || 'en';
+            
             // If article has categories (from junction table), load them
             if (article.categories && Array.isArray(article.categories) && article.categories.length > 0) {
                 article.categories.forEach(category => {
-                    selectedCategories.push({ 
-                        id: String(category.id), 
-                        name: category.name 
-                    });
+                    // Try to find the category in the article's language
+                    const groupId = category.translation_group_id || category.id;
+                    const langCategory = allCategories.find(c => 
+                        (c.translation_group_id === groupId || c.id === groupId) && 
+                        c.language_code === articleLang
+                    );
+                    
+                    if (langCategory) {
+                        selectedCategories.push({ 
+                            id: String(langCategory.id), 
+                            name: langCategory.name,
+                            groupId: groupId
+                        });
+                    } else {
+                        // Fallback to original category
+                        selectedCategories.push({ 
+                            id: String(category.id), 
+                            name: category.name,
+                            groupId: groupId
+                        });
+                    }
                 });
             } else if (article.category_id) {
-                // Fallback to single category_id - find the category name from allCategories
-                const category = allCategories.find(c => c.id === article.category_id || String(c.id) === String(article.category_id));
-                if (category) {
-                    selectedCategories.push({ 
-                        id: String(article.category_id), 
-                        name: category.name 
-                    });
+                // Fallback to single category_id - find the category in article's language
+                const originalCategory = allCategories.find(c => c.id === article.category_id || String(c.id) === String(article.category_id));
+                
+                if (originalCategory) {
+                    // Get translation group ID
+                    const groupId = originalCategory.translation_group_id || originalCategory.id;
+                    
+                    // Find category in article's language
+                    const langCategory = allCategories.find(c => 
+                        (c.translation_group_id === groupId || c.id === groupId) && 
+                        c.language_code === articleLang
+                    );
+                    
+                    if (langCategory) {
+                        selectedCategories.push({ 
+                            id: String(langCategory.id), 
+                            name: langCategory.name,
+                            groupId: groupId
+                        });
+                    } else {
+                        // Fallback to original category
+                        selectedCategories.push({ 
+                            id: String(article.category_id), 
+                            name: originalCategory.name,
+                            groupId: groupId
+                        });
+                    }
                 } else {
                     // If category not found in allCategories, just use the ID
                     selectedCategories.push({ 
@@ -151,7 +191,7 @@ async function loadArticleCategories() {
             }
             
             updateCategoryDisplay();
-            console.log('Article categories loaded:', selectedCategories);
+            console.log('Article categories loaded for language ' + articleLang + ':', selectedCategories);
         }
     } catch (error) {
         console.error('Error loading article categories:', error);

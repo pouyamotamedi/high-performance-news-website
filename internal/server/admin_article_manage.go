@@ -349,27 +349,48 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                             const transStatusClass = 'status-' + translation.status;
                             const transCreatedDate = new Date(translation.created_at).toLocaleDateString();
                             
-                            // Display categories for translation - find category in same language
+                            // Display categories for translation - find category in same language as translation
                             let transCategoryNames = [];
-                            if (translation.categories && translation.categories.length > 0) {
-                                transCategoryNames = translation.categories.map(cat => cat.name);
-                            } else if (translation.category_id) {
-                                // First try to find category by ID
+                            
+                            // First, try to find the correct category in translation's language
+                            // by using the translation_group_id from the article's category
+                            if (translation.category_id) {
                                 const transPrimaryCategory = categories.find(c => c.id === translation.category_id);
                                 if (transPrimaryCategory) {
-                                    transCategoryNames = [transPrimaryCategory.name];
+                                    // Get the translation group ID
+                                    const groupId = transPrimaryCategory.translation_group_id || transPrimaryCategory.id;
+                                    
+                                    // Find category with same translation_group_id and matching translation's language
+                                    const translatedCategory = categories.find(c => 
+                                        (c.translation_group_id === groupId || c.id === groupId) && 
+                                        c.language_code === translation.language_code
+                                    );
+                                    
+                                    if (translatedCategory) {
+                                        transCategoryNames = [translatedCategory.name];
+                                    } else {
+                                        // Fallback to original category name
+                                        transCategoryNames = [transPrimaryCategory.name];
+                                    }
                                 }
                             }
                             
-                            // If no category found for translation, try to find translated category
-                            // by matching the main article's category with translation's language
+                            // If still no category, try from translation.categories array
+                            if (transCategoryNames.length === 0 && translation.categories && translation.categories.length > 0) {
+                                // Try to find category in translation's language from the categories array
+                                const langCat = translation.categories.find(c => c.language_code === translation.language_code);
+                                if (langCat) {
+                                    transCategoryNames = [langCat.name];
+                                } else {
+                                    transCategoryNames = translation.categories.map(cat => cat.name);
+                                }
+                            }
+                            
+                            // Last resort: try to find from main article's category
                             if (transCategoryNames.length === 0 && article.category_id) {
                                 const mainCategory = categories.find(c => c.id === article.category_id);
                                 if (mainCategory) {
-                                    // Get the translation group ID - either from the category itself or use its ID
                                     const groupId = mainCategory.translation_group_id || mainCategory.id;
-                                    
-                                    // Find category with same translation_group_id (or ID equals groupId) and matching translation's language
                                     const translatedCategory = categories.find(c => 
                                         (c.translation_group_id === groupId || c.id === groupId) && 
                                         c.language_code === translation.language_code
@@ -377,7 +398,6 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                                     if (translatedCategory) {
                                         transCategoryNames = [translatedCategory.name];
                                     } else {
-                                        // Fallback to main category name
                                         transCategoryNames = [mainCategory.name];
                                     }
                                 }
