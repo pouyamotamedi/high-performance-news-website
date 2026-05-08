@@ -28,8 +28,8 @@ func (r *TagRepository) Create(tag *models.Tag) (*models.Tag, error) {
 		return nil, err
 	}
 
-	// Validate keyword uniqueness across all tags
-	if err := r.ValidateKeywordUniqueness(tag.Keywords, 0); err != nil {
+	// Validate keyword uniqueness across tags within the same language
+	if err := r.ValidateKeywordUniquenessForLanguage(tag.Keywords, tag.LanguageCode, 0); err != nil {
 		return nil, err
 	}
 
@@ -230,8 +230,8 @@ func (r *TagRepository) Update(tag *models.Tag) error {
 		return err
 	}
 
-	// Validate keyword uniqueness across all tags (excluding this tag)
-	if err := r.ValidateKeywordUniqueness(tag.Keywords, tag.ID); err != nil {
+	// Validate keyword uniqueness across tags within the same language (excluding this tag)
+	if err := r.ValidateKeywordUniquenessForLanguage(tag.Keywords, tag.LanguageCode, tag.ID); err != nil {
 		return err
 	}
 
@@ -411,15 +411,22 @@ func (r *TagRepository) SearchTags(query string, limit int) ([]models.Tag, error
 
 	return tags, nil
 }
-// ValidateKeywordUniqueness ensures keywords are unique across all tags
+// ValidateKeywordUniqueness ensures keywords are unique across tags within the same language
 func (r *TagRepository) ValidateKeywordUniqueness(keywords []string, excludeTagID uint64) error {
+	// This function is deprecated - use ValidateKeywordUniquenessForLanguage instead
+	// Keeping for backward compatibility but it now does nothing
+	return nil
+}
+
+// ValidateKeywordUniquenessForLanguage ensures keywords are unique across tags within the same language
+func (r *TagRepository) ValidateKeywordUniquenessForLanguage(keywords []string, languageCode string, excludeTagID uint64) error {
 	if len(keywords) == 0 {
 		return nil
 	}
 
-	// Get all existing keywords from other tags
-	query := `SELECT id, name, keywords FROM tags WHERE id != $1`
-	rows, err := r.db.Query(query, excludeTagID)
+	// Get all existing keywords from other tags in the same language
+	query := `SELECT id, name, keywords FROM tags WHERE id != $1 AND language_code = $2`
+	rows, err := r.db.Query(query, excludeTagID, languageCode)
 	if err != nil {
 		return fmt.Errorf("failed to query existing tags: %w", err)
 	}

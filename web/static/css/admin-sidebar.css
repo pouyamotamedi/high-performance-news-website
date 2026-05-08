@@ -556,6 +556,24 @@ body.authenticated {
         transform: translateX(0);
     }
     
+    /* Remove collapsed state on mobile */
+    .admin-sidebar.collapsed {
+        width: var(--sidebar-width);
+    }
+    
+    .admin-sidebar.collapsed .sidebar-logo span,
+    .admin-sidebar.collapsed .nav-text,
+    .admin-sidebar.collapsed .nav-arrow,
+    .admin-sidebar.collapsed .nav-section-title,
+    .admin-sidebar.collapsed .nav-submenu {
+        display: block;
+    }
+    
+    .admin-sidebar.collapsed .nav-link {
+        justify-content: flex-start;
+        padding: 0.75rem 1rem;
+    }
+    
     .admin-main {
         margin-left: 0;
         max-width: 100vw;
@@ -604,9 +622,21 @@ body.authenticated {
         display: none;
     }
     
-    /* Ensure sidebar is always visible on desktop */
+    /* Ensure sidebar is always visible on desktop and properly positioned */
     .admin-sidebar {
         transform: translateX(0) !important;
+        position: fixed;
+        left: 0;
+        top: 0;
+    }
+    
+    /* Remove mobile-open class effects on desktop */
+    .admin-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    
+    .admin-sidebar.mobile-open::after {
+        display: none;
     }
 }
 

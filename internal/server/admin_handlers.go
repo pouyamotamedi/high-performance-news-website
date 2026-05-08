@@ -433,10 +433,38 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
             }
         });
 
-        // Restore sidebar state only on desktop
-        if (window.innerWidth > 1024 && localStorage.getItem('sidebarCollapsed') === 'true') {
-            document.getElementById('sidebar').classList.add('collapsed');
+        // Restore sidebar state only on desktop - but ensure it's not collapsed by default
+        // Clear any corrupted state first
+        if (window.innerWidth > 1024) {
+            const sidebar = document.getElementById('sidebar');
+            // Remove any mobile classes on desktop
+            sidebar.classList.remove('mobile-open');
+            
+            // Only restore collapsed state if explicitly set
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+            } else {
+                // Ensure sidebar is NOT collapsed by default
+                sidebar.classList.remove('collapsed');
+            }
+        } else {
+            // On mobile, ensure sidebar starts hidden
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('collapsed');
+            sidebar.classList.remove('mobile-open');
         }
+
+        // Handle window resize - reset sidebar state appropriately
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth > 1024) {
+                // Desktop: remove mobile classes
+                sidebar.classList.remove('mobile-open');
+            } else {
+                // Mobile: remove collapsed class, keep mobile-open if it was open
+                sidebar.classList.remove('collapsed');
+            }
+        });
 
         // Highlight active menu and expand parent
         function highlightActiveMenu() {

@@ -349,6 +349,22 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                             const transStatusClass = 'status-' + translation.status;
                             const transCreatedDate = new Date(translation.created_at).toLocaleDateString();
                             
+                            // Display categories for translation (same logic as main article)
+                            let transCategoryNames = [];
+                            if (translation.categories && translation.categories.length > 0) {
+                                transCategoryNames = translation.categories.map(cat => cat.name);
+                            } else {
+                                const transPrimaryCategory = categories.find(c => c.id === translation.category_id);
+                                if (transPrimaryCategory) {
+                                    transCategoryNames = [transPrimaryCategory.name];
+                                }
+                            }
+                            // If still no category, use the main article's category
+                            if (transCategoryNames.length === 0 && categoryNames.length > 0) {
+                                transCategoryNames = categoryNames;
+                            }
+                            const transCategoryDisplay = transCategoryNames.length > 0 ? transCategoryNames.join(', ') : 'Unknown';
+                            
                             html += '<tr class="translation-row" data-parent-group="' + group.groupId + '">';
                             html += '<td><input type="checkbox" class="article-checkbox" value="' + translation.id + '"></td>';
                             html += '<td>';
@@ -357,7 +373,7 @@ func (s *Server) renderManageArticles(c *gin.Context) {
                             html += '<br><small style="margin-left: 1.5rem;">' + escapeHtml(translation.slug) + '</small></td>';
                             html += '<td><span class="language-badge">' + getLanguageFlag(translation.language_code) + ' ' + getLanguageName(translation.language_code) + '</span></td>';
                             html += '<td><span class="status-badge ' + transStatusClass + '">' + translation.status.toUpperCase() + '</span></td>';
-                            html += '<td>-</td>';
+                            html += '<td>' + escapeHtml(transCategoryDisplay) + '</td>';
                             html += '<td>' + transCreatedDate + '</td>';
                             html += '<td>' + (translation.view_count || 0) + '</td>';
                             html += '<td>';

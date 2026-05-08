@@ -1029,19 +1029,19 @@
             <!-- Article Meta -->
             <div class="article-meta-enhanced">
                 <div class="author-info-enhanced">
-                    {{if .Article.Author.Avatar}}
-                    <img src="{{.Article.Author.Avatar}}" alt="{{.Article.Author.FirstName}}"
+                    {{if and .Article.Author .Article.Author.Avatar}}
+                    <img src="{{.Article.Author.Avatar}}" alt="{{if .Article.Author.FirstName}}{{.Article.Author.FirstName}}{{else}}Author{{end}}"
                         class="author-avatar-enhanced">
                     {{else}}
                     <div class="author-placeholder-enhanced">
-                        {{printf "%.1s%.1s" .Article.Author.FirstName .Article.Author.LastName}}
+                        {{if and .Article.Author .Article.Author.FirstName}}{{slice .Article.Author.FirstName 0 1}}{{else}}A{{end}}{{if and .Article.Author .Article.Author.LastName}}{{slice .Article.Author.LastName 0 1}}{{end}}
                     </div>
                     {{end}}
                     <div>
                         <div class="author-name">
-                            <strong>{{.Article.Author.FirstName}} {{.Article.Author.LastName}}</strong>
+                            <strong>{{if and .Article.Author .Article.Author.FirstName}}{{.Article.Author.FirstName}}{{end}} {{if and .Article.Author .Article.Author.LastName}}{{.Article.Author.LastName}}{{end}}</strong>
                         </div>
-                        {{if .Article.Author.Bio}}
+                        {{if and .Article.Author .Article.Author.Bio}}
                         <div class="author-bio">{{.Article.Author.Bio}}</div>
                         {{end}}
                     </div>
@@ -1158,18 +1158,18 @@
         <div class="sidebar-widget">
             <h3 class="widget-title">{{t .LanguageCode "about_author"}}</h3>
             <div class="author-card-enhanced">
-                {{if .Article.Author.Avatar}}
-                <img src="{{.Article.Author.Avatar}}" alt="{{.Article.Author.FirstName}}" class="author-card-avatar">
+                {{if and .Article.Author .Article.Author.Avatar}}
+                <img src="{{.Article.Author.Avatar}}" alt="{{if .Article.Author.FirstName}}{{.Article.Author.FirstName}}{{else}}Author{{end}}" class="author-card-avatar">
                 {{else}}
                 <div class="author-card-placeholder">
-                    {{printf "%.1s%.1s" .Article.Author.FirstName .Article.Author.LastName}}
+                    {{if and .Article.Author .Article.Author.FirstName}}{{slice .Article.Author.FirstName 0 1}}{{else}}A{{end}}{{if and .Article.Author .Article.Author.LastName}}{{slice .Article.Author.LastName 0 1}}{{end}}
                 </div>
                 {{end}}
-                <div class="author-card-name">{{.Article.Author.FirstName}} {{.Article.Author.LastName}}</div>
-                {{if .Article.Author.Bio}}
+                <div class="author-card-name">{{if and .Article.Author .Article.Author.FirstName}}{{.Article.Author.FirstName}}{{end}} {{if and .Article.Author .Article.Author.LastName}}{{.Article.Author.LastName}}{{end}}</div>
+                {{if and .Article.Author .Article.Author.Bio}}
                 <div class="author-card-bio">{{.Article.Author.Bio}}</div>
                 {{end}}
-                <a href="/authors/{{.Article.Author.ID}}" class="category-badge-enhanced">View all articles →</a>
+                {{if .Article.Author}}<a href="/authors/{{.Article.Author.ID}}" class="category-badge-enhanced">{{t .LanguageCode "view_all_articles"}} →</a>{{end}}
             </div>
         </div>
 
