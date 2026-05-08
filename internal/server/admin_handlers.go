@@ -52,9 +52,8 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
             <div class="sidebar-header">
                 <a href="/admin/dashboard" class="sidebar-logo">
                     <div class="sidebar-logo-icon">📰</div>
-                    <span>News Admin</span>
+                    <span class="logo-text">News Admin</span>
                 </a>
-                <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
             </div>
             <nav class="sidebar-nav">
                 <!-- Dashboard -->
@@ -361,6 +360,7 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         <main class="admin-main">
             <header class="admin-header">
                 <div class="header-left">
+                    <button class="desktop-menu-btn" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
                     <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" title="Toggle Menu">☰</button>
                     <h1 class="page-title">` + title + `</h1>
                 </div>
@@ -401,8 +401,11 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         })();
 
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('collapsed');
-            localStorage.setItem('sidebarCollapsed', document.getElementById('sidebar').classList.contains('collapsed'));
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.admin-main');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
 
         function toggleMobileSidebar() {
@@ -460,6 +463,7 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         // Clear any corrupted state first
         if (window.innerWidth > 1024) {
             const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.admin-main');
             const overlay = document.getElementById('sidebarOverlay');
             // Remove any mobile classes on desktop
             sidebar.classList.remove('mobile-open');
@@ -469,16 +473,20 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
             // Only restore collapsed state if explicitly set
             if (localStorage.getItem('sidebarCollapsed') === 'true') {
                 sidebar.classList.add('collapsed');
+                mainContent.classList.add('sidebar-collapsed');
             } else {
                 // Ensure sidebar is NOT collapsed by default
                 sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('sidebar-collapsed');
             }
         } else {
             // On mobile, ensure sidebar starts hidden
             const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.admin-main');
             const overlay = document.getElementById('sidebarOverlay');
             sidebar.classList.remove('collapsed');
             sidebar.classList.remove('mobile-open');
+            mainContent.classList.remove('sidebar-collapsed');
             overlay.classList.remove('active');
             document.body.classList.remove('sidebar-open');
         }

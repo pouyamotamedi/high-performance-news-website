@@ -1416,7 +1416,32 @@ func (s *Server) renderCreateArticle(c *gin.Context) {
             }
 
             function getSelectedCategoryIds() {
-                return selectedCategories.map(cat => parseInt(cat.id));
+                // Get the selected language for the article
+                const articleLang = document.getElementById('languageCode').value || 'en';
+                
+                // For each selected category, find the correct language version
+                return selectedCategories.map(cat => {
+                    // If the article language is English, use the stored ID (which is already English)
+                    if (articleLang === 'en') {
+                        return parseInt(cat.id);
+                    }
+                    
+                    // Otherwise, find the category in the same translation group with matching language
+                    const groupId = cat.groupId;
+                    const matchingCat = allCategories.find(c => 
+                        (c.translation_group_id === groupId || c.id === groupId) && 
+                        c.language_code === articleLang
+                    );
+                    
+                    if (matchingCat) {
+                        console.log('Found matching category for language ' + articleLang + ':', matchingCat.name, matchingCat.id);
+                        return parseInt(matchingCat.id);
+                    }
+                    
+                    // Fallback to the original category if no translation exists
+                    console.log('No matching category found for language ' + articleLang + ', using original:', cat.id);
+                    return parseInt(cat.id);
+                });
             }
         </script>`
 	s.renderAdminPage(c, title, "content", content)
