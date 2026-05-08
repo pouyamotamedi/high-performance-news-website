@@ -448,7 +448,7 @@ func TestStaticGenerator_SchemaGeneration(t *testing.T) {
 		},
 	}
 
-	schema := sg.generateArticleSchema(article)
+	schema := sg.generateArticleSchema(article, nil)
 	assert.NotEmpty(t, schema)
 	
 	// Verify it's valid JSON

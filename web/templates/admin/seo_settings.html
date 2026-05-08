@@ -565,20 +565,12 @@
                         <div class="card-title">🤖 Robots.txt Configuration</div>
                         <div class="form-group">
                             <label for="robotsTxt">Robots.txt Content</label>
-                            <textarea id="robotsTxt" style="min-height: 300px; font-family: monospace;">User-agent: *
-Allow: /
-
-Sitemap: https://a.10top.shop/sitemap.xml
-
-Crawl-delay: 1
-
-Disallow: /admin/
-Disallow: /api/
-Allow: /api/v1/articles/
-Allow: /static/</textarea>
+                            <textarea id="robotsTxt" style="min-height: 300px; font-family: monospace;" placeholder="Loading..."></textarea>
+                            <div class="form-hint">Use {SITE_URL} as placeholder for your site URL (will be replaced automatically)</div>
                         </div>
                         <div class="btn-group">
                             <button class="btn btn-primary" onclick="saveRobotsTxt()">Save Robots.txt</button>
+                            <button class="btn btn-secondary" onclick="loadRobotsTxt()">🔄 Reload</button>
                             <button class="btn btn-secondary" onclick="viewRobotsTxt()">👁️ View Live</button>
                         </div>
                     </div>
@@ -699,6 +691,7 @@ Allow: /static/</textarea>
                 document.getElementById('userRole').textContent = role === 'admin' ? 'Administrator' : 'Editor';
                 
                 loadSEOSettings();
+                loadRobotsTxt();
                 initFeedUrls();
             } catch (error) {
                 console.error('Auth check failed:', error);
@@ -854,6 +847,22 @@ Allow: /static/</textarea>
             } catch (error) {
                 console.error('Save failed:', error);
                 showAlert('Failed to save settings', 'error');
+            }
+        }
+
+        async function loadRobotsTxt() {
+            try {
+                const response = await fetch('/api/v1/admin/seo/robots', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.content) {
+                        document.getElementById('robotsTxt').value = data.content;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load robots.txt:', error);
             }
         }
 
