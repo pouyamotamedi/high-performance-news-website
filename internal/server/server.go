@@ -2746,7 +2746,7 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 		"LanguageCode":      "en",
 		"LanguageDirection": "ltr",
 		"ThemeMode":         "auto",
-		"CurrentYear":       2024,
+		"CurrentYear":       time.Now().Year(),
 		"Navigation":        s.getNavigationForLanguage("en"),
 		"IsAuthenticated":   false,
 		"OGType":            "website",
@@ -3618,7 +3618,7 @@ func (s *Server) getArticlesByCategoryIDsAndLanguage(ctx context.Context, catego
 	query := fmt.Sprintf(`
 		SELECT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
 			   a.status, a.published_at, a.view_count, a.like_count, a.dislike_count,
-			   a.language_code, a.translation_group_id
+			   a.language_code, a.translation_group_id, a.featured_image
 		FROM articles a
 		WHERE a.category_id IN (%s)
 		  AND a.language_code = $%d
@@ -3638,6 +3638,7 @@ func (s *Server) getArticlesByCategoryIDsAndLanguage(ctx context.Context, catego
 	for rows.Next() {
 		var article models.Article
 		var translationGroupID sql.NullInt64
+		var featuredImage sql.NullString
 		err := rows.Scan(
 			&article.ID,
 			&article.Title,
@@ -3652,6 +3653,7 @@ func (s *Server) getArticlesByCategoryIDsAndLanguage(ctx context.Context, catego
 			&article.DislikeCount,
 			&article.LanguageCode,
 			&translationGroupID,
+			&featuredImage,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan article: %w", err)
@@ -3659,6 +3661,9 @@ func (s *Server) getArticlesByCategoryIDsAndLanguage(ctx context.Context, catego
 		if translationGroupID.Valid {
 			tgid := uint64(translationGroupID.Int64)
 			article.TranslationGroupID = &tgid
+		}
+		if featuredImage.Valid {
+			article.FeaturedImage = featuredImage.String
 		}
 		articles = append(articles, article)
 	}
@@ -3686,7 +3691,7 @@ func (s *Server) getArticlesByTagIDsAndLanguage(ctx context.Context, tagIDs []ui
 	query := fmt.Sprintf(`
 		SELECT DISTINCT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
 			   a.status, a.published_at, a.view_count, a.like_count, a.dislike_count,
-			   a.language_code, a.translation_group_id
+			   a.language_code, a.translation_group_id, a.featured_image
 		FROM articles a
 		JOIN article_tags at ON a.id = at.article_id
 		WHERE at.tag_id IN (%s)
@@ -3707,6 +3712,7 @@ func (s *Server) getArticlesByTagIDsAndLanguage(ctx context.Context, tagIDs []ui
 	for rows.Next() {
 		var article models.Article
 		var translationGroupID sql.NullInt64
+		var featuredImage sql.NullString
 		err := rows.Scan(
 			&article.ID,
 			&article.Title,
@@ -3721,6 +3727,7 @@ func (s *Server) getArticlesByTagIDsAndLanguage(ctx context.Context, tagIDs []ui
 			&article.DislikeCount,
 			&article.LanguageCode,
 			&translationGroupID,
+			&featuredImage,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan article: %w", err)
@@ -3728,6 +3735,9 @@ func (s *Server) getArticlesByTagIDsAndLanguage(ctx context.Context, tagIDs []ui
 		if translationGroupID.Valid {
 			tgid := uint64(translationGroupID.Int64)
 			article.TranslationGroupID = &tgid
+		}
+		if featuredImage.Valid {
+			article.FeaturedImage = featuredImage.String
 		}
 		articles = append(articles, article)
 	}
@@ -4337,13 +4347,14 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 					articleLang = "en"
 				}
 				articleData[i] = gin.H{
-					"ID":        article.ID,
-					"Title":     article.Title,
-					"Slug":      article.Slug,
-					"Excerpt":   article.Excerpt,
-					"TimeAgo":   formatTimeAgo(article.PublishedAt),
-					"ViewCount": article.ViewCount,
-					"URL":       fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
+					"ID":            article.ID,
+					"Title":         article.Title,
+					"Slug":          article.Slug,
+					"Excerpt":       article.Excerpt,
+					"TimeAgo":       formatTimeAgo(article.PublishedAt),
+					"ViewCount":     article.ViewCount,
+					"FeaturedImage": article.FeaturedImage,
+					"URL":           fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
 				}
 			}
 			data["Articles"] = articleData
@@ -4503,13 +4514,14 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 					articleLang = "en"
 				}
 				articleData[i] = gin.H{
-					"ID":        article.ID,
-					"Title":     article.Title,
-					"Slug":      article.Slug,
-					"Excerpt":   article.Excerpt,
-					"TimeAgo":   formatTimeAgo(article.PublishedAt),
-					"ViewCount": article.ViewCount,
-					"URL":       fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
+					"ID":            article.ID,
+					"Title":         article.Title,
+					"Slug":          article.Slug,
+					"Excerpt":       article.Excerpt,
+					"TimeAgo":       formatTimeAgo(article.PublishedAt),
+					"ViewCount":     article.ViewCount,
+					"FeaturedImage": article.FeaturedImage,
+					"URL":           fmt.Sprintf("/%s/article/%s", articleLang, article.Slug),
 				}
 			}
 			data["Articles"] = articleData

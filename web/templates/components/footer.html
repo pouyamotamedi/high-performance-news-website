@@ -6,11 +6,7 @@
             <div class="footer-section">
                 <h3 class="footer-title">{{t .LanguageCode "about"}}</h3>
                 <p class="footer-description">
-                    {{if .SiteDescription}}
-                        {{.SiteDescription}}
-                    {{else}}
-                        High-performance multilingual news website
-                    {{end}}
+                    {{t .LanguageCode "site_description"}}
                 </p>
                 
                 <!-- Social links -->

@@ -1002,14 +1002,14 @@
             <!-- Category Badges -->
             <div class="article-category-enhanced">
                 {{range .Article.Categories}}
-                <a href="/category/{{.Slug}}" class="category-badge-enhanced" style="margin-right: var(--space-2); margin-bottom: var(--space-2);">
+                <a href="/{{$.LanguageCode}}/category/{{.Slug}}" class="category-badge-enhanced" style="margin-right: var(--space-2); margin-bottom: var(--space-2);">
                     {{.Name}}
                 </a>
                 {{end}}
                 {{if not .Article.Categories}}
                 <!-- Fallback to single category for backward compatibility -->
                 {{if .Article.Category}}
-                <a href="/category/{{.Article.Category.Slug}}" class="category-badge-enhanced">
+                <a href="/{{$.LanguageCode}}/category/{{.Article.Category.Slug}}" class="category-badge-enhanced">
                     {{.Article.Category.Name}}
                 </a>
                 {{end}}
@@ -1235,12 +1235,12 @@
                 {{end}}
             </div>
             {{if .Article.Categories}}
-            <a href="/category/{{(index .Article.Categories 0).Slug}}" class="category-badge-enhanced"
+            <a href="/{{$.LanguageCode}}/category/{{(index .Article.Categories 0).Slug}}" class="category-badge-enhanced"
                 style="margin-top: var(--space-4);">
                 {{t .LanguageCode "view_all"}} {{(index .Article.Categories 0).Name}} →
             </a>
             {{else if .Article.Category}}
-            <a href="/category/{{.Article.Category.Slug}}" class="category-badge-enhanced"
+            <a href="/{{$.LanguageCode}}/category/{{.Article.Category.Slug}}" class="category-badge-enhanced"
                 style="margin-top: var(--space-4);">
                 {{t .LanguageCode "view_all"}} {{.Article.Category.Name}} →
             </a>

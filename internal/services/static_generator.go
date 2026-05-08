@@ -1869,6 +1869,7 @@ func (sg *StaticGenerator) generateArticleSchema(article *models.Article, catego
 		"articleBody":         article.Content,
 		"wordCount":           len(strings.Fields(article.Content)),
 		"isAccessibleForFree": true,
+		"inLanguage":          articleLang,
 	}
 
 	// Add mainEntityOfPage (required for Google News)

@@ -29,6 +29,9 @@ var Translations = map[string]map[string]string{
 		"privacy_note":   "We respect your privacy. Unsubscribe anytime.",
 		"follow_us":      "Follow Us",
 
+		// Site description
+		"site_description": "Real-time crypto news, exchange insights, and data-driven guides for modern investors.",
+
 		// Article
 		"read_more":      "Read More",
 		"share":          "Share",
@@ -124,6 +127,9 @@ var Translations = map[string]map[string]string{
 		"subscribe":      "Abonnieren",
 		"privacy_note":   "Wir respektieren Ihre Privatsphäre. Jederzeit abmelden.",
 		"follow_us":      "Folgen Sie uns",
+
+		// Site description
+		"site_description": "Echtzeit-Krypto-Nachrichten, Börseneinblicke und datengestützte Leitfäden für moderne Anleger.",
 
 		// Article
 		"read_more":      "Weiterlesen",
@@ -221,6 +227,9 @@ var Translations = map[string]map[string]string{
 		"privacy_note":   "Nous respectons votre vie privée. Désabonnez-vous à tout moment.",
 		"follow_us":      "Suivez-nous",
 
+		// Site description
+		"site_description": "Actualités crypto en temps réel, analyses des exchanges et guides basés sur les données pour les investisseurs modernes.",
+
 		// Article
 		"read_more":      "Lire la suite",
 		"share":          "Partager",
@@ -317,6 +326,9 @@ var Translations = map[string]map[string]string{
 		"privacy_note":   "Respetamos tu privacidad. Cancela cuando quieras.",
 		"follow_us":      "Síguenos",
 
+		// Site description
+		"site_description": "Noticias de criptomonedas en tiempo real, análisis de exchanges y guías basadas en datos para inversores modernos.",
+
 		// Article
 		"read_more":      "Leer más",
 		"share":          "Compartir",
@@ -412,6 +424,9 @@ var Translations = map[string]map[string]string{
 		"subscribe":      "اشترك",
 		"privacy_note":   "نحترم خصوصيتك. يمكنك إلغاء الاشتراك في أي وقت.",
 		"follow_us":      "تابعنا",
+
+		// Site description
+		"site_description": "أخبار العملات الرقمية في الوقت الفعلي، تحليلات منصات التداول، وأدلة مبنية على البيانات للمستثمرين العصريين.",
 
 		// Article
 		"read_more":      "اقرأ المزيد",
