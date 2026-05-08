@@ -1,6 +1,7 @@
 package api
 
 import (
+	"os"
 	"time"
 	"database/sql"
 	"github.com/gin-gonic/gin"
@@ -785,6 +786,12 @@ func saveSEOSettings(c *gin.Context) {
 }
 
 func getRobotsTxt(c *gin.Context) {
+	// Try to read from persistent file first
+	fileContent, err := os.ReadFile("data/robots.txt")
+	if err == nil && len(fileContent) > 0 {
+		c.JSON(200, gin.H{"content": string(fileContent)})
+		return
+	}
 	c.JSON(200, gin.H{"content": robotsTxtContent})
 }
 
@@ -797,6 +804,15 @@ func saveRobotsTxt(c *gin.Context) {
 		return
 	}
 	
+	// Save to memory
 	robotsTxtContent = input.Content
+	
+	// Persist to file
+	os.MkdirAll("data", 0755)
+	if err := os.WriteFile("data/robots.txt", []byte(input.Content), 0644); err != nil {
+		c.JSON(500, gin.H{"error": "Failed to persist robots.txt: " + err.Error()})
+		return
+	}
+	
 	c.JSON(200, gin.H{"status": "success", "message": "Robots.txt saved"})
 }

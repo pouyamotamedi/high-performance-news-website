@@ -220,6 +220,7 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
                         </div>
                         <div class="nav-submenu">
                             <a href="/admin/seo" class="nav-link">SEO Settings</a>
+                            <a href="/admin/robots" class="nav-link">Robots.txt</a>
                             <a href="/admin/seo/overview" class="nav-link">Overview</a>
                             <a href="/admin/seo/sitemap" class="nav-link">Sitemap</a>
                             <a href="/admin/seo/google-news" class="nav-link">Google News</a>

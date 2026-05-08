@@ -1446,9 +1446,15 @@ func (s *Server) handleLanguageSitemap(c *gin.Context) {
 
 // handleRobotsTxt generates robots.txt
 func (s *Server) handleRobotsTxt(c *gin.Context) {
-	// Try to get custom robots.txt from admin settings via API
-	// For now, use the shared variable from api package
-	robotsTxt := api.GetRobotsTxtContent()
+	// Try to read from persistent file first
+	robotsTxt := ""
+	fileContent, err := os.ReadFile("data/robots.txt")
+	if err == nil && len(fileContent) > 0 {
+		robotsTxt = string(fileContent)
+	} else {
+		// Fallback to in-memory content
+		robotsTxt = api.GetRobotsTxtContent()
+	}
 
 	// Replace {SITE_URL} placeholder with actual site URL
 	siteURL := s.config.App.BaseURL

@@ -61,6 +61,7 @@ services:
     volumes:
       - uploads:/app/uploads
       - logs:/app/logs
+      - app_data:/app/data
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:
@@ -83,6 +84,7 @@ volumes:
   redis_data:
   uploads:
   logs:
+  app_data:
 
 networks:
   app_network:
