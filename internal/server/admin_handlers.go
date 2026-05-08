@@ -360,7 +360,6 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         <main class="admin-main">
             <header class="admin-header">
                 <div class="header-left">
-                    <button class="desktop-menu-btn" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
                     <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" title="Toggle Menu">☰</button>
                     <h1 class="page-title">` + title + `</h1>
                 </div>
@@ -400,14 +399,6 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
             document.body.classList.add('authenticated');
         })();
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.querySelector('.admin-main');
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-        }
-
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
@@ -434,12 +425,10 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
         document.addEventListener('click', function(e) {
             const sidebar = document.getElementById('sidebar');
             const mobileBtn = document.querySelector('.mobile-menu-btn');
-            const overlay = document.getElementById('sidebarOverlay');
             if (window.innerWidth <= 1024 && 
                 sidebar.classList.contains('mobile-open') && 
                 !sidebar.contains(e.target) && 
-                !mobileBtn.contains(e.target) &&
-                e.target !== overlay) {
+                !mobileBtn.contains(e.target)) {
                 closeMobileSidebar();
             }
         });
@@ -459,50 +448,21 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
             }
         });
 
-        // Restore sidebar state only on desktop - but ensure it's not collapsed by default
-        // Clear any corrupted state first
-        if (window.innerWidth > 1024) {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.querySelector('.admin-main');
-            const overlay = document.getElementById('sidebarOverlay');
-            // Remove any mobile classes on desktop
-            sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('active');
-            document.body.classList.remove('sidebar-open');
-            
-            // Only restore collapsed state if explicitly set
-            if (localStorage.getItem('sidebarCollapsed') === 'true') {
-                sidebar.classList.add('collapsed');
-                mainContent.classList.add('sidebar-collapsed');
-            } else {
-                // Ensure sidebar is NOT collapsed by default
-                sidebar.classList.remove('collapsed');
-                mainContent.classList.remove('sidebar-collapsed');
-            }
-        } else {
+        // Initialize sidebar state
+        if (window.innerWidth <= 1024) {
             // On mobile, ensure sidebar starts hidden
             const sidebar = document.getElementById('sidebar');
-            const mainContent = document.querySelector('.admin-main');
             const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.remove('collapsed');
             sidebar.classList.remove('mobile-open');
-            mainContent.classList.remove('sidebar-collapsed');
             overlay.classList.remove('active');
             document.body.classList.remove('sidebar-open');
         }
 
-        // Handle window resize - reset sidebar state appropriately
+        // Handle window resize
         window.addEventListener('resize', function() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
             if (window.innerWidth > 1024) {
-                // Desktop: remove mobile classes and overlay
-                sidebar.classList.remove('mobile-open');
-                overlay.classList.remove('active');
-                document.body.classList.remove('sidebar-open');
-            } else {
-                // Mobile: remove collapsed class
-                sidebar.classList.remove('collapsed');
+                // Desktop: close mobile menu if open
+                closeMobileSidebar();
             }
         });
 
