@@ -36,9 +36,9 @@ type BaseTemplateData struct {
 	TwitterImage       string `json:"twitter_image"`
 	
 	// Language and localization
-	LanguageCode      string            `json:"language_code"`
-	LanguageDirection string            `json:"language_direction"`
-	AlternateURLs     map[string]string `json:"alternate_urls"`
+	LanguageCode      string         `json:"language_code"`
+	LanguageDirection string         `json:"language_direction"`
+	AlternateURLs     []AlternateURL `json:"alternate_urls"`
 	
 	// Navigation
 	Navigation []NavigationItem `json:"navigation"`
@@ -84,6 +84,12 @@ type NavigationItem struct {
 type BreadcrumbItem struct {
 	Name string `json:"name"`
 	URL  string `json:"url,omitempty"`
+}
+
+// AlternateURL represents an alternate language URL for hreflang tags
+type AlternateURL struct {
+	Lang string `json:"lang"`
+	URL  string `json:"url"`
 }
 
 // PreloadResource represents a resource to preload

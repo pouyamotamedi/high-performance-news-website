@@ -1613,11 +1613,11 @@ func getLanguageName(lang string) string {
 // generateAlternateURLs generates alternate language URLs for hreflang tags
 // This is the default implementation for static pages (homepage, about, etc.)
 // For articles, use generateArticleAlternateURLs instead
-func (s *Server) generateAlternateURLs(currentPath string) []map[string]string {
+func (s *Server) generateAlternateURLs(currentPath string) []templates.AlternateURL {
 	languages := []string{"en", "de", "fr", "es", "ar"}
 	baseURL := s.config.App.BaseURL
 	if baseURL == "" {
-		baseURL = "https://a.10top.shop"
+		baseURL = "https://cryptonlisys.com"
 	}
 
 	// Remove any existing language prefix from the path
@@ -1634,23 +1634,26 @@ func (s *Server) generateAlternateURLs(currentPath string) []map[string]string {
 		}
 	}
 
-	var alternates []map[string]string
+	var alternates []templates.AlternateURL
 	for _, lang := range languages {
 		url := baseURL + "/" + lang + cleanPath
 		// Clean up double slashes
 		url = strings.ReplaceAll(url, "//", "/")
 		url = strings.Replace(url, ":/", "://", 1)
 
-		alternates = append(alternates, map[string]string{
-			"lang": lang,
-			"url":  url,
+		alternates = append(alternates, templates.AlternateURL{
+			Lang: lang,
+			URL:  url,
 		})
 	}
 
 	// Add x-default pointing to English
-	alternates = append(alternates, map[string]string{
-		"lang": "x-default",
-		"url":  baseURL + "/en" + cleanPath,
+	xDefaultURL := baseURL + "/en" + cleanPath
+	xDefaultURL = strings.ReplaceAll(xDefaultURL, "//", "/")
+	xDefaultURL = strings.Replace(xDefaultURL, ":/", "://", 1)
+	alternates = append(alternates, templates.AlternateURL{
+		Lang: "x-default",
+		URL:  xDefaultURL,
 	})
 
 	return alternates
@@ -1658,13 +1661,13 @@ func (s *Server) generateAlternateURLs(currentPath string) []map[string]string {
 
 // generateAlternateURLsForTranslations generates hreflang URLs only for existing translations
 // This should be used for articles, categories, and tags that have translation groups
-func (s *Server) generateAlternateURLsForTranslations(availableLanguages []string, pathTemplate string) []map[string]string {
+func (s *Server) generateAlternateURLsForTranslations(availableLanguages []string, pathTemplate string) []templates.AlternateURL {
 	baseURL := s.config.App.BaseURL
 	if baseURL == "" {
-		baseURL = "https://a.10top.shop"
+		baseURL = "https://cryptonlisys.com"
 	}
 
-	var alternates []map[string]string
+	var alternates []templates.AlternateURL
 	var hasEnglish bool
 
 	for _, lang := range availableLanguages {
@@ -1673,9 +1676,9 @@ func (s *Server) generateAlternateURLsForTranslations(availableLanguages []strin
 		url = strings.ReplaceAll(url, "//", "/")
 		url = strings.Replace(url, ":/", "://", 1)
 
-		alternates = append(alternates, map[string]string{
-			"lang": lang,
-			"url":  url,
+		alternates = append(alternates, templates.AlternateURL{
+			Lang: lang,
+			URL:  url,
 		})
 
 		if lang == "en" {
@@ -1693,9 +1696,64 @@ func (s *Server) generateAlternateURLsForTranslations(availableLanguages []strin
 	xDefaultURL = strings.ReplaceAll(xDefaultURL, "//", "/")
 	xDefaultURL = strings.Replace(xDefaultURL, ":/", "://", 1)
 
-	alternates = append(alternates, map[string]string{
-		"lang": "x-default",
-		"url":  xDefaultURL,
+	alternates = append(alternates, templates.AlternateURL{
+		Lang: "x-default",
+		URL:  xDefaultURL,
+	})
+
+	return alternates
+}
+
+// generateAlternateURLsForArticleTranslations generates hreflang URLs for article translations
+// using the correct slug for each language
+func (s *Server) generateAlternateURLsForArticleTranslations(translations []models.Article) []templates.AlternateURL {
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://cryptonlisys.com"
+	}
+
+	var alternates []templates.AlternateURL
+	var hasEnglish bool
+	var englishSlug string
+	var firstSlug string
+	var firstLang string
+
+	for i, trans := range translations {
+		lang := trans.LanguageCode
+		if lang == "" {
+			lang = "en"
+		}
+
+		url := fmt.Sprintf("%s/%s/article/%s", baseURL, lang, trans.Slug)
+
+		alternates = append(alternates, templates.AlternateURL{
+			Lang: lang,
+			URL:  url,
+		})
+
+		if lang == "en" {
+			hasEnglish = true
+			englishSlug = trans.Slug
+		}
+
+		if i == 0 {
+			firstSlug = trans.Slug
+			firstLang = lang
+		}
+	}
+
+	// Add x-default pointing to English if available, otherwise first language
+	xDefaultLang := "en"
+	xDefaultSlug := englishSlug
+	if !hasEnglish && len(translations) > 0 {
+		xDefaultLang = firstLang
+		xDefaultSlug = firstSlug
+	}
+
+	xDefaultURL := fmt.Sprintf("%s/%s/article/%s", baseURL, xDefaultLang, xDefaultSlug)
+	alternates = append(alternates, templates.AlternateURL{
+		Lang: "x-default",
+		URL:  xDefaultURL,
 	})
 
 	return alternates
@@ -4207,19 +4265,90 @@ func (s *Server) handleMultilingualArticle(c *gin.Context) {
 	data["PageType"] = "article"
 	data["Article"] = articleData
 
+	// === SEO DATA ===
+	// Set SEO title and description from article's meta fields
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://cryptonlisys.com"
+	}
+
+	// SEO Title - use MetaTitle if available, otherwise article title
+	if article.MetaTitle != "" {
+		data["SEOTitle"] = article.MetaTitle
+	} else {
+		data["SEOTitle"] = article.Title + " - " + s.config.App.Name
+	}
+
+	// SEO Description - use MetaDescription if available, otherwise excerpt
+	if article.MetaDescription != "" {
+		data["SEODescription"] = article.MetaDescription
+	} else if article.Excerpt != "" {
+		data["SEODescription"] = article.Excerpt
+	}
+
+	// SEO Keywords
+	var seoKeywords []string
+	if article.SEOData.Keywords != nil {
+		seoKeywords = append(seoKeywords, article.SEOData.Keywords...)
+	}
+	for _, tag := range article.Tags {
+		seoKeywords = append(seoKeywords, tag.Name)
+	}
+	data["SEOKeywords"] = seoKeywords
+
+	// Open Graph data
+	data["OGTitle"] = data["SEOTitle"]
+	data["OGDescription"] = data["SEODescription"]
+	data["OGType"] = "article"
+	if article.FeaturedImage != "" {
+		ogImage := article.FeaturedImage
+		if !strings.HasPrefix(ogImage, "http") {
+			ogImage = baseURL + ogImage
+		}
+		data["OGImage"] = ogImage
+		data["TwitterImage"] = ogImage
+	}
+
+	// Twitter Card data
+	data["TwitterTitle"] = data["SEOTitle"]
+	data["TwitterDescription"] = data["SEODescription"]
+
+	// Get category data for structured data
+	var categoryData gin.H
+	if article.CategoryID > 0 {
+		categoryData, _ = s.getCategoryByIDForLanguage(article.CategoryID, lang)
+	}
+
+	// Generate structured data (JSON-LD)
+	data["StructuredData"] = s.generateArticleStructuredData(article, categoryData, lang)
+
+	// Generate breadcrumb schema
+	breadcrumbItems := []map[string]string{
+		{"name": "Home", "url": "/" + lang + "/"},
+	}
+	if categoryData != nil {
+		if catName, ok := categoryData["Name"].(string); ok {
+			if catSlug, ok := categoryData["Slug"].(string); ok {
+				breadcrumbItems = append(breadcrumbItems, map[string]string{
+					"name": catName,
+					"url":  "/" + lang + "/category/" + catSlug,
+				})
+			}
+		}
+	}
+	breadcrumbItems = append(breadcrumbItems, map[string]string{
+		"name": article.Title,
+		"url":  "/" + lang + "/article/" + slug,
+	})
+	data["BreadcrumbSchema"] = s.generateBreadcrumbSchema(breadcrumbItems)
+
 	// Get available translations for correct hreflang tags
 	availableTranslations, err := s.articleService.GetAvailableTranslations(c.Request.Context(), article.ID)
 	log.Printf("DEBUG handleMultilingualArticle: article=%s (ID=%d), lang=%s, availableTranslations=%d, err=%v",
 		slug, article.ID, lang, len(availableTranslations), err)
 	if err == nil && len(availableTranslations) > 0 {
-		// Build list of available languages
-		var availableLangs []string
-		for _, trans := range availableTranslations {
-			availableLangs = append(availableLangs, trans.LanguageCode)
-			log.Printf("DEBUG: translation found: lang=%s, slug=%s", trans.LanguageCode, trans.Slug)
-		}
-		// Use the new method that only includes existing translations
-		data["AlternateURLs"] = s.generateAlternateURLsForTranslations(availableLangs, "/article/"+slug)
+		// Use the new method that generates correct URLs with proper slugs for each language
+		data["AlternateURLs"] = s.generateAlternateURLsForArticleTranslations(availableTranslations)
 		data["AvailableLanguages"] = s.getAvailableLanguagesForArticle(availableTranslations, slug)
 		log.Printf("DEBUG: AvailableLanguages set with %d languages", len(availableTranslations))
 	} else {
@@ -4303,6 +4432,47 @@ func (s *Server) handleMultilingualCategory(c *gin.Context) {
 			"Slug":        category.Slug,
 			"Description": category.Description,
 		}
+
+		// === SEO DATA for Category ===
+		baseURL := s.config.App.BaseURL
+		if baseURL == "" {
+			baseURL = "https://cryptonlisys.com"
+		}
+
+		// SEO Title
+		data["SEOTitle"] = category.Name + " - " + s.config.App.Name
+
+		// SEO Description
+		if category.Description != "" {
+			data["SEODescription"] = category.Description
+		} else {
+			data["SEODescription"] = "Browse articles in " + category.Name + " category"
+		}
+
+		// Open Graph data
+		data["OGTitle"] = data["SEOTitle"]
+		data["OGDescription"] = data["SEODescription"]
+		data["OGType"] = "website"
+
+		// Twitter Card data
+		data["TwitterTitle"] = data["SEOTitle"]
+		data["TwitterDescription"] = data["SEODescription"]
+
+		// Generate structured data (JSON-LD)
+		categoryDataForSchema := gin.H{
+			"Name":        category.Name,
+			"Slug":        category.Slug,
+			"Description": category.Description,
+		}
+		data["StructuredData"] = s.generateCategoryStructuredData(categoryDataForSchema, lang)
+
+		// Generate breadcrumb schema
+		breadcrumbItems := []map[string]string{
+			{"name": "Home", "url": "/" + lang + "/"},
+			{"name": "Categories", "url": "/" + lang + "/categories"},
+			{"name": category.Name, "url": "/" + lang + "/category/" + slug},
+		}
+		data["BreadcrumbSchema"] = s.generateBreadcrumbSchema(breadcrumbItems)
 
 		// Get articles in this category - filter by same language
 		// IMPORTANT: We need to get articles from ALL categories in the same translation group
@@ -4482,6 +4652,47 @@ func (s *Server) handleMultilingualTag(c *gin.Context) {
 			"Slug":        tag.Slug,
 			"Description": tag.Description,
 		}
+
+		// === SEO DATA for Tag ===
+		baseURL := s.config.App.BaseURL
+		if baseURL == "" {
+			baseURL = "https://cryptonlisys.com"
+		}
+
+		// SEO Title
+		data["SEOTitle"] = tag.Name + " - " + s.config.App.Name
+
+		// SEO Description
+		if tag.Description != "" {
+			data["SEODescription"] = tag.Description
+		} else {
+			data["SEODescription"] = "Browse articles tagged with " + tag.Name
+		}
+
+		// Open Graph data
+		data["OGTitle"] = data["SEOTitle"]
+		data["OGDescription"] = data["SEODescription"]
+		data["OGType"] = "website"
+
+		// Twitter Card data
+		data["TwitterTitle"] = data["SEOTitle"]
+		data["TwitterDescription"] = data["SEODescription"]
+
+		// Generate structured data (JSON-LD)
+		tagDataForSchema := gin.H{
+			"Name":        tag.Name,
+			"Slug":        tag.Slug,
+			"Description": tag.Description,
+		}
+		data["StructuredData"] = s.generateTagStructuredData(tagDataForSchema, lang)
+
+		// Generate breadcrumb schema
+		breadcrumbItems := []map[string]string{
+			{"name": "Home", "url": "/" + lang + "/"},
+			{"name": "Tags", "url": "/" + lang + "/tags"},
+			{"name": tag.Name, "url": "/" + lang + "/tag/" + slug},
+		}
+		data["BreadcrumbSchema"] = s.generateBreadcrumbSchema(breadcrumbItems)
 
 		// Get articles with this tag - filter by same language
 		// IMPORTANT: We need to get articles from ALL tags in the same translation group
@@ -4799,4 +5010,221 @@ func (s *Server) handleMultilingualContact(c *gin.Context) {
 	}
 
 	c.String(http.StatusOK, "Contact Us")
+}
+
+// generateArticleStructuredData generates JSON-LD structured data for an article
+func (s *Server) generateArticleStructuredData(article *models.Article, category gin.H, lang string) string {
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://cryptonlisys.com"
+	}
+
+	schemaType := "NewsArticle"
+	if article.SEOData.SchemaType != "" {
+		schemaType = article.SEOData.SchemaType
+	}
+
+	articleURL := fmt.Sprintf("%s/%s/article/%s", baseURL, lang, article.Slug)
+
+	schema := map[string]interface{}{
+		"@context":            "https://schema.org",
+		"@type":               schemaType,
+		"headline":            article.Title,
+		"url":                 articleURL,
+		"description":         article.Excerpt,
+		"articleBody":         article.Content,
+		"wordCount":           len(strings.Fields(article.Content)),
+		"isAccessibleForFree": true,
+		"inLanguage":          lang,
+	}
+
+	// Add dates
+	if article.PublishedAt != nil {
+		schema["datePublished"] = article.PublishedAt.Format(time.RFC3339)
+	}
+	schema["dateModified"] = article.UpdatedAt.Format(time.RFC3339)
+
+	// Add mainEntityOfPage (required for Google News)
+	schema["mainEntityOfPage"] = map[string]interface{}{
+		"@type": "WebPage",
+		"@id":   articleURL,
+	}
+
+	// Add author information (required for Google News)
+	schema["author"] = map[string]interface{}{
+		"@type": "Person",
+		"name":  "Editorial Team",
+		"url":   baseURL + "/about",
+	}
+
+	// Collect keywords from SEO data and tags
+	var allKeywords []string
+	if article.SEOData.Keywords != nil && len(article.SEOData.Keywords) > 0 {
+		allKeywords = append(allKeywords, article.SEOData.Keywords...)
+	}
+	for _, tag := range article.Tags {
+		allKeywords = append(allKeywords, tag.Name)
+	}
+	if len(allKeywords) > 0 {
+		// Deduplicate and limit to 10 keywords
+		seen := make(map[string]bool)
+		unique := []string{}
+		for _, kw := range allKeywords {
+			if !seen[kw] && kw != "" {
+				seen[kw] = true
+				unique = append(unique, kw)
+				if len(unique) >= 10 {
+					break
+				}
+			}
+		}
+		schema["keywords"] = strings.Join(unique, ", ")
+	}
+
+	// Add articleSection (category)
+	if category != nil {
+		if name, ok := category["Name"].(string); ok {
+			schema["articleSection"] = name
+		}
+	}
+
+	// Add publisher information with logo (required for Google News)
+	schema["publisher"] = map[string]interface{}{
+		"@type": "Organization",
+		"name":  s.config.App.Name,
+		"url":   baseURL,
+		"logo": map[string]interface{}{
+			"@type":  "ImageObject",
+			"url":    baseURL + "/static/images/logo.svg",
+			"width":  600,
+			"height": 60,
+		},
+	}
+
+	// Add featured image with full URL (required for Google News)
+	if article.FeaturedImage != "" {
+		imageURL := article.FeaturedImage
+		// Ensure absolute URL
+		if !strings.HasPrefix(imageURL, "http") {
+			imageURL = baseURL + imageURL
+		}
+		schema["image"] = map[string]interface{}{
+			"@type":  "ImageObject",
+			"url":    imageURL,
+			"width":  1200,
+			"height": 630,
+		}
+	}
+
+	schemaJSON, _ := json.Marshal(schema)
+	return string(schemaJSON)
+}
+
+// generateCategoryStructuredData generates JSON-LD structured data for a category page
+func (s *Server) generateCategoryStructuredData(category gin.H, lang string) string {
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://cryptonlisys.com"
+	}
+
+	name := ""
+	slug := ""
+	description := ""
+	if n, ok := category["Name"].(string); ok {
+		name = n
+	}
+	if sl, ok := category["Slug"].(string); ok {
+		slug = sl
+	}
+	if d, ok := category["Description"].(string); ok {
+		description = d
+	}
+
+	categoryURL := fmt.Sprintf("%s/%s/category/%s", baseURL, lang, slug)
+
+	schema := map[string]interface{}{
+		"@context":    "https://schema.org",
+		"@type":       "CollectionPage",
+		"name":        name,
+		"description": description,
+		"url":         categoryURL,
+		"inLanguage":  lang,
+		"mainEntityOfPage": map[string]interface{}{
+			"@type": "WebPage",
+			"@id":   categoryURL,
+		},
+	}
+
+	schemaJSON, _ := json.Marshal(schema)
+	return string(schemaJSON)
+}
+
+// generateTagStructuredData generates JSON-LD structured data for a tag page
+func (s *Server) generateTagStructuredData(tag gin.H, lang string) string {
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://cryptonlisys.com"
+	}
+
+	name := ""
+	slug := ""
+	description := ""
+	if n, ok := tag["Name"].(string); ok {
+		name = n
+	}
+	if sl, ok := tag["Slug"].(string); ok {
+		slug = sl
+	}
+	if d, ok := tag["Description"].(string); ok {
+		description = d
+	}
+
+	tagURL := fmt.Sprintf("%s/%s/tag/%s", baseURL, lang, slug)
+
+	schema := map[string]interface{}{
+		"@context":    "https://schema.org",
+		"@type":       "CollectionPage",
+		"name":        name,
+		"description": description,
+		"url":         tagURL,
+		"inLanguage":  lang,
+		"mainEntityOfPage": map[string]interface{}{
+			"@type": "WebPage",
+			"@id":   tagURL,
+		},
+	}
+
+	schemaJSON, _ := json.Marshal(schema)
+	return string(schemaJSON)
+}
+
+// generateBreadcrumbSchema generates JSON-LD breadcrumb structured data
+func (s *Server) generateBreadcrumbSchema(items []map[string]string) string {
+	baseURL := s.config.App.BaseURL
+	if baseURL == "" {
+		baseURL = "https://cryptonlisys.com"
+	}
+
+	listItems := make([]map[string]interface{}, len(items))
+	for i, item := range items {
+		url := item["url"]
+		if !strings.HasPrefix(url, "http") {
+			url = baseURL + url
+		}
+		listItems[i] = map[string]interface{}{
+			"@type":    "ListItem",
+			"position": i + 1,
+			"name":     item["name"],
+			"item":     url,
+		}
+	}
+
+	schema := map[string]interface{}{
+		"@context":        "https://schema.org",
+		"@type":           "BreadcrumbList",
+		"itemListElement": listItems,
+	}
+
+	schemaJSON, _ := json.Marshal(schema)
+	return string(schemaJSON)
 }
