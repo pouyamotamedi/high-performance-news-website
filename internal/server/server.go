@@ -75,6 +75,7 @@ type Server struct {
 	mediaService            *services.MediaService
 	staticGenerator         *services.StaticGenerator
 	enterpriseSearchService *services.EnterpriseSearchService
+	codeInjectionRepo       *repositories.CodeInjectionRepository
 }
 
 // requireAuth middleware checks authentication for admin routes
@@ -477,6 +478,7 @@ func New(cfg *config.Config) (*Server, error) {
 	var finalThemeService *services.ThemeService
 	var finalCDNService services.CDNServiceInterface
 	var finalMediaService *services.MediaService
+	var finalCodeInjectionRepo *repositories.CodeInjectionRepository
 
 	if !useMockServices {
 		finalAnalyticsService = analyticsService
@@ -486,6 +488,12 @@ func New(cfg *config.Config) (*Server, error) {
 		finalThemeService = themeService
 		finalCDNService = cdnService
 		finalMediaService = mediaService
+
+		// Initialize code injection repository
+		finalCodeInjectionRepo = repositories.NewCodeInjectionRepository(db.DB)
+		if err := finalCodeInjectionRepo.InitTable(context.Background()); err != nil {
+			log.Printf("Warning: Failed to initialize code injection table: %v", err)
+		}
 	}
 
 	return &Server{
@@ -514,6 +522,7 @@ func New(cfg *config.Config) (*Server, error) {
 		mediaService:            finalMediaService,
 		staticGenerator:         staticGenerator,
 		enterpriseSearchService: enterpriseSearchService,
+		codeInjectionRepo:       finalCodeInjectionRepo,
 	}, nil
 }
 
@@ -2731,9 +2740,17 @@ func (s *Server) setupAdminFrontendRoutes() {
 
 		// Code Injection
 		adminGroup.GET("/code/header", s.handleAdminHeaderScripts)
+		adminGroup.GET("/code/body-start", s.handleAdminBodyStartScripts)
 		adminGroup.GET("/code/footer", s.handleAdminFooterScripts)
 		adminGroup.GET("/code/custom-css", s.handleAdminCustomCSS)
 		adminGroup.GET("/code/custom-js", s.handleAdminCustomJS)
+
+		// Code Injection API
+		adminGroup.POST("/api/code-injection/header", s.handleSaveHeaderScripts)
+		adminGroup.POST("/api/code-injection/body-start", s.handleSaveBodyStartScripts)
+		adminGroup.POST("/api/code-injection/footer", s.handleSaveFooterScripts)
+		adminGroup.POST("/api/code-injection/custom-css", s.handleSaveCustomCSS)
+		adminGroup.POST("/api/code-injection/custom-js", s.handleSaveCustomJS)
 	}
 }
 
@@ -2831,6 +2848,18 @@ func (s *Server) createBaseTemplateData(c *gin.Context) gin.H {
 		"IsAuthenticated":   false,
 		"OGType":            "website",
 		"TwitterCard":       "summary_large_image",
+	}
+
+	// Add code injection data
+	if s.codeInjectionRepo != nil {
+		headerCode, bodyStartCode, footerCode, customCSS, customJS, err := s.codeInjectionRepo.GetEnabledCode(c.Request.Context())
+		if err == nil {
+			data["InjectedHeaderCode"] = headerCode
+			data["InjectedBodyStartCode"] = bodyStartCode
+			data["InjectedFooterCode"] = footerCode
+			data["InjectedCustomCSS"] = customCSS
+			data["InjectedCustomJS"] = customJS
+		}
 	}
 
 	// Fetch breaking news articles (articles with "breaking" tag)

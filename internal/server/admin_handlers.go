@@ -300,7 +300,8 @@ func (s *Server) renderAdminPage(c *gin.Context, title, page, content string) {
                             <span class="nav-arrow">›</span>
                         </div>
                         <div class="nav-submenu">
-                            <a href="/admin/code/header" class="nav-link">Header Scripts</a>
+                            <a href="/admin/code/header" class="nav-link">Header Scripts (head)</a>
+                            <a href="/admin/code/body-start" class="nav-link">Body Start Scripts</a>
                             <a href="/admin/code/footer" class="nav-link">Footer Scripts</a>
                             <a href="/admin/code/custom-css" class="nav-link">Custom CSS</a>
                             <a href="/admin/code/custom-js" class="nav-link">Custom JavaScript</a>

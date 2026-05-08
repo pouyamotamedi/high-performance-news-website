@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
+    <!-- Injected Header Code (Google Tag Manager, etc.) -->
+    {{if .InjectedHeaderCode}}{{.InjectedHeaderCode | safeHTML}}{{end}}
+    
     <!-- Performance hints -->
     {{range .PreloadResources}}
     <link rel="preload" href="{{.URL}}" as="{{.As}}" type="{{.Type}}">
@@ -176,6 +179,9 @@
     {{end}}
 </head>
 <body class="{{.LanguageCode}}-lang {{.LanguageDirection}}-dir">
+    <!-- Injected Body Start Code (Google Tag Manager noscript, etc.) -->
+    {{if .InjectedBodyStartCode}}{{.InjectedBodyStartCode | safeHTML}}{{end}}
+    
     <!-- Reading Progress Bar -->
     <div class="reading-progress" id="reading-progress" aria-hidden="true"></div>
     
@@ -337,6 +343,19 @@
             });
         }
     </script>
+    
+    <!-- Injected Custom CSS -->
+    {{if .InjectedCustomCSS}}
+    <style>{{.InjectedCustomCSS | safeCSS}}</style>
+    {{end}}
+    
+    <!-- Injected Custom JavaScript -->
+    {{if .InjectedCustomJS}}
+    <script>{{.InjectedCustomJS | safeJS}}</script>
+    {{end}}
+    
+    <!-- Injected Footer Code -->
+    {{if .InjectedFooterCode}}{{.InjectedFooterCode | safeHTML}}{{end}}
 </body>
 </html>
 {{end}}

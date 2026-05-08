@@ -432,7 +432,197 @@ func (s *Server) handleAdminAnalyticsRealtime(c *gin.Context) {
 // ============================================================================
 
 func (s *Server) handleAdminRobotsEditor(c *gin.Context) {
-	c.File("web/templates/admin/robots_editor.html")
+	content := `
+	<style>
+		.robots-editor {
+			background: white;
+			border-radius: 8px;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+			padding: 1.5rem;
+		}
+		.editor-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 1rem;
+			flex-wrap: wrap;
+			gap: 1rem;
+		}
+		.editor-title {
+			font-size: 1.1rem;
+			font-weight: 600;
+			color: #1f2937;
+		}
+		.editor-actions {
+			display: flex;
+			gap: 0.75rem;
+			flex-wrap: wrap;
+		}
+		.btn {
+			padding: 0.6rem 1.2rem;
+			border: none;
+			border-radius: 6px;
+			cursor: pointer;
+			font-size: 0.9rem;
+			font-weight: 500;
+			transition: all 0.2s;
+		}
+		.btn-primary { background: #3b82f6; color: white; }
+		.btn-primary:hover { background: #2563eb; }
+		.btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+		.btn-secondary:hover { background: #e2e8f0; }
+		#robotsContent {
+			width: 100%;
+			min-height: 500px;
+			padding: 1rem;
+			font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+			font-size: 0.9rem;
+			line-height: 1.6;
+			border: 1px solid #d1d5db;
+			border-radius: 6px;
+			resize: vertical;
+			background: #f8fafc;
+			color: #1e293b;
+			tab-size: 4;
+		}
+		#robotsContent:focus {
+			outline: none;
+			border-color: #3b82f6;
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+			background: #fff;
+		}
+		.status-bar {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-top: 0.75rem;
+			font-size: 0.85rem;
+			color: #6b7280;
+		}
+		.alert {
+			padding: 0.75rem 1rem;
+			border-radius: 6px;
+			margin-bottom: 1rem;
+			font-size: 0.9rem;
+		}
+		.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+		.alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+		.hint-box {
+			background: #fffbeb;
+			border: 1px solid #fde68a;
+			border-radius: 6px;
+			padding: 0.75rem 1rem;
+			margin-bottom: 1rem;
+			font-size: 0.85rem;
+			color: #92400e;
+		}
+	</style>
+
+	<div id="alertContainer"></div>
+
+	<div class="hint-box">
+		💡 <strong>Note:</strong> Changes take effect immediately after saving. Use <code>{SITE_URL}</code> as placeholder — it will be replaced with your actual domain when served.
+	</div>
+
+	<div class="robots-editor">
+		<div class="editor-header">
+			<div class="editor-title">📄 /robots.txt</div>
+			<div class="editor-actions">
+				<button class="btn btn-secondary" onclick="loadRobots()">🔄 Reload</button>
+				<button class="btn btn-secondary" onclick="window.open('/robots.txt', '_blank')">👁️ View Live</button>
+				<button class="btn btn-primary" onclick="saveRobots()">💾 Save</button>
+			</div>
+		</div>
+		<textarea id="robotsContent" spellcheck="false" placeholder="Loading robots.txt..."></textarea>
+		<div class="status-bar">
+			<span id="lastSaved">Not saved yet</span>
+			<span id="charCount">0 characters</span>
+		</div>
+	</div>
+
+	<script>
+		let csrfToken = null;
+
+		function showAlert(message, type) {
+			const container = document.getElementById('alertContainer');
+			container.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+			setTimeout(() => container.innerHTML = '', 5000);
+		}
+
+		async function getCSRFToken() {
+			try {
+				const response = await fetch('/api/v1/auth/csrf-token');
+				const data = await response.json();
+				csrfToken = data.csrf_token;
+			} catch (e) {
+				console.error('Failed to get CSRF token:', e);
+			}
+		}
+
+		async function loadRobots() {
+			try {
+				const response = await fetch('/api/v1/admin/seo/robots', {
+					headers: { 'Authorization': 'Bearer ' + localStorage.getItem('auth_token') }
+				});
+				if (response.ok) {
+					const data = await response.json();
+					document.getElementById('robotsContent').value = data.content || '';
+					updateCharCount();
+				} else {
+					showAlert('Failed to load robots.txt', 'error');
+				}
+			} catch (error) {
+				console.error('Load error:', error);
+				showAlert('Failed to load robots.txt: ' + error.message, 'error');
+			}
+		}
+
+		async function saveRobots() {
+			const content = document.getElementById('robotsContent').value;
+			try {
+				const response = await fetch('/api/v1/admin/seo/robots', {
+					method: 'POST',
+					headers: {
+						'Authorization': 'Bearer ' + localStorage.getItem('auth_token'),
+						'Content-Type': 'application/json',
+						'X-CSRF-Token': csrfToken
+					},
+					body: JSON.stringify({ content: content })
+				});
+				if (response.ok) {
+					showAlert('✅ Robots.txt saved successfully!', 'success');
+					document.getElementById('lastSaved').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+				} else {
+					const errData = await response.json();
+					showAlert('Failed to save: ' + (errData.error || 'Unknown error'), 'error');
+				}
+			} catch (error) {
+				showAlert('Failed to save: ' + error.message, 'error');
+			}
+		}
+
+		function updateCharCount() {
+			const content = document.getElementById('robotsContent').value;
+			document.getElementById('charCount').textContent = content.length + ' characters';
+		}
+
+		// Keyboard shortcut: Ctrl+S to save
+		document.addEventListener('keydown', function(e) {
+			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+				e.preventDefault();
+				saveRobots();
+			}
+		});
+
+		// Initialize
+		(async function() {
+			await getCSRFToken();
+			await loadRobots();
+			document.getElementById('robotsContent').addEventListener('input', updateCharCount);
+		})();
+	</script>`
+
+	s.renderAdminPage(c, "🤖 Robots.txt Editor", "seo", content)
 }
 
 func (s *Server) handleAdminSEOSettings(c *gin.Context) {
@@ -1745,47 +1935,211 @@ func (s *Server) handleAdminFacebookPixel(c *gin.Context) {
 // ============================================================================
 
 func (s *Server) handleAdminHeaderScripts(c *gin.Context) {
-	content := `
+	// Get current settings from database
+	var currentCode, enabled string
+	if s.codeInjectionRepo != nil {
+		ci, err := s.codeInjectionRepo.Get(c.Request.Context())
+		if err == nil {
+			currentCode = ci.HeaderCode
+			if ci.HeaderEnabled {
+				enabled = "checked"
+			}
+		}
+	}
+
+	content := fmt.Sprintf(`
 	<div class="dashboard-card">
-		<div class="card-title">📝 Header Scripts</div>
-		<p style="background: #fef3c7; padding: 1rem; border-radius: 8px; color: #92400e;">
-			<strong>🚧 This feature coming soon</strong><br>
-			<em>Header scripts injection allows you to add custom code to the &lt;head&gt; section of every page. Perfect for meta tags, verification codes, analytics scripts, and custom fonts.</em>
+		<div class="card-title">📝 Header Scripts (Inside &lt;head&gt;)</div>
+		<p style="background: #dbeafe; padding: 1rem; border-radius: 8px; color: #1e40af;">
+			<strong>💡 Google Tag Manager - Part 1</strong><br>
+			<em>Paste the first GTM code here (the one that goes "as high in the &lt;head&gt; as possible").</em>
 		</p>
-		<div style="margin-top: 1.5rem;">
+		<form id="header-scripts-form" style="margin-top: 1.5rem;">
+			<div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+				<input type="checkbox" id="header-enabled" name="enabled" %s style="width: 18px; height: 18px;">
+				<label for="header-enabled" style="font-weight: 500;">Enable Header Scripts</label>
+			</div>
 			<h4 style="margin-bottom: 1rem;">Custom Header Code</h4>
 			<p style="color: #64748b; font-size: 0.875rem; margin-bottom: 0.5rem;">This code will be injected into the &lt;head&gt; section of all pages:</p>
-			<textarea id="header-scripts" style="width: 100%; min-height: 200px; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace; font-size: 0.875rem;" placeholder="<!-- Add your header scripts here -->
-<meta name='verification' content='xxx'>
-<script>...</script>"></textarea>
+			<textarea id="header-scripts" name="code" style="width: 100%%; min-height: 250px; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace; font-size: 0.875rem;" placeholder="<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-XXXX');</script>
+<!-- End Google Tag Manager -->">%s</textarea>
 			<div style="margin-top: 1rem;">
-				<button class="action-button" disabled>💾 Save Header Scripts</button>
+				<button type="submit" class="action-button">💾 Save Header Scripts</button>
+				<span id="header-status" style="margin-left: 1rem; color: #16a34a;"></span>
 			</div>
-		</div>
-	</div>`
+		</form>
+	</div>
+	<script>
+	document.getElementById('header-scripts-form').addEventListener('submit', async function(e) {
+		e.preventDefault();
+		const code = document.getElementById('header-scripts').value;
+		const enabled = document.getElementById('header-enabled').checked;
+		const status = document.getElementById('header-status');
+		
+		try {
+			const response = await fetch('/admin/api/code-injection/header', {
+				method: 'POST',
+				headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify({code: code, enabled: enabled})
+			});
+			const data = await response.json();
+			if (data.success) {
+				status.textContent = '✓ Saved successfully!';
+				status.style.color = '#16a34a';
+			} else {
+				status.textContent = '✗ Error: ' + (data.error || 'Unknown error');
+				status.style.color = '#dc2626';
+			}
+		} catch (err) {
+			status.textContent = '✗ Error: ' + err.message;
+			status.style.color = '#dc2626';
+		}
+		setTimeout(() => { status.textContent = ''; }, 3000);
+	});
+	</script>`, enabled, escapeHTML(currentCode))
 	s.renderAdminPage(c, "Header Scripts", "code-injection", content)
 }
 
 func (s *Server) handleAdminFooterScripts(c *gin.Context) {
-	content := `
+	// Get current settings from database
+	var currentCode, enabled string
+	if s.codeInjectionRepo != nil {
+		ci, err := s.codeInjectionRepo.Get(c.Request.Context())
+		if err == nil {
+			currentCode = ci.FooterCode
+			if ci.FooterEnabled {
+				enabled = "checked"
+			}
+		}
+	}
+
+	content := fmt.Sprintf(`
 	<div class="dashboard-card">
-		<div class="card-title">📝 Footer Scripts</div>
-		<p style="background: #fef3c7; padding: 1rem; border-radius: 8px; color: #92400e;">
-			<strong>🚧 This feature coming soon</strong><br>
-			<em>Footer scripts injection allows you to add custom code before the closing &lt;/body&gt; tag. Ideal for chat widgets, analytics scripts, and third-party integrations that should load after page content.</em>
+		<div class="card-title">📝 Footer Scripts (Before &lt;/body&gt;)</div>
+		<p style="background: #f0fdf4; padding: 1rem; border-radius: 8px; color: #166534;">
+			<strong>💡 Tip</strong><br>
+			<em>Use this for scripts that should load after page content, like chat widgets or analytics that don't need to be in the head.</em>
 		</p>
-		<div style="margin-top: 1.5rem;">
+		<form id="footer-scripts-form" style="margin-top: 1.5rem;">
+			<div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+				<input type="checkbox" id="footer-enabled" name="enabled" %s style="width: 18px; height: 18px;">
+				<label for="footer-enabled" style="font-weight: 500;">Enable Footer Scripts</label>
+			</div>
 			<h4 style="margin-bottom: 1rem;">Custom Footer Code</h4>
 			<p style="color: #64748b; font-size: 0.875rem; margin-bottom: 0.5rem;">This code will be injected before the &lt;/body&gt; tag on all pages:</p>
-			<textarea id="footer-scripts" style="width: 100%; min-height: 200px; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace; font-size: 0.875rem;" placeholder="<!-- Add your footer scripts here -->
+			<textarea id="footer-scripts" name="code" style="width: 100%%; min-height: 250px; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace; font-size: 0.875rem;" placeholder="<!-- Add your footer scripts here -->
 <script src='https://example.com/widget.js'></script>
-<script>...</script>"></textarea>
+<script>
+// Your custom code
+</script>">%s</textarea>
 			<div style="margin-top: 1rem;">
-				<button class="action-button" disabled>💾 Save Footer Scripts</button>
+				<button type="submit" class="action-button">💾 Save Footer Scripts</button>
+				<span id="footer-status" style="margin-left: 1rem; color: #16a34a;"></span>
 			</div>
-		</div>
-	</div>`
+		</form>
+	</div>
+	<script>
+	document.getElementById('footer-scripts-form').addEventListener('submit', async function(e) {
+		e.preventDefault();
+		const code = document.getElementById('footer-scripts').value;
+		const enabled = document.getElementById('footer-enabled').checked;
+		const status = document.getElementById('footer-status');
+		
+		try {
+			const response = await fetch('/admin/api/code-injection/footer', {
+				method: 'POST',
+				headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify({code: code, enabled: enabled})
+			});
+			const data = await response.json();
+			if (data.success) {
+				status.textContent = '✓ Saved successfully!';
+				status.style.color = '#16a34a';
+			} else {
+				status.textContent = '✗ Error: ' + (data.error || 'Unknown error');
+				status.style.color = '#dc2626';
+			}
+		} catch (err) {
+			status.textContent = '✗ Error: ' + err.message;
+			status.style.color = '#dc2626';
+		}
+		setTimeout(() => { status.textContent = ''; }, 3000);
+	});
+	</script>`, enabled, escapeHTML(currentCode))
 	s.renderAdminPage(c, "Footer Scripts", "code-injection", content)
+}
+
+func (s *Server) handleAdminBodyStartScripts(c *gin.Context) {
+	// Get current settings from database
+	var currentCode, enabled string
+	if s.codeInjectionRepo != nil {
+		ci, err := s.codeInjectionRepo.Get(c.Request.Context())
+		if err == nil {
+			currentCode = ci.BodyStartCode
+			if ci.BodyStartEnabled {
+				enabled = "checked"
+			}
+		}
+	}
+
+	content := fmt.Sprintf(`
+	<div class="dashboard-card">
+		<div class="card-title">📝 Body Start Scripts (After &lt;body&gt;)</div>
+		<p style="background: #fef3cd; padding: 1rem; border-radius: 8px; color: #856404;">
+			<strong>💡 Google Tag Manager - Part 2</strong><br>
+			<em>Paste the second GTM code here (the noscript part that goes "immediately after the opening &lt;body&gt; tag").</em>
+		</p>
+		<form id="body-start-scripts-form" style="margin-top: 1.5rem;">
+			<div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+				<input type="checkbox" id="body-start-enabled" name="enabled" %s style="width: 18px; height: 18px;">
+				<label for="body-start-enabled" style="font-weight: 500;">Enable Body Start Scripts</label>
+			</div>
+			<h4 style="margin-bottom: 1rem;">Custom Body Start Code</h4>
+			<p style="color: #64748b; font-size: 0.875rem; margin-bottom: 0.5rem;">This code will be injected immediately after the &lt;body&gt; tag on all pages:</p>
+			<textarea id="body-start-scripts" name="code" style="width: 100%%; min-height: 200px; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace; font-size: 0.875rem;" placeholder="<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src='https://www.googletagmanager.com/ns.html?id=GTM-XXXX'
+height='0' width='0' style='display:none;visibility:hidden'></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->">%s</textarea>
+			<div style="margin-top: 1rem;">
+				<button type="submit" class="action-button">💾 Save Body Start Scripts</button>
+				<span id="body-start-status" style="margin-left: 1rem; color: #16a34a;"></span>
+			</div>
+		</form>
+	</div>
+	<script>
+	document.getElementById('body-start-scripts-form').addEventListener('submit', async function(e) {
+		e.preventDefault();
+		const code = document.getElementById('body-start-scripts').value;
+		const enabled = document.getElementById('body-start-enabled').checked;
+		const status = document.getElementById('body-start-status');
+		
+		try {
+			const response = await fetch('/admin/api/code-injection/body-start', {
+				method: 'POST',
+				headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify({code: code, enabled: enabled})
+			});
+			const data = await response.json();
+			if (data.success) {
+				status.textContent = '✓ Saved successfully!';
+				status.style.color = '#16a34a';
+			} else {
+				status.textContent = '✗ Error: ' + (data.error || 'Unknown error');
+				status.style.color = '#dc2626';
+			}
+		} catch (err) {
+			status.textContent = '✗ Error: ' + err.message;
+			status.style.color = '#dc2626';
+		}
+		setTimeout(() => { status.textContent = ''; }, 3000);
+	});
+	</script>`, enabled, escapeHTML(currentCode))
+	s.renderAdminPage(c, "Body Start Scripts", "code-injection", content)
 }
 
 func (s *Server) handleAdminCustomCSS(c *gin.Context) {
@@ -1839,4 +2193,138 @@ document.addEventListener('DOMContentLoaded', function() {
 		</div>
 	</div>`
 	s.renderAdminPage(c, "Custom JavaScript", "code-injection", content)
+}
+
+// ============================================================================
+// CODE INJECTION API HANDLERS
+// ============================================================================
+
+// handleSaveHeaderScripts saves header scripts
+func (s *Server) handleSaveHeaderScripts(c *gin.Context) {
+	var req struct {
+		Code    string `json:"code"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	if s.codeInjectionRepo == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Code injection not available"})
+		return
+	}
+
+	if err := s.codeInjectionRepo.UpdateHeaderCode(c.Request.Context(), req.Code, req.Enabled); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// handleSaveBodyStartScripts saves body start scripts
+func (s *Server) handleSaveBodyStartScripts(c *gin.Context) {
+	var req struct {
+		Code    string `json:"code"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	if s.codeInjectionRepo == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Code injection not available"})
+		return
+	}
+
+	if err := s.codeInjectionRepo.UpdateBodyStartCode(c.Request.Context(), req.Code, req.Enabled); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// handleSaveFooterScripts saves footer scripts
+func (s *Server) handleSaveFooterScripts(c *gin.Context) {
+	var req struct {
+		Code    string `json:"code"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	if s.codeInjectionRepo == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Code injection not available"})
+		return
+	}
+
+	if err := s.codeInjectionRepo.UpdateFooterCode(c.Request.Context(), req.Code, req.Enabled); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// handleSaveCustomCSS saves custom CSS
+func (s *Server) handleSaveCustomCSS(c *gin.Context) {
+	var req struct {
+		Code    string `json:"code"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	if s.codeInjectionRepo == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Code injection not available"})
+		return
+	}
+
+	if err := s.codeInjectionRepo.UpdateCustomCSS(c.Request.Context(), req.Code, req.Enabled); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// handleSaveCustomJS saves custom JavaScript
+func (s *Server) handleSaveCustomJS(c *gin.Context) {
+	var req struct {
+		Code    string `json:"code"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	if s.codeInjectionRepo == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Code injection not available"})
+		return
+	}
+
+	if err := s.codeInjectionRepo.UpdateCustomJS(c.Request.Context(), req.Code, req.Enabled); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// escapeHTML escapes HTML special characters for safe display in textarea
+func escapeHTML(s string) string {
+	s = strings.ReplaceAll(s, "&", "&amp;")
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	s = strings.ReplaceAll(s, ">", "&gt;")
+	s = strings.ReplaceAll(s, "\"", "&quot;")
+	s = strings.ReplaceAll(s, "'", "&#39;")
+	return s
 }
