@@ -242,9 +242,9 @@ func (h *APIHandler) CreateArticle(c *gin.Context) {
 		}
 	}
 
-	// Handle tags after article creation
+	// Handle tags after article creation - pass article language for correct tag association
 	if len(req.Tags) > 0 {
-		err = h.handleArticleTags(c.Request.Context(), createdArticle.ID, req.Tags)
+		err = h.handleArticleTags(c.Request.Context(), createdArticle.ID, req.Tags, createdArticle.LanguageCode)
 		if err != nil {
 			// Log error but don't fail the request since article was created
 			// In production, you might want to handle this differently
@@ -807,17 +807,24 @@ func generateSlugFromTitle(title string) string {
 }
 
 // handleArticleTags processes and associates tags with an article
-func (h *APIHandler) handleArticleTags(ctx context.Context, articleID uint64, tagNames []string) error {
+// languageCode is the article's language to ensure tags are created/associated in the correct language
+func (h *APIHandler) handleArticleTags(ctx context.Context, articleID uint64, tagNames []string, languageCode string) error {
 	// Use direct database approach for now
-	return h.handleTagsDirect(ctx, articleID, tagNames)
+	return h.handleTagsDirect(ctx, articleID, tagNames, languageCode)
 }
 
 // handleTagsDirect handles tags with direct database queries
-func (h *APIHandler) handleTagsDirect(ctx context.Context, articleID uint64, tagNames []string) error {
+// languageCode is the article's language to ensure tags are created/associated in the correct language
+func (h *APIHandler) handleTagsDirect(ctx context.Context, articleID uint64, tagNames []string, languageCode string) error {
 	// Use the article service to handle tag creation and association
 	if h.articleService == nil {
 		log.Printf("Article service not available for tag processing")
 		return nil
+	}
+	
+	// Default to English if no language specified
+	if languageCode == "" {
+		languageCode = "en"
 	}
 	
 	for _, tagName := range tagNames {
@@ -833,31 +840,37 @@ func (h *APIHandler) handleTagsDirect(ctx context.Context, articleID uint64, tag
 		// Note: This assumes the article service has tag handling methods
 		// If not, we'll need to implement direct database operations
 		
-		err := h.createAndAssociateTag(ctx, articleID, tagName, tagSlug)
+		err := h.createAndAssociateTag(ctx, articleID, tagName, tagSlug, languageCode)
 		if err != nil {
 			log.Printf("Failed to create/associate tag %s with article %d: %v", tagName, articleID, err)
 			// Continue with other tags even if one fails
 			continue
 		}
 		
-		log.Printf("Successfully created/associated tag: %s (slug: %s) with article %d", tagName, tagSlug, articleID)
+		log.Printf("Successfully created/associated tag: %s (slug: %s) with article %d (lang: %s)", tagName, tagSlug, articleID, languageCode)
 	}
 	
 	return nil
 }
 
 // createAndAssociateTag creates a tag if it doesn't exist and associates it with an article
-func (h *APIHandler) createAndAssociateTag(ctx context.Context, articleID uint64, tagName, tagSlug string) error {
+// languageCode is the article's language - we try to find an existing tag in that language first,
+// or create a new one in that language if it doesn't exist
+func (h *APIHandler) createAndAssociateTag(ctx context.Context, articleID uint64, tagName, tagSlug, languageCode string) error {
 	// Check if we have access to tag service
 	if h.tagService == nil {
 		log.Printf("TagService not available - cannot create/associate tag: %s", tagName)
 		return nil
 	}
 	
-	// 1. Check if tag exists by name first (case-insensitive)
-	existingTag, err := h.findTagByName(ctx, tagName)
+	// 1. First try to find an existing tag with the same name in the article's language
+	existingTag, err := h.findTagByNameAndLanguage(ctx, tagName, languageCode)
 	if err != nil || existingTag == nil {
-		// Tag doesn't exist, create it with unique slug
+		// No tag found in the article's language
+		// Check if there's a tag with the same name in any language (to get translation_group_id)
+		anyLangTag, _ := h.findTagByName(ctx, tagName)
+		
+		// Create a new tag in the article's language
 		uniqueSlug, err := h.generateUniqueTagSlug(ctx, tagSlug)
 		if err != nil {
 			log.Printf("Failed to generate unique slug for %s: %v", tagName, err)
@@ -867,8 +880,14 @@ func (h *APIHandler) createAndAssociateTag(ctx context.Context, articleID uint64
 		newTag := &models.Tag{
 			Name:         tagName,
 			Slug:         uniqueSlug,
-			LanguageCode: "fa", // Default to Persian
+			LanguageCode: languageCode, // Use article's language
 			Keywords:     []string{tagName}, // Add the tag name as a keyword
+		}
+		
+		// If we found a tag with the same name in another language, link them via translation_group_id
+		if anyLangTag != nil && anyLangTag.TranslationGroupID != nil {
+			newTag.TranslationGroupID = anyLangTag.TranslationGroupID
+			log.Printf("Linking new tag to existing translation group: %d", *anyLangTag.TranslationGroupID)
 		}
 		
 		// Validate and prepare the tag
@@ -886,10 +905,10 @@ func (h *APIHandler) createAndAssociateTag(ctx context.Context, articleID uint64
 			return fmt.Errorf("failed to create tag: %w", err)
 		}
 		
-		log.Printf("Created new tag: %s (slug: %s)", tagName, uniqueSlug)
+		log.Printf("Created new tag: %s (slug: %s, lang: %s)", tagName, uniqueSlug, languageCode)
 		existingTag = newTag
 	} else {
-		log.Printf("Using existing tag: %s (ID: %d)", tagName, existingTag.ID)
+		log.Printf("Using existing tag: %s (ID: %d, lang: %s)", tagName, existingTag.ID, existingTag.LanguageCode)
 	}
 	
 	// 2. Associate tag with article using direct database query
@@ -935,6 +954,25 @@ func (h *APIHandler) findTagByName(ctx context.Context, tagName string) (*models
 	lowerTagName := strings.ToLower(strings.TrimSpace(tagName))
 	for _, tag := range tags {
 		if strings.ToLower(tag.Name) == lowerTagName {
+			return &tag, nil
+		}
+	}
+	
+	return nil, nil // Not found
+}
+
+// findTagByNameAndLanguage searches for a tag by name and language code (case-insensitive)
+// This is used to find the correct localized version of a tag for SEO purposes
+func (h *APIHandler) findTagByNameAndLanguage(ctx context.Context, tagName string, languageCode string) (*models.Tag, error) {
+	// Get all tags and search by name and language (case-insensitive)
+	tags, err := h.tagService.GetAll()
+	if err != nil {
+		return nil, err
+	}
+	
+	lowerTagName := strings.ToLower(strings.TrimSpace(tagName))
+	for _, tag := range tags {
+		if strings.ToLower(tag.Name) == lowerTagName && tag.LanguageCode == languageCode {
 			return &tag, nil
 		}
 	}

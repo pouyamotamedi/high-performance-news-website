@@ -453,3 +453,53 @@ func (r *CategoryRepository) GetCategoryPath(ctx context.Context, categoryID uin
 
 	return categories, nil
 }
+
+// GetByTranslationGroupAndLanguage finds a category by its translation group and language code
+// This is used to get the correct localized version of a category for SEO purposes
+func (r *CategoryRepository) GetByTranslationGroupAndLanguage(ctx context.Context, translationGroupID uint64, languageCode string) (*models.Category, error) {
+	query := `
+		SELECT id, name, slug, description, parent_id, sort_order, image_url, image_alt_text,
+		       created_at, updated_at, language_code, translation_group_id
+		FROM categories 
+		WHERE (translation_group_id = $1 OR id = $1) AND language_code = $2
+		LIMIT 1
+	`
+
+	var category models.Category
+	var description, imageURL, imageAltText sql.NullString
+	var parentID, translationGroupIDPtr sql.NullInt64
+	var updatedAt sql.NullTime
+
+	err := r.db.QueryRowContext(ctx, query, translationGroupID, languageCode).Scan(
+		&category.ID, &category.Name, &category.Slug, &description,
+		&parentID, &category.SortOrder, &imageURL, &imageAltText,
+		&category.CreatedAt, &updatedAt, &category.LanguageCode, &translationGroupIDPtr,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get category by translation group and language: %w", err)
+	}
+
+	// Handle nullable fields
+	if description.Valid {
+		category.Description = description.String
+	}
+	if imageURL.Valid {
+		category.ImageURL = &imageURL.String
+	}
+	if imageAltText.Valid {
+		category.ImageAltText = &imageAltText.String
+	}
+	if parentID.Valid {
+		pid := uint64(parentID.Int64)
+		category.ParentID = &pid
+	}
+	if translationGroupIDPtr.Valid {
+		tgid := uint64(translationGroupIDPtr.Int64)
+		category.TranslationGroupID = &tgid
+	}
+	if updatedAt.Valid {
+		category.UpdatedAt = updatedAt.Time
+	}
+
+	return &category, nil
+}

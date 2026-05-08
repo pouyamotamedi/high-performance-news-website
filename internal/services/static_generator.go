@@ -669,26 +669,43 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 		relatedArticles = []models.Article{} // Continue with empty related articles
 	}
 
-	// Get the article's category
-	var articleCategory *models.Category
-	if len(article.Categories) > 0 {
-		articleCategory = &article.Categories[0]
-	} else if sg.categoryRepo != nil && article.CategoryID > 0 {
-		// Try to fetch category from repository
-		cat, err := sg.categoryRepo.GetByID(ctx, article.CategoryID)
-		if err == nil {
-			articleCategory = cat
-		}
-	}
-	// Fallback to a default category if none found
-	if articleCategory == nil {
-		articleCategory = &models.Category{Name: "General", Slug: "general"}
-	}
-
 	// Use article's language for URL (SEO best practice)
 	language := article.LanguageCode
 	if language == "" {
 		language = "en"
+	}
+
+	// Get the article's category - resolve to correct language version for SEO
+	var articleCategory *models.Category
+	if sg.categoryRepo != nil && article.CategoryID > 0 {
+		// First get the original category to find its translation group
+		originalCat, err := sg.categoryRepo.GetByID(ctx, article.CategoryID)
+		if err == nil && originalCat != nil {
+			// Try to find the category in the article's language
+			translationGroupID := originalCat.ID
+			if originalCat.TranslationGroupID != nil {
+				translationGroupID = *originalCat.TranslationGroupID
+			}
+			
+			// Query for category in the correct language
+			langCat, err := sg.getCategoryByTranslationGroupAndLanguage(ctx, translationGroupID, language)
+			if err == nil && langCat != nil {
+				articleCategory = langCat
+			} else {
+				// Fallback to original category
+				articleCategory = originalCat
+			}
+		}
+	}
+	
+	// If still no category, check article.Categories
+	if articleCategory == nil && len(article.Categories) > 0 {
+		articleCategory = &article.Categories[0]
+	}
+	
+	// Fallback to a default category if none found
+	if articleCategory == nil {
+		articleCategory = &models.Category{Name: "General", Slug: "general"}
 	}
 
 	// Create base template data matching dynamic templates
@@ -808,8 +825,8 @@ func (sg *StaticGenerator) GenerateArticlePage(ctx context.Context, article *mod
 	}
 	data.CategoryArticles = categoryData
 
-	// Add structured data
-	data.StructuredData = sg.generateArticleSchema(article)
+	// Add structured data - pass the language-resolved category
+	data.StructuredData = sg.generateArticleSchema(article, articleCategory)
 
 	// Generate breadcrumbs HTML
 	breadcrumbHTML := sg.generateArticleBreadcrumbs(article)
@@ -1780,6 +1797,16 @@ func (sg *StaticGenerator) getRelatedArticles(ctx context.Context, article *mode
 	return related, nil
 }
 
+// getCategoryByTranslationGroupAndLanguage finds a category by its translation group and language
+// This is used to get the correct localized version of a category for SEO purposes
+func (sg *StaticGenerator) getCategoryByTranslationGroupAndLanguage(ctx context.Context, translationGroupID uint64, languageCode string) (*models.Category, error) {
+	if sg.categoryRepo == nil {
+		return nil, fmt.Errorf("category repository not available")
+	}
+
+	return sg.categoryRepo.GetByTranslationGroupAndLanguage(ctx, translationGroupID, languageCode)
+}
+
 func (sg *StaticGenerator) generateHomepageSchema(articles []models.Article) string {
 	schema := map[string]interface{}{
 		"@context": "https://schema.org",
@@ -1818,7 +1845,7 @@ func (sg *StaticGenerator) generateHomepageSchema(articles []models.Article) str
 	return string(schemaJSON)
 }
 
-func (sg *StaticGenerator) generateArticleSchema(article *models.Article) string {
+func (sg *StaticGenerator) generateArticleSchema(article *models.Article, category *models.Category) string {
 	schemaType := "NewsArticle"
 	if article.SEOData.SchemaType != "" {
 		schemaType = article.SEOData.SchemaType
@@ -1881,8 +1908,11 @@ func (sg *StaticGenerator) generateArticleSchema(article *models.Article) string
 		schema["keywords"] = strings.Join(unique, ", ")
 	}
 
-	// Add articleSection (category) if available
-	if len(article.Categories) > 0 {
+	// Add articleSection (category) - use the language-resolved category passed as parameter
+	if category != nil {
+		schema["articleSection"] = category.Name
+	} else if len(article.Categories) > 0 {
+		// Fallback to article.Categories if no category passed
 		schema["articleSection"] = article.Categories[0].Name
 	}
 
