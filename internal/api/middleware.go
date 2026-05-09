@@ -377,13 +377,14 @@ func SecurityHeaders() gin.HandlerFunc {
 				"base-uri 'self'; " +
 				"form-action 'self'"
 		} else {
-			// Public CSP: More restrictive for public-facing pages
+			// Public CSP: Allow GTM, GA4, and other analytics while maintaining security
 			csp = "default-src 'self'; " +
-				"script-src 'self'; " +
-				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+				"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com https://tagmanager.google.com https://static.cloudflareinsights.com; " +
+				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://tagmanager.google.com; " +
 				"font-src 'self' https://fonts.gstatic.com; " +
-				"img-src 'self' data: https:; " +
-				"connect-src 'self'; " +
+				"img-src 'self' data: https: www.googletagmanager.com www.google-analytics.com; " +
+				"connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://region1.google-analytics.com; " +
+				"frame-src https://www.googletagmanager.com; " +
 				"object-src 'none'; " +
 				"frame-ancestors 'none'; " +
 				"base-uri 'self'; " +
@@ -1132,17 +1133,18 @@ func EnhancedSecurityHeaders() gin.HandlerFunc {
 				"base-uri 'self'; " +
 				"manifest-src 'self'"
 		} else {
-			// Public CSP: More restrictive for public pages
+			// Public CSP: Allow GTM, GA4, and other analytics while maintaining security
 			csp = "default-src 'self'; " +
-				"script-src 'self' 'unsafe-inline'; " +
-				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-				"img-src 'self' data: https:; " +
+				"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com https://tagmanager.google.com https://static.cloudflareinsights.com; " +
+				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://tagmanager.google.com; " +
+				"img-src 'self' data: https: www.googletagmanager.com www.google-analytics.com; " +
 				"font-src 'self' data: https://fonts.gstatic.com; " +
-				"connect-src 'self'; " +
+				"connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://region1.google-analytics.com; " +
 				"media-src 'self'; " +
 				"object-src 'none'; " +
 				"child-src 'none'; " +
 				"worker-src 'self'; " +
+				"frame-src https://www.googletagmanager.com; " +
 				"frame-ancestors 'none'; " +
 				"form-action 'self'; " +
 				"base-uri 'self'; " +
