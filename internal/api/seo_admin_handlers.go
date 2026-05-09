@@ -103,24 +103,45 @@ func getDefaultSEOSettings() *SEOSettings {
 		RSSDelayHours:         2,
 		RSSCacheTTL:           4,
 		RSSItemLimit:          50,
-		RobotsTxtContent: `User-agent: *
+		RobotsTxtContent: `# Robots.txt - Optimized for SEO + AI Protection
+# Use {SITE_URL} as placeholder for your domain
+
+User-agent: *
 Allow: /
-
-# Sitemaps
-Sitemap: https://a.10top.shop/sitemap.xml
-
-# Crawl-delay for polite crawling
-Crawl-delay: 1
-
-# Disallow admin areas
 Disallow: /admin/
 Disallow: /api/
-
-# Allow specific API paths
 Allow: /api/v1/articles/
+Allow: /static/
+Allow: /uploads/
+Disallow: /*?utm_
+Disallow: /*?fbclid=
+Disallow: /*?gclid=
+Crawl-delay: 1
 
-# Static resources
-Allow: /static/`,
+# AI Bots - Block Training
+User-agent: GPTBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+Sitemap: {SITE_URL}/sitemap.xml
+Sitemap: {SITE_URL}/sitemap-news.xml`,
 	}
 }
 

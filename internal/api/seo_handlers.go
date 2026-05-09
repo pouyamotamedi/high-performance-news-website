@@ -51,8 +51,8 @@ func (h *SEOHandlers) RegisterSEORoutes(router *gin.Engine) {
 	router.GET("/sitemap-categories.xml", h.handleCategorySitemap)
 	router.GET("/sitemap-tags.xml", h.handleTagSitemap)
 
-	// Robots.txt
-	router.GET("/robots.txt", h.handleRobotsTxt)
+	// Note: robots.txt is handled by server.go to support admin panel editing
+	// router.GET("/robots.txt", h.handleRobotsTxt)
 
 	// SEO API endpoints (for admin/testing)
 	seoAPI := router.Group("/api/v1/seo")
@@ -239,28 +239,128 @@ func (h *SEOHandlers) handleTagSitemap(c *gin.Context) {
 }
 
 func (h *SEOHandlers) handleRobotsTxt(c *gin.Context) {
-	robotsTxt := `User-agent: *
+	baseURL := h.getBaseURL(c)
+	
+	robotsTxt := `# Robots.txt for ` + baseURL + `
+# Optimized for SEO + AI Protection + Crawl Budget Management
+
+# =============================================================================
+# GENERAL CRAWLERS
+# =============================================================================
+User-agent: *
 Allow: /
 
-# Sitemaps
-Sitemap: %s/sitemap.xml
-
-# Crawl-delay for polite crawling
-Crawl-delay: 1
-
-# Disallow admin areas
+# Disallow admin and API areas
 Disallow: /admin/
 Disallow: /api/
 
-# Allow specific paths
+# Allow specific public API endpoints
 Allow: /api/v1/articles/
-Allow: /static/`
 
-	baseURL := h.getBaseURL(c)
-	content := fmt.Sprintf(robotsTxt, baseURL)
+# Allow static resources
+Allow: /static/
+Allow: /uploads/
+
+# Prevent duplicate content from URL parameters
+Disallow: /*?replytocom=
+Disallow: /*?utm_
+Disallow: /*?filter=
+Disallow: /*?sort=
+Disallow: /*?page=
+Disallow: /*?ref=
+Disallow: /*?source=
+Disallow: /*?fbclid=
+Disallow: /*?gclid=
+
+# Crawl-delay (respected by Bing/Yandex, ignored by Google)
+Crawl-delay: 1
+
+# =============================================================================
+# AI / LLM BOTS - Block AI Training
+# =============================================================================
+# OpenAI
+User-agent: GPTBot
+Disallow: /
+
+User-agent: OAI-SearchBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+# Google AI (but allow regular Googlebot for indexing)
+User-agent: Google-Extended
+Disallow: /
+
+# Anthropic
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+# Common Crawl (used for AI training)
+User-agent: CCBot
+Disallow: /
+
+# ByteDance
+User-agent: Bytespider
+Disallow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Disallow: /
+
+# Apple AI
+User-agent: Applebot-Extended
+Disallow: /
+
+# Meta AI
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+# Amazon
+User-agent: Amazonbot
+Disallow: /
+
+# Cohere
+User-agent: cohere-ai
+Disallow: /
+
+# =============================================================================
+# AGGRESSIVE/UNWANTED CRAWLERS
+# =============================================================================
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: CloudflareBrowserRenderingCrawler
+Disallow: /
+
+# =============================================================================
+# SITEMAPS
+# =============================================================================
+Sitemap: ` + baseURL + `/sitemap.xml
+Sitemap: ` + baseURL + `/sitemap-news.xml
+`
 
 	c.Header("Content-Type", "text/plain; charset=utf-8")
-	c.String(http.StatusOK, content)
+	c.Header("Cache-Control", "public, max-age=86400") // Cache for 24 hours
+	c.String(http.StatusOK, robotsTxt)
 }
 
 // Schema markup handlers
