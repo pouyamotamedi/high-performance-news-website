@@ -57,8 +57,8 @@ type GoogleNewsData struct {
 }
 
 type GoogleNewsPublication struct {
-	Name     string `xml:"name,attr"`
-	Language string `xml:"language,attr"`
+	Name     string `xml:"news:name"`
+	Language string `xml:"news:language"`
 }
 
 // GenerateGoogleNewsSitemap generates Google News sitemap with 1000 article limit
@@ -218,7 +218,7 @@ func (g *GoogleNewsSitemapService) buildNewsURL(article models.Article, language
 		News: GoogleNewsData{
 			Publication: GoogleNewsPublication{
 				Name:     g.siteName,
-				Language: languageCode,
+				Language: articleLang, // Use article's actual language
 			},
 			PubDate:      pubDate,
 			Title:        article.Title,
