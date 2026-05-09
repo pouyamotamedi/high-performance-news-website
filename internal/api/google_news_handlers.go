@@ -24,11 +24,10 @@ func NewGoogleNewsHandlers(sitemapService services.GoogleNewsSitemapServiceInter
 
 // HandleGoogleNewsSitemap serves Google News sitemap files
 func (h *GoogleNewsHandlers) HandleGoogleNewsSitemap(c *gin.Context) {
-	// Get language from query parameter or default to "en" (most common)
+	// Get language from query parameter
+	// If no language specified, return all languages (empty string triggers "all languages" mode in repository)
 	languageCode := c.Query("lang")
-	if languageCode == "" {
-		languageCode = "en"
-	}
+	// Don't set a default - empty string means "all languages"
 
 	// Get page parameter for pagination
 	page := 0
@@ -55,11 +54,9 @@ func (h *GoogleNewsHandlers) HandleGoogleNewsSitemap(c *gin.Context) {
 
 // HandleGoogleNewsSitemapIndex serves Google News sitemap index
 func (h *GoogleNewsHandlers) HandleGoogleNewsSitemapIndex(c *gin.Context) {
-	// Get language from query parameter or default to "en"
+	// Get language from query parameter
+	// If no language specified, return all languages
 	languageCode := c.Query("lang")
-	if languageCode == "" {
-		languageCode = "en"
-	}
 
 	// Generate sitemap index
 	xmlData, err := h.sitemapService.GenerateGoogleNewsSitemapIndex(languageCode)

@@ -75,14 +75,24 @@ func (g *GoogleNewsSitemapService) GenerateGoogleNewsSitemap(languageCode string
 	limit := 1000
 	offset := fileIndex * limit
 
-	// Get recent articles (last 2 days for Google News)
+	// Get recent articles (last 2 days for Google News standard)
 	cutoffTime := time.Now().Add(-48 * time.Hour)
 	articles, err := g.articleRepo.GetPublishedArticlesAfterTimeWithOffset(cutoffTime, languageCode, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get articles: %w", err)
 	}
 
-	// If no articles found, return empty sitemap
+	// If no articles found in last 48 hours, try last 7 days as fallback
+	// This ensures the sitemap is never completely empty for Google Search Console
+	if len(articles) == 0 && fileIndex == 0 {
+		cutoffTime = time.Now().Add(-7 * 24 * time.Hour) // 7 days
+		articles, err = g.articleRepo.GetPublishedArticlesAfterTimeWithOffset(cutoffTime, languageCode, limit, offset)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get articles (7-day fallback): %w", err)
+		}
+	}
+
+	// If still no articles found, return empty sitemap
 	if len(articles) == 0 {
 		return g.generateEmptySitemap(), nil
 	}
@@ -120,6 +130,15 @@ func (g *GoogleNewsSitemapService) GenerateGoogleNewsSitemapIndex(languageCode s
 	totalArticles, err := g.articleRepo.CountPublishedArticlesAfterTime(cutoffTime, languageCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count articles: %w", err)
+	}
+
+	// If no articles in 48 hours, try 7 days as fallback
+	if totalArticles == 0 {
+		cutoffTime = time.Now().Add(-7 * 24 * time.Hour)
+		totalArticles, err = g.articleRepo.CountPublishedArticlesAfterTime(cutoffTime, languageCode)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count articles (7-day fallback): %w", err)
+		}
 	}
 
 	// Calculate number of sitemap files needed (1000 articles per file)
@@ -349,6 +368,17 @@ func (g *GoogleNewsSitemapService) GetSitemapStats(languageCode string) (map[str
 		return nil, fmt.Errorf("failed to count articles: %w", err)
 	}
 
+	// Also count 7-day fallback
+	fallbackUsed := false
+	if totalArticles == 0 {
+		cutoffTime = time.Now().Add(-7 * 24 * time.Hour)
+		totalArticles, err = g.articleRepo.CountPublishedArticlesAfterTime(cutoffTime, languageCode)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count articles (7-day fallback): %w", err)
+		}
+		fallbackUsed = true
+	}
+
 	numFiles := (totalArticles + 999) / 1000 // Ceiling division
 	if numFiles == 0 {
 		numFiles = 1
@@ -359,6 +389,10 @@ func (g *GoogleNewsSitemapService) GetSitemapStats(languageCode string) (map[str
 	stats["articles_per_file"] = 1000
 	stats["cutoff_time"] = cutoffTime.Format(time.RFC3339)
 	stats["last_updated"] = time.Now().Format(time.RFC3339)
+	stats["fallback_used"] = fallbackUsed
+	if fallbackUsed {
+		stats["note"] = "No articles in last 48 hours, using 7-day fallback"
+	}
 
 	return stats, nil
 }
