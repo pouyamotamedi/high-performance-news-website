@@ -260,22 +260,11 @@ log_success "Configuration created"
 
 # Step 5: Prepare database init script
 log_info "Step 5/6: Preparing database..."
-if [ -f "$INSTALL_DIR/database_schema.sql" ]; then
-    cp $INSTALL_DIR/database_schema.sql $INSTALL_DIR/deployment/init-db.sql
-elif [ -d "$INSTALL_DIR/migrations" ]; then
-    cat > $INSTALL_DIR/deployment/init-db.sql << 'SQLEOF'
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";
-SQLEOF
-    for migration in $INSTALL_DIR/migrations/*_*.up.sql; do
-        if [ -f "$migration" ]; then
-            echo "" >> $INSTALL_DIR/deployment/init-db.sql
-            echo "-- Migration: $(basename $migration)" >> $INSTALL_DIR/deployment/init-db.sql
-            cat "$migration" >> $INSTALL_DIR/deployment/init-db.sql
-        fi
-    done
+if [ ! -f "$INSTALL_DIR/deployment/init-db.sql" ]; then
+    log_error "init-db.sql not found! This file should be in the deployment directory."
+    exit 1
 fi
-log_success "Database prepared"
+log_success "Database schema ready (init-db.sql)"
 
 # Step 6: Build and start services
 log_info "Step 6/6: Building and starting services..."

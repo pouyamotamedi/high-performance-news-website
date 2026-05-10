@@ -1,151 +1,90 @@
-# News Website - Docker Deployment
+# Deployment Guide
 
-## Quick Installation
-
-### Prerequisites
-- A server with Ubuntu 20.04+ or Debian 11+
-- A domain name pointing to your server's IP
-- Root access to the server
-
-### One-Command Installation
+## Quick Start - New Site Installation
 
 ```bash
-# On your server, run:
-curl -sSL https://raw.githubusercontent.com/your-repo/install.sh | sudo bash -s -- yourdomain.com your@email.com
+cd deployment
+chmod +x install-site.sh
+./install-site.sh <domain> <app-port> <db-port> <redis-port> [admin-email]
 ```
 
-Or manually:
+### Examples:
 
 ```bash
-# 1. Clone/upload the project to your server
-scp -r . root@your-server:/opt/news-website/
-
-# 2. SSH into your server
-ssh root@your-server
-
-# 3. Run the installation script
-cd /opt/news-website/deployment
-chmod +x install.sh
-./install.sh yourdomain.com your@email.com
+./install-site.sh enginosys.com 8081 5433 6381 admin@enginosys.com
+./install-site.sh cryptonlisys.com 8082 5434 6382 admin@cryptonlisys.com
+./install-site.sh technolisys.com 8083 5435 6383 admin@technolisys.com
 ```
 
-## What Gets Installed
+### Port Allocation:
 
-- **PostgreSQL 15**: Database
-- **Dragonfly**: Redis-compatible cache (faster than Redis)
-- **Go Application**: The news website
-- **Nginx**: Reverse proxy with SSL
-- **Certbot**: Automatic SSL certificates
+| Site | App Port | DB Port | Redis Port |
+|------|----------|---------|------------|
+| 1    | 8081     | 5433    | 6381       |
+| 2    | 8082     | 5434    | 6382       |
+| 3    | 8083     | 5435    | 6383       |
 
-## Management Commands
-
-After installation, these scripts are available:
+## Updating an Existing Site
 
 ```bash
-# Check status
-/opt/news-website/status.sh
-
-# Update the application
-/opt/news-website/update.sh
-
-# Create backup
-/opt/news-website/backup.sh
-
-# View logs
-cd /opt/news-website/deployment && docker compose logs -f
-
-# Restart all services
-cd /opt/news-website/deployment && docker compose restart
-
-# Stop all services
-cd /opt/news-website/deployment && docker compose down
-
-# Start all services
-cd /opt/news-website/deployment && docker compose up -d
+cd /opt/<sitename>-website/deployment
+chmod +x update.sh
+./update.sh          # Quick update (rebuild app only)
+./update.sh --rebuild  # Full rebuild (no cache)
 ```
 
-## Updating the Application
+## Docker Commands
 
-When you have new code changes:
-
-1. Upload new files to `/opt/news-website/`
-2. Run `/opt/news-website/update.sh`
-
-The update script will:
-- Create a backup
-- Rebuild the application
-- Restart services
-- Keep your data intact
-
-## Backup & Restore
-
-### Create Backup
-```bash
-/opt/news-website/backup.sh
-```
-
-Backups are saved to `/opt/news-website/backups/`
-
-### Restore Database
-```bash
-cd /opt/news-website/deployment
-docker compose exec -T postgres psql -U newsapp newsdb < /path/to/backup.sql
-```
-
-## SSL Certificate
-
-SSL certificates are automatically renewed via cron job.
-To manually renew:
+Each site uses its own project name for isolation:
 
 ```bash
-cd /opt/news-website/deployment
-docker compose run --rm certbot renew
-docker compose restart nginx
+# Status
+docker compose -p <sitename> ps
+
+# Logs
+docker compose -p <sitename> logs -f app
+
+# Restart
+docker compose -p <sitename> restart
+
+# Stop
+docker compose -p <sitename> down
+
+# Start
+docker compose -p <sitename> up -d
 ```
 
-## Troubleshooting
+## Files
 
-### Check service status
-```bash
-cd /opt/news-website/deployment
-docker compose ps
-```
+| File | Description |
+|------|-------------|
+| `install-site.sh` | Install a new site (creates everything from scratch) |
+| `update.sh` | Update existing site code without touching configs |
+| `generate-init-db.sh` | Export schema from production to update init-db.sql |
+| `init-db.sql` | Complete database schema (auto-runs on first start) |
+| `docker-compose.yml` | Docker services configuration (site-specific) |
+| `Dockerfile` | Application build instructions |
+| `.env` | Site-specific environment variables (auto-generated) |
 
-### View logs
-```bash
-# All services
-docker compose logs -f
+## Database Schema Updates
 
-# Specific service
-docker compose logs -f app
-docker compose logs -f postgres
-docker compose logs -f nginx
-```
+If you change the database schema:
 
-### Restart a service
-```bash
-docker compose restart app
-```
+1. Make changes on a running site
+2. Export the updated schema:
+   ```bash
+   ./generate-init-db.sh <sitename>
+   ```
+3. Commit and push:
+   ```bash
+   git add deployment/init-db.sql
+   git commit -m "Update database schema"
+   git push origin master
+   ```
 
-### Database connection
-```bash
-docker compose exec postgres psql -U newsapp newsdb
-```
+## Important Notes
 
-## Environment Variables
-
-Configuration is stored in `/opt/news-website/deployment/.env`
-
-Key variables:
-- `DOMAIN`: Your domain name
-- `DB_PASSWORD`: Database password
-- `JWT_SECRET`: JWT signing secret
-- `ADMIN_EMAIL`: Admin login email
-- `ADMIN_PASSWORD`: Admin login password
-
-## Ports Used
-
-- 80: HTTP (redirects to HTTPS)
-- 443: HTTPS
-- 5432: PostgreSQL (internal only)
-- 6379: Redis (internal only)
+- Each site has its own isolated Docker network, volumes, and containers
+- `docker-compose.yml` and `.env` are site-specific and should NOT be overwritten during updates
+- The `update.sh` script handles this automatically
+- Always use `-p <sitename>` flag with docker compose commands
