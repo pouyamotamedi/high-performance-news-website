@@ -214,33 +214,104 @@ func ValidateSEOData(seo *SEOData) error {
 }
 
 // GenerateSlug creates a URL-friendly slug from a title
+// Uses transliteration for Arabic, Persian, German, French, Spanish
 func GenerateSlug(title string) string {
-	// Convert to lowercase
-	slug := strings.ToLower(title)
-	
-	// Replace spaces and special characters with hyphens
-	slug = regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(slug, "-")
-	
-	// Remove leading and trailing hyphens
-	slug = strings.Trim(slug, "-")
-	
-	// Replace multiple consecutive hyphens with single hyphen
-	slug = regexp.MustCompile(`-+`).ReplaceAllString(slug, "-")
-	
-	return slug
+	if title == "" {
+		return fmt.Sprintf("article-%d", time.Now().UnixNano())
+	}
+
+	text := strings.ToLower(title)
+
+	// Transliterate non-ASCII characters
+	var result strings.Builder
+	for _, r := range text {
+		if latin, ok := slugTranslitMap[r]; ok {
+			result.WriteString(latin)
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	text = result.String()
+
+	// Remove any character that's not a-z, 0-9, space, or hyphen
+	reg := regexp.MustCompile(`[^a-z0-9 -]`)
+	text = reg.ReplaceAllString(text, "")
+
+	// Replace spaces with hyphens
+	text = strings.ReplaceAll(text, " ", "-")
+
+	// Replace multiple hyphens with single
+	reg = regexp.MustCompile(`-+`)
+	text = reg.ReplaceAllString(text, "-")
+
+	// Trim hyphens
+	text = strings.Trim(text, "-")
+
+	// Limit length to 100 characters for SEO
+	if len(text) > 100 {
+		text = text[:100]
+		text = strings.TrimRight(text, "-")
+	}
+
+	if text == "" {
+		text = fmt.Sprintf("article-%d", time.Now().UnixNano())
+	}
+
+	return text
 }
 
-// IsValidSlug checks if a slug contains only valid ASCII characters
-// Slugs must be ASCII-only for SEO best practices
+// slugTranslitMap contains transliteration mappings for all supported languages
+var slugTranslitMap = map[rune]string{
+	// Arabic/Persian
+	'ا': "a", 'أ': "a", 'إ': "e", 'آ': "a",
+	'ب': "b", 'ت': "t", 'ث': "th",
+	'ج': "j", 'ح': "h", 'خ': "kh",
+	'د': "d", 'ذ': "dh",
+	'ر': "r", 'ز': "z",
+	'س': "s", 'ش': "sh",
+	'ص': "s", 'ض': "d",
+	'ط': "t", 'ظ': "z",
+	'ع': "a", 'غ': "gh",
+	'ف': "f", 'ق': "q",
+	'ك': "k", 'ک': "k",
+	'ل': "l", 'م': "m", 'ن': "n",
+	'ه': "h", 'ة': "h",
+	'و': "w", 'ؤ': "w",
+	'ي': "y", 'ى': "y", 'ئ': "y",
+	'ء': "",
+	'َ': "a", 'ُ': "u", 'ِ': "i", 'ً': "", 'ٌ': "", 'ٍ': "",
+	'ّ': "", 'ْ': "",
+	'٠': "0", '١': "1", '٢': "2", '٣': "3", '٤': "4",
+	'٥': "5", '٦': "6", '٧': "7", '٨': "8", '٩': "9",
+	// German
+	'ä': "ae", 'ö': "oe", 'ü': "ue", 'ß': "ss",
+	// French
+	'à': "a", 'â': "a", 'ç': "c",
+	'é': "e", 'è': "e", 'ê': "e", 'ë': "e",
+	'î': "i", 'ï': "i", 'ô': "o",
+	'ù': "u", 'û': "u", 'ÿ': "y",
+	// Spanish
+	'á': "a", 'í': "i", 'ó': "o", 'ú': "u", 'ñ': "n",
+}
+
+// IsValidSlug checks if a slug is valid (ASCII only for SEO)
 func IsValidSlug(s string) bool {
 	if s == "" {
 		return false
 	}
-	
-	// Slug should contain only lowercase letters, numbers, and hyphens
-	// Should not start or end with hyphen, no consecutive hyphens
-	slugRegex := regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
-	return slugRegex.MatchString(s)
+	if strings.HasPrefix(s, "-") || strings.HasSuffix(s, "-") {
+		return false
+	}
+	if strings.Contains(s, "--") {
+		return false
+	}
+	// Only allow lowercase letters, numbers, and single hyphens
+	for _, r := range s {
+		if r != '-' && !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9') {
+			return false
+		}
+	}
+	return true
 }
 
 // IsValidURL validates URL format
