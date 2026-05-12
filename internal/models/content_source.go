@@ -75,8 +75,10 @@ type ContentIngestionRequest struct {
 	FocusKeyword      string                 `json:"focus_keyword,omitempty" validate:"max=100"`
 	// Auto-linking
 	EnableAutoLinking bool                   `json:"enable_auto_linking,omitempty"`
-	// Language
-	LanguageCode      string                 `json:"language_code,omitempty" validate:"omitempty,max=5"`
+	// Language and Translation
+	LanguageCode        string               `json:"language_code,omitempty" validate:"omitempty,max=5"`
+	TranslationGroupID  *uint64              `json:"translation_group_id,omitempty"`  // Link to existing translation group
+	TranslateOfArticleID *uint64             `json:"translate_of_article_id,omitempty"` // ID of the original article this is a translation of
 	Metadata          map[string]interface{} `json:"metadata,omitempty"`
 }
 

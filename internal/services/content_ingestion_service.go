@@ -110,6 +110,14 @@ func (s *ContentIngestionService) IngestContent(ctx context.Context, sourceAPIKe
 		content.Metadata["language_code"] = request.LanguageCode
 	}
 
+	// Add translation group info to metadata if provided
+	if request.TranslationGroupID != nil {
+		content.Metadata["translation_group_id"] = float64(*request.TranslationGroupID)
+	}
+	if request.TranslateOfArticleID != nil {
+		content.Metadata["translate_of_article_id"] = float64(*request.TranslateOfArticleID)
+	}
+
 	// 4. Sanitize and validate content
 	models.SanitizeIngestedContent(content)
 	validationResult := models.ValidateIngestedContent(content)
@@ -201,7 +209,7 @@ func (s *ContentIngestionService) ProcessPendingContent(ctx context.Context, con
 	fmt.Printf("DEBUG: Processing article %d, tags count: %d, tags: %v\n", createdArticle.ID, len(content.Tags), content.Tags)
 	if len(content.Tags) > 0 {
 		fmt.Printf("DEBUG: Calling processArticleTags for article %d with tags: %v\n", createdArticle.ID, content.Tags)
-		if err := s.processArticleTags(ctx, createdArticle.ID, content.Tags); err != nil {
+		if err := s.processArticleTags(ctx, createdArticle.ID, content.Tags, article.LanguageCode); err != nil {
 			// Log error but don't fail the whole process
 			fmt.Printf("ERROR: Failed to process tags for article %d: %v\n", createdArticle.ID, err)
 		} else {
@@ -349,24 +357,33 @@ func (s *ContentIngestionService) convertToArticle(ctx context.Context, content 
 		}
 	}
 
+	// Set language code - check direct field first, then metadata
+	if lc, ok := content.Metadata["language_code"].(string); ok && lc != "" {
+		article.LanguageCode = lc
+	} else {
+		article.LanguageCode = "en" // Default to English
+	}
+
 	// Set category - prioritize provided category over default
 	if content.CategoryName != "" {
-		// Try to find category by name
-		categoryID, err := s.findCategoryByName(ctx, content.CategoryName)
+		// Try to find category by name and language
+		categoryID, err := s.findCategoryByNameAndLanguage(ctx, content.CategoryName, article.LanguageCode)
 		if err == nil && categoryID != 0 {
 			article.CategoryID = categoryID
-		} else if source.Config.DefaultCategoryID != 0 {
-			// Fall back to default if category not found
-			article.CategoryID = source.Config.DefaultCategoryID
 		} else {
-			// Use fallback category
-			article.CategoryID = 1
+			// Try without language filter
+			categoryID, err = s.findCategoryByName(ctx, content.CategoryName)
+			if err == nil && categoryID != 0 {
+				article.CategoryID = categoryID
+			} else if source.Config.DefaultCategoryID != 0 {
+				article.CategoryID = source.Config.DefaultCategoryID
+			} else {
+				article.CategoryID = 1
+			}
 		}
 	} else if source.Config.DefaultCategoryID != 0 {
-		// Use default category if no category provided
 		article.CategoryID = source.Config.DefaultCategoryID
 	} else {
-		// Use fallback category
 		article.CategoryID = 1
 	}
 
@@ -374,7 +391,6 @@ func (s *ContentIngestionService) convertToArticle(ctx context.Context, content 
 	if content.PublishedAt != nil {
 		article.PublishedAt = content.PublishedAt
 	} else {
-		// Always set a published date for partitioning, even for drafts
 		now := time.Now()
 		article.PublishedAt = &now
 	}
@@ -384,39 +400,44 @@ func (s *ContentIngestionService) convertToArticle(ctx context.Context, content 
 		article.Status = "published"
 	}
 
-	// Set SEO fields directly on article (not in SEOData struct)
-	// Use provided SEO fields from metadata if available, otherwise use defaults
-	fmt.Printf("DEBUG convertToArticle: Processing metadata: %+v\n", content.Metadata)
+	// Handle Translation Group
+	// Priority: translation_group_id > translate_of_article_id > create new group
+	if tgID, ok := content.Metadata["translation_group_id"].(float64); ok && tgID > 0 {
+		// Use provided translation group ID directly
+		groupID := uint64(tgID)
+		article.TranslationGroupID = &groupID
+	} else if translateOfID, ok := content.Metadata["translate_of_article_id"].(float64); ok && translateOfID > 0 {
+		// Find the translation group of the original article
+		originalArticleID := uint64(translateOfID)
+		groupID, err := s.getTranslationGroupOfArticle(ctx, originalArticleID)
+		if err == nil && groupID > 0 {
+			article.TranslationGroupID = &groupID
+		}
+		// If not found, article_repository.Create will create a new group
+	}
+	// If neither is provided, article_repository.Create will create a new translation group
 
+	// Set SEO fields
 	if mt, ok := content.Metadata["meta_title"].(string); ok && mt != "" {
 		article.MetaTitle = mt
-		fmt.Printf("DEBUG convertToArticle: Set meta_title to: %s\n", mt)
 	} else {
 		article.MetaTitle = content.Title
-		fmt.Printf("DEBUG convertToArticle: Using title as meta_title: %s\n", content.Title)
 	}
 
 	if md, ok := content.Metadata["meta_description"].(string); ok && md != "" {
 		article.MetaDescription = md
-		fmt.Printf("DEBUG convertToArticle: Set meta_description to: %s\n", md)
 	} else {
 		article.MetaDescription = content.Excerpt
-		fmt.Printf("DEBUG convertToArticle: Using excerpt as meta_description\n")
 	}
 
 	if cu, ok := content.Metadata["canonical_url"].(string); ok && cu != "" {
 		article.CanonicalURL = cu
-		fmt.Printf("DEBUG convertToArticle: Set canonical_url to: %s\n", cu)
 	} else if content.SourceURL != "" {
 		article.CanonicalURL = content.SourceURL
-		fmt.Printf("DEBUG convertToArticle: Using source_url as canonical_url: %s\n", content.SourceURL)
 	}
 
 	if fk, ok := content.Metadata["focus_keyword"].(string); ok && fk != "" {
 		article.FocusKeyword = fk
-		fmt.Printf("DEBUG convertToArticle: Set focus_keyword to: %s\n", fk)
-	} else {
-		fmt.Printf("DEBUG convertToArticle: No focus_keyword in metadata\n")
 	}
 
 	// Set schema type
@@ -425,18 +446,6 @@ func (s *ContentIngestionService) convertToArticle(ctx context.Context, content 
 	// Set auto-linking flag from metadata
 	if enableAutoLinking, ok := content.Metadata["enable_auto_linking"].(bool); ok {
 		article.AutoLinking = enableAutoLinking
-		fmt.Printf("DEBUG convertToArticle: Set auto_linking to: %v\n", enableAutoLinking)
-	} else {
-		fmt.Printf("DEBUG convertToArticle: No auto_linking in metadata, defaulting to false\n")
-	}
-
-	// Set language code from metadata or default to Persian
-	if lc, ok := content.Metadata["language_code"].(string); ok && lc != "" {
-		article.LanguageCode = lc
-		fmt.Printf("DEBUG convertToArticle: Set language_code to: %s\n", lc)
-	} else {
-		article.LanguageCode = "en"
-		fmt.Printf("DEBUG convertToArticle: No language_code in metadata, defaulting to 'en'\n")
 	}
 
 	// Set moderation status (default to approved for auto-published content)
@@ -445,8 +454,6 @@ func (s *ContentIngestionService) convertToArticle(ctx context.Context, content 
 	} else {
 		article.ModerationStatus = "pending"
 	}
-
-	// Tags will be processed after article creation in ProcessPendingContent
 
 	return article, nil
 }
@@ -462,6 +469,32 @@ func (s *ContentIngestionService) findCategoryByName(ctx context.Context, catego
 	}
 
 	return categoryID, nil
+}
+
+func (s *ContentIngestionService) findCategoryByNameAndLanguage(ctx context.Context, categoryName string, languageCode string) (uint64, error) {
+	// Query to find category by name and language (case-insensitive)
+	query := `SELECT id FROM categories WHERE LOWER(name) = LOWER($1) AND language_code = $2 LIMIT 1`
+
+	var categoryID uint64
+	err := s.ingestionRepo.GetDB().QueryRowContext(ctx, query, categoryName, languageCode).Scan(&categoryID)
+	if err != nil {
+		return 0, err
+	}
+
+	return categoryID, nil
+}
+
+func (s *ContentIngestionService) getTranslationGroupOfArticle(ctx context.Context, articleID uint64) (uint64, error) {
+	// Find the translation_group_id of an existing article
+	query := `SELECT translation_group_id FROM articles WHERE id = $1 AND translation_group_id IS NOT NULL LIMIT 1`
+
+	var groupID uint64
+	err := s.ingestionRepo.GetDB().QueryRowContext(ctx, query, articleID).Scan(&groupID)
+	if err != nil {
+		return 0, err
+	}
+
+	return groupID, nil
 }
 
 func (s *ContentIngestionService) validateContentSource(source *models.ContentSource) error {
@@ -856,6 +889,20 @@ func (s *ContentIngestionService) processIngestedContent(ctx context.Context, co
 		return fmt.Errorf("failed to create article: %w", err)
 	}
 
+	// Process tags if provided
+	if len(content.Tags) > 0 {
+		if err := s.processArticleTags(ctx, createdArticle.ID, content.Tags, article.LanguageCode); err != nil {
+			fmt.Printf("ERROR: Failed to process tags for article %d: %v\n", createdArticle.ID, err)
+		}
+	}
+
+	// Process featured image if URL provided
+	if featuredImageURL, ok := content.Metadata["featured_image_url"].(string); ok && featuredImageURL != "" {
+		if err := s.downloadAndSetFeaturedImage(ctx, createdArticle.ID, featuredImageURL); err != nil {
+			fmt.Printf("ERROR: Failed to download featured image for article %d: %v\n", createdArticle.ID, err)
+		}
+	}
+
 	// Update ingested content status
 	err = s.ingestionRepo.UpdateIngestedContentStatus(ctx, content.ID, "processed", &createdArticle.ID, "")
 	if err != nil {
@@ -913,9 +960,15 @@ func (s *ContentIngestionService) ReprocessRejectedContent(ctx context.Context, 
 }
 
 // processArticleTags finds or creates tags and associates them with the article
-func (s *ContentIngestionService) processArticleTags(ctx context.Context, articleID uint64, tagNames []string) error {
+func (s *ContentIngestionService) processArticleTags(ctx context.Context, articleID uint64, tagNames []string, languageCode ...string) error {
 	if len(tagNames) == 0 {
 		return nil
+	}
+
+	// Default language code
+	lang := "en"
+	if len(languageCode) > 0 && languageCode[0] != "" {
+		lang = languageCode[0]
 	}
 
 	db := s.ingestionRepo.GetDB()
@@ -926,34 +979,26 @@ func (s *ContentIngestionService) processArticleTags(ctx context.Context, articl
 			continue
 		}
 
-		// Find or create tag (search in English language)
+		// Find or create tag (search by language)
 		var tagID uint64
-		query := `SELECT id FROM tags WHERE LOWER(name) = LOWER($1) AND language_code = 'en' LIMIT 1`
-		err := db.QueryRowContext(ctx, query, tagName).Scan(&tagID)
+		query := `SELECT id FROM tags WHERE LOWER(name) = LOWER($1) AND language_code = $2 LIMIT 1`
+		err := db.QueryRowContext(ctx, query, tagName, lang).Scan(&tagID)
 
 		if err != nil {
 			// Tag doesn't exist, create it
 			slug := strings.ToLower(strings.ReplaceAll(tagName, " ", "-"))
-			fmt.Printf("DEBUG: Creating new tag '%s' with slug '%s'\n", tagName, slug)
-			insertQuery := `INSERT INTO tags (name, slug, language_code, created_at, updated_at) VALUES ($1, $2, 'en', NOW(), NOW()) RETURNING id`
-			err = db.QueryRowContext(ctx, insertQuery, tagName, slug).Scan(&tagID)
+			insertQuery := `INSERT INTO tags (name, slug, language_code, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id`
+			err = db.QueryRowContext(ctx, insertQuery, tagName, slug, lang).Scan(&tagID)
 			if err != nil {
 				fmt.Printf("ERROR: Failed to create tag %s: %v\n", tagName, err)
 				continue
 			}
-			fmt.Printf("DEBUG: Created tag '%s' with ID %d\n", tagName, tagID)
-		} else {
-			fmt.Printf("DEBUG: Found existing tag '%s' with ID %d\n", tagName, tagID)
 		}
 
 		// Associate tag with article (table is partitioned by created_at)
-		fmt.Printf("DEBUG: Associating tag %d (%s) with article %d\n", tagID, tagName, articleID)
-		result, err := db.ExecContext(ctx, `INSERT INTO article_tags (article_id, tag_id, created_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING`, articleID, tagID)
+		_, err = db.ExecContext(ctx, `INSERT INTO article_tags (article_id, tag_id, created_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING`, articleID, tagID)
 		if err != nil {
 			fmt.Printf("ERROR: Failed to associate tag %d with article %d: %v\n", tagID, articleID, err)
-		} else {
-			rowsAffected, _ := result.RowsAffected()
-			fmt.Printf("DEBUG: Tag association result - rows affected: %d\n", rowsAffected)
 		}
 	}
 

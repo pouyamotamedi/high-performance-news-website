@@ -1087,53 +1087,78 @@ class ContentIngestionManager {
         }
         
         let example = '';
+        const baseUrl = window.location.origin;
         switch (type) {
             case 'api':
-                example = `curl -X POST https://a.10top.shop/api/v1/content/ingest \\
+                example = `curl -X POST ${baseUrl}/api/v1/content/ingest \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: ${apiKey}" \\
   -d '{
     "external_id": "unique-id-123",
     "title": "Article Title",
-    "content": "Article content...",
-    "excerpt": "Brief excerpt",
+    "content": "<p>Article content in HTML...</p>",
+    "excerpt": "Brief excerpt for SEO",
     "author_name": "${authorName}",
     "author_email": "author@example.com",
     "category_name": "${categoryName}",
-    "tags": ["tech", "news"],
+    "tags": ["crypto", "exchange"],
     "source_url": "https://source.com/article",
     "featured_image_url": "https://example.com/image.jpg",
-    "meta_title": "SEO Title (optional)",
-    "meta_description": "SEO description (optional)",
-    "canonical_url": "https://canonical-url.com (optional)",
-    "focus_keyword": "main keyword (optional)",
+    "meta_title": "SEO Title (max 60 chars)",
+    "meta_description": "SEO description (max 160 chars)",
+    "canonical_url": "https://canonical-url.com",
+    "focus_keyword": "main keyword",
     "enable_auto_linking": true,
-    "language_code": "fa"
+    "language_code": "en",
+    "translation_group_id": null,
+    "translate_of_article_id": null
   }'
 
-# Required fields:
+# ═══════════════════════════════════════════
+# REQUIRED FIELDS:
+# ═══════════════════════════════════════════
 # - external_id: Unique identifier from your system
-# - title: Article title
-# - content: Article content (HTML or plain text)
+# - title: Article title (max 255 chars)
+# - content: Article content (HTML supported)
 
-# Optional fields:
-# - excerpt: Brief summary
-# - author_name, author_email: Author information
-# - category_name: Category name (will be matched or use default)
-# - tags: Array of tag names
+# ═══════════════════════════════════════════
+# OPTIONAL FIELDS:
+# ═══════════════════════════════════════════
+# - excerpt: Brief summary (max 500 chars)
+# - author_name: Author display name
+# - author_email: Author email
+# - category_name: Category name (matched by name)
+# - tags: Array of tag names (created if not exist)
 # - source_url: Original article URL
-# - featured_image_url: URL of featured image (will be downloaded)
-# - meta_title: Custom SEO title (defaults to title)
-# - meta_description: Custom SEO description (defaults to excerpt)
-# - canonical_url: Canonical URL for SEO (defaults to source_url)
-# - focus_keyword: Main SEO keyword for the article
-# - enable_auto_linking: Enable automatic internal linking (default: false)
-# - language_code: Language code (default: "fa" for Persian)`;
+# - featured_image_url: Image URL (auto-downloaded)
+# - published_at: ISO 8601 date (default: now)
+
+# ═══════════════════════════════════════════
+# SEO FIELDS:
+# ═══════════════════════════════════════════
+# - meta_title: Custom SEO title (default: title)
+# - meta_description: SEO description (default: excerpt)
+# - canonical_url: Canonical URL (default: source_url)
+# - focus_keyword: Main SEO keyword
+# - enable_auto_linking: Auto internal linking (default: false)
+
+# ═══════════════════════════════════════════
+# MULTILINGUAL / TRANSLATION FIELDS:
+# ═══════════════════════════════════════════
+# - language_code: "en", "fr", "de", "es", "ar" (default: "en")
+# - translation_group_id: Link to existing translation group ID
+# - translate_of_article_id: ID of original article (auto-links to same group)
+#
+# WORKFLOW FOR TRANSLATIONS:
+# 1. Send the original article (e.g., English) → returns article with ID
+# 2. Send translations with translate_of_article_id = original article ID
+#    This automatically links all translations together.`;
                 break;
             case 'webhook':
-                example = `Webhook URL: https://a.10top.shop/api/v1/content/webhook/{source_id}
+                example = `Webhook URL: ${baseUrl}/api/v1/content/webhook/{source_id}
                 
-Send POST requests with the same JSON structure as API ingestion.`;
+Send POST requests with the same JSON structure as API ingestion.
+The source_id is automatically determined from the URL.`;
                 break;
             case 'manual':
                 example = 'Manual sources are managed through the admin interface only.';

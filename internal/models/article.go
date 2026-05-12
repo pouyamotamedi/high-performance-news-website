@@ -34,7 +34,7 @@ type Article struct {
 	CanonicalURL         string     `json:"canonical_url" db:"canonical_url" validate:"omitempty,url,max=500"`
 	SchemaType           string     `json:"schema_type" db:"schema_type" validate:"oneof=NewsArticle Article BlogPosting"`
 	AutoLinking          bool       `json:"auto_linking" db:"auto_linking"` // Override for per-article auto-linking
-	LanguageCode         string     `json:"language_code" db:"language_code" validate:"required,len=5"`
+	LanguageCode         string     `json:"language_code" db:"language_code" validate:"required,min=2,max=5"`
 	TranslationGroupID   *uint64    `json:"translation_group_id" db:"translation_group_id"`
 	ModerationStatus     string     `json:"moderation_status" db:"moderation_status"`
 	ModerationNotes      string     `json:"moderation_notes" db:"moderation_notes"`
@@ -106,8 +106,13 @@ func ValidateArticle(article *Article) error {
 	if strings.TrimSpace(article.LanguageCode) == "" {
 		article.LanguageCode = "en" // Default to English
 	}
-	if len(article.LanguageCode) != 2 {
-		errors = append(errors, "language_code must be exactly 2 characters")
+	validLanguages := map[string]bool{
+		"en": true, "fr": true, "de": true, "es": true, "ar": true,
+		"fa": true, "zh": true, "ja": true, "ko": true, "pt": true,
+		"ru": true, "it": true, "nl": true, "tr": true, "hi": true,
+	}
+	if !validLanguages[article.LanguageCode] && len(article.LanguageCode) > 5 {
+		errors = append(errors, "language_code must be a valid language code (2-5 characters)")
 	}
 
 	// Status validation
