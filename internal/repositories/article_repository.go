@@ -319,7 +319,12 @@ func (r *ArticleRepository) GetTrendingArticles(ctx context.Context, limit int, 
 	// Query from database with trending algorithm
 	query := `
 		SELECT a.id, a.title, a.slug, a.excerpt, a.author_id, a.published_at, a.view_count,
-			   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END,
+			   CASE 
+			       WHEN i.original_url LIKE '/uploads/%' THEN i.original_url
+			       WHEN i.original_url LIKE '/static/%' THEN i.original_url
+			       WHEN i.filename IS NOT NULL AND i.filename != '' THEN '/static/media/articles/' || i.filename
+			       ELSE NULL 
+			   END,
 			   (a.view_count * 0.7 + a.like_count * 0.2 + (EXTRACT(EPOCH FROM NOW() - a.published_at) / 3600)::int * -0.1) as trending_score
 		FROM articles a
 		LEFT JOIN images i ON a.featured_image_id = i.id
@@ -664,7 +669,12 @@ func (r *ArticleRepository) getByIDFromDB(ctx context.Context, id uint64) (*mode
 			   a.like_count, a.dislike_count, a.meta_title, a.meta_description, 
 			   a.focus_keyword, a.canonical_url, a.schema_type, a.featured_image_id, a.auto_linking,
 			   a.language_code, a.translation_group_id,
-			   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END as featured_image
+			   CASE 
+			       WHEN i.original_url LIKE '/uploads/%' THEN i.original_url
+			       WHEN i.original_url LIKE '/static/%' THEN i.original_url
+			       WHEN i.filename IS NOT NULL AND i.filename != '' THEN '/static/media/articles/' || i.filename
+			       ELSE NULL 
+			   END as featured_image
 		FROM articles a
 		LEFT JOIN images i ON a.featured_image_id = i.id
 		WHERE a.id = $1`

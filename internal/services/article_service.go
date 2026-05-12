@@ -510,7 +510,11 @@ func (s *ArticleService) List(ctx context.Context, limit, offset int, filters Ar
 			   a.status, a.published_at, a.created_at, a.updated_at, a.view_count,
 			   a.like_count, a.dislike_count, a.featured_image_id,
 			   a.language_code, a.translation_group_id,
-			   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END as featured_image
+			   CASE 
+			       WHEN i.original_url LIKE '/uploads/%' THEN i.original_url
+			       WHEN i.filename IS NOT NULL AND i.filename != '' THEN '/static/media/articles/' || i.filename
+			       ELSE NULL 
+			   END as featured_image
 		FROM articles a
 		LEFT JOIN images i ON a.featured_image_id = i.id
 		WHERE 1=1`

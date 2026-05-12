@@ -102,7 +102,11 @@ func (db *DB) initPreparedStatements() error {
 				   a.published_at, a.view_count, a.like_count, a.dislike_count,
 				   a.meta_title, a.meta_description, a.canonical_url, a.schema_type,
 				   a.featured_image_id, a.auto_linking, a.language_code, a.translation_group_id,
-				   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END as featured_image
+				   CASE 
+				       WHEN i.original_url LIKE '/uploads/%' THEN i.original_url
+				       WHEN i.filename IS NOT NULL AND i.filename != '' THEN '/static/media/articles/' || i.filename
+				       ELSE NULL 
+				   END as featured_image
 			FROM articles a
 			LEFT JOIN images i ON a.featured_image_id = i.id
 			WHERE a.slug = $1 AND a.status = 'published'
@@ -110,7 +114,11 @@ func (db *DB) initPreparedStatements() error {
 
 		StmtGetHomepage: `
 			SELECT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id, a.published_at, a.view_count,
-				   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END
+				   CASE 
+				       WHEN i.original_url LIKE '/uploads/%' THEN i.original_url
+				       WHEN i.filename IS NOT NULL AND i.filename != '' THEN '/static/media/articles/' || i.filename
+				       ELSE NULL 
+				   END
 			FROM articles a
 			LEFT JOIN images i ON a.featured_image_id = i.id
 			WHERE a.status = 'published' AND a.published_at IS NOT NULL
@@ -119,7 +127,11 @@ func (db *DB) initPreparedStatements() error {
 
 		StmtGetCategory: `
 			SELECT a.id, a.title, a.slug, a.excerpt, a.author_id, a.published_at, a.view_count,
-				   CASE WHEN i.original_url LIKE '/uploads/%' THEN i.original_url ELSE NULL END
+				   CASE 
+				       WHEN i.original_url LIKE '/uploads/%' THEN i.original_url
+				       WHEN i.filename IS NOT NULL AND i.filename != '' THEN '/static/media/articles/' || i.filename
+				       ELSE NULL 
+				   END
 			FROM articles a
 			LEFT JOIN images i ON a.featured_image_id = i.id
 			WHERE a.status = 'published' AND a.published_at IS NOT NULL

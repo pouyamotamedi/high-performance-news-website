@@ -343,6 +343,10 @@ func New(cfg *config.Config) (*Server, error) {
 		// Create media service for database operations
 		fmt.Printf("DEBUG: Creating MediaService with database connection\n")
 		mediaService = services.NewMediaService(db.DB)
+
+		// Wire image processor and media service to content ingestion service
+		contentIngestionService.SetImageProcessor(imageProcessor)
+		contentIngestionService.SetMediaService(mediaService)
 		fmt.Printf("DEBUG: MediaService created successfully, is nil: %v\n", mediaService == nil)
 
 		// Initialize static generator for automatic static file generation
@@ -2478,11 +2482,16 @@ func (s *Server) handleProductionArticleBySlug(c *gin.Context) {
 			"SchemaType":      article.SchemaType,
 		}
 
-		// Get featured image if available (only local paths starting with /uploads/)
+		// Get featured image if available
 		if article.FeaturedImageID != nil && *article.FeaturedImageID > 0 {
 			if s.db != nil {
 				var imageURL sql.NullString
-				query := "SELECT CASE WHEN original_url LIKE '/uploads/%' THEN original_url ELSE NULL END FROM images WHERE id = $1"
+				query := `SELECT CASE 
+					WHEN original_url LIKE '/uploads/%' THEN original_url
+					WHEN original_url LIKE '/static/%' THEN original_url
+					WHEN filename IS NOT NULL AND filename != '' THEN '/static/media/articles/' || filename
+					ELSE NULL 
+				END FROM images WHERE id = $1`
 				err := s.db.DB.QueryRow(query, *article.FeaturedImageID).Scan(&imageURL)
 				if err == nil && imageURL.Valid && imageURL.String != "" {
 					articleData["FeaturedImage"] = imageURL.String
@@ -3728,7 +3737,12 @@ func (s *Server) getArticlesByCategoryIDsAndLanguage(ctx context.Context, catego
 		SELECT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
 			   a.status, a.published_at, a.view_count, a.like_count, a.dislike_count,
 			   a.language_code, a.translation_group_id,
-			   CASE WHEN i.original_url LIKE '/uploads/%%' THEN i.original_url ELSE NULL END as featured_image
+			   CASE 
+			       WHEN i.original_url LIKE '/uploads/%%' THEN i.original_url
+			       WHEN i.original_url LIKE '/static/%%' THEN i.original_url
+			       WHEN i.filename IS NOT NULL AND i.filename != '' THEN '/static/media/articles/' || i.filename
+			       ELSE NULL 
+			   END as featured_image
 		FROM articles a
 		LEFT JOIN images i ON a.featured_image_id = i.id
 		WHERE a.category_id IN (%s)
@@ -3803,7 +3817,12 @@ func (s *Server) getArticlesByTagIDsAndLanguage(ctx context.Context, tagIDs []ui
 		SELECT DISTINCT a.id, a.title, a.slug, a.excerpt, a.author_id, a.category_id,
 			   a.status, a.published_at, a.view_count, a.like_count, a.dislike_count,
 			   a.language_code, a.translation_group_id,
-			   CASE WHEN i.original_url LIKE '/uploads/%%' THEN i.original_url ELSE NULL END as featured_image
+			   CASE 
+			       WHEN i.original_url LIKE '/uploads/%%' THEN i.original_url
+			       WHEN i.original_url LIKE '/static/%%' THEN i.original_url
+			       WHEN i.filename IS NOT NULL AND i.filename != '' THEN '/static/media/articles/' || i.filename
+			       ELSE NULL 
+			   END as featured_image
 		FROM articles a
 		JOIN article_tags at ON a.id = at.article_id
 		LEFT JOIN images i ON a.featured_image_id = i.id

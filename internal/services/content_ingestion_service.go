@@ -21,11 +21,13 @@ import (
 
 // ContentIngestionService handles content ingestion business logic
 type ContentIngestionService struct {
-	ingestionRepo *repositories.ContentIngestionRepository
-	articleRepo   *repositories.ArticleRepository
-	userRepo      *repositories.UserRepository
-	categoryRepo  *repositories.CategoryRepository
-	tagRepo       *repositories.TagRepository
+	ingestionRepo  *repositories.ContentIngestionRepository
+	articleRepo    *repositories.ArticleRepository
+	userRepo       *repositories.UserRepository
+	categoryRepo   *repositories.CategoryRepository
+	tagRepo        *repositories.TagRepository
+	imageProcessor *ImageProcessor
+	mediaService   *MediaService
 }
 
 // NewContentIngestionService creates a new content ingestion service
@@ -37,12 +39,22 @@ func NewContentIngestionService(
 	tagRepo *repositories.TagRepository,
 ) *ContentIngestionService {
 	return &ContentIngestionService{
-		ingestionRepo: ingestionRepo,
-		articleRepo:   articleRepo,
-		userRepo:      userRepo,
-		categoryRepo:  categoryRepo,
-		tagRepo:       tagRepo,
+		ingestionRepo:  ingestionRepo,
+		articleRepo:    articleRepo,
+		userRepo:       userRepo,
+		categoryRepo:   categoryRepo,
+		tagRepo:        tagRepo,
 	}
+}
+
+// SetImageProcessor sets the image processor for content ingestion (optional dependency)
+func (s *ContentIngestionService) SetImageProcessor(ip *ImageProcessor) {
+	s.imageProcessor = ip
+}
+
+// SetMediaService sets the media service for content ingestion (optional dependency)
+func (s *ContentIngestionService) SetMediaService(ms *MediaService) {
+	s.mediaService = ms
 }
 
 // IngestContent processes content from external sources
@@ -1043,58 +1055,134 @@ func (s *ContentIngestionService) downloadAndSetFeaturedImage(ctx context.Contex
 		ext = ".webp"
 	}
 
-	filename := fmt.Sprintf("article_%d_featured%s", articleID, ext)
+	// Generate unique image ID
+	imageID := uint64(time.Now().UnixNano())
 
-	// Create media directory if it doesn't exist
-	mediaDir := "./web/static/media/articles"
-	if err := os.MkdirAll(mediaDir, 0755); err != nil {
-		return fmt.Errorf("failed to create media directory: %w", err)
+	// Determine storage path based on whether image processor is available
+	var originalPath string
+	var originalURL string
+
+	if s.imageProcessor != nil {
+		// Use uploads directory (same as admin panel)
+		uploadsDir := "./uploads/originals"
+		if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+			return fmt.Errorf("failed to create uploads directory: %w", err)
+		}
+		originalFilename := fmt.Sprintf("%d_article_%d%s", imageID, articleID, ext)
+		originalPath = fmt.Sprintf("%s/%s", uploadsDir, originalFilename)
+		originalURL = fmt.Sprintf("/uploads/originals/%s", originalFilename)
+	} else {
+		// Fallback: save to static media directory
+		mediaDir := "./web/static/media/articles"
+		if err := os.MkdirAll(mediaDir, 0755); err != nil {
+			return fmt.Errorf("failed to create media directory: %w", err)
+		}
+		filename := fmt.Sprintf("article_%d_featured%s", articleID, ext)
+		originalPath = fmt.Sprintf("%s/%s", mediaDir, filename)
+		originalURL = fmt.Sprintf("/static/media/articles/%s", filename)
 	}
 
 	// Save image to disk
-	filepath := fmt.Sprintf("%s/%s", mediaDir, filename)
-	if err := os.WriteFile(filepath, imageData, 0644); err != nil {
+	if err := os.WriteFile(originalPath, imageData, 0644); err != nil {
 		return fmt.Errorf("failed to save image: %w", err)
 	}
 
 	// Detect image dimensions
-	img, _, err := image.DecodeConfig(bytes.NewReader(imageData))
+	imgConfig, _, err := image.DecodeConfig(bytes.NewReader(imageData))
 	if err != nil {
-		// If we can't decode, use default dimensions
-		img.Width = 1200
-		img.Height = 630
+		imgConfig.Width = 1200
+		imgConfig.Height = 630
 		fmt.Printf("Warning: Could not decode image dimensions, using defaults: %v\n", err)
 	}
 
-	// Create image record in database
+	// Process image variants if image processor is available
+	var variants []models.ImageVariant
+	if s.imageProcessor != nil {
+		sizes := []models.ImageSize{
+			models.ImageSizeThumbnail,
+			models.ImageSizeSmall,
+			models.ImageSizeMedium,
+			models.ImageSizeLarge,
+		}
+		formats := []models.ImageFormat{
+			models.ImageFormatJPEG,
+			models.ImageFormatWebP,
+		}
+
+		variants, err = s.imageProcessor.ProcessImageSync(imageID, originalPath, sizes, formats)
+		if err != nil {
+			fmt.Printf("Warning: Image processing had errors (continuing with original): %v\n", err)
+		}
+
+		// If variants were generated successfully, update originalURL to largest variant
+		if len(variants) > 0 {
+			if largestVariant := s.imageProcessor.GetLargestVariant(variants, models.ImageFormatJPEG); largestVariant != nil {
+				originalURL = largestVariant.URL
+			}
+			// Delete original file since we have variants
+			os.Remove(originalPath)
+		}
+	}
+
+	// Save to database
 	db := s.ingestionRepo.GetDB()
-	var imageID uint64
-	imageQuery := `
-		INSERT INTO images (original_url, filename, width, height, file_size, mime_type, article_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-		RETURNING id`
 
-	err = db.QueryRowContext(ctx, imageQuery,
-		imageURL,
-		filename,
-		img.Width,
-		img.Height,
-		len(imageData),
-		contentType,
-		articleID,
-	).Scan(&imageID)
+	if s.mediaService != nil {
+		// Use media service (same as admin panel)
+		img := &models.Image{
+			ID:          imageID,
+			OriginalURL: originalURL,
+			Filename:    fmt.Sprintf("article_%d_featured%s", articleID, ext),
+			AltText:     "",
+			Width:       imgConfig.Width,
+			Height:      imgConfig.Height,
+			FileSize:    int64(len(imageData)),
+			MimeType:    contentType,
+			ArticleID:   &articleID,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
 
-	if err != nil {
-		return fmt.Errorf("failed to create image record: %w", err)
+		if err := s.mediaService.CreateImageWithVariants(img, variants); err != nil {
+			return fmt.Errorf("failed to save image with variants: %w", err)
+		}
+
+		// Update article's featured_image_id
+		updateQuery := `UPDATE articles SET featured_image_id = $1, updated_at = NOW() WHERE id = $2`
+		_, err = db.ExecContext(ctx, updateQuery, imageID, articleID)
+		if err != nil {
+			return fmt.Errorf("failed to update article featured image: %w", err)
+		}
+	} else {
+		// Fallback: direct database insert
+		var dbImageID uint64
+		imageQuery := `
+			INSERT INTO images (original_url, filename, width, height, file_size, mime_type, article_id, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+			RETURNING id`
+
+		err = db.QueryRowContext(ctx, imageQuery,
+			originalURL,
+			fmt.Sprintf("article_%d_featured%s", articleID, ext),
+			imgConfig.Width,
+			imgConfig.Height,
+			len(imageData),
+			contentType,
+			articleID,
+		).Scan(&dbImageID)
+
+		if err != nil {
+			return fmt.Errorf("failed to create image record: %w", err)
+		}
+
+		// Update article's featured_image_id
+		updateQuery := `UPDATE articles SET featured_image_id = $1, updated_at = NOW() WHERE id = $2`
+		_, err = db.ExecContext(ctx, updateQuery, dbImageID, articleID)
+		if err != nil {
+			return fmt.Errorf("failed to update article featured image: %w", err)
+		}
 	}
 
-	// Update article's featured_image_id
-	updateQuery := `UPDATE articles SET featured_image_id = $1, updated_at = NOW() WHERE id = $2`
-	_, err = db.ExecContext(ctx, updateQuery, imageID, articleID)
-	if err != nil {
-		return fmt.Errorf("failed to update article featured image: %w", err)
-	}
-
-	fmt.Printf("Successfully downloaded and set featured image for article %d: %s\n", articleID, filename)
+	fmt.Printf("Successfully downloaded and set featured image for article %d\n", articleID)
 	return nil
 }
