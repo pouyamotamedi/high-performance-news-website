@@ -17,6 +17,7 @@ import (
 	"high-performance-news-website/internal/auth"
 	"high-performance-news-website/internal/models"
 	"high-performance-news-website/internal/repositories"
+	"high-performance-news-website/pkg/database"
 )
 
 // ContentIngestionService handles content ingestion business logic
@@ -55,6 +56,11 @@ func (s *ContentIngestionService) SetImageProcessor(ip *ImageProcessor) {
 // SetMediaService sets the media service for content ingestion (optional dependency)
 func (s *ContentIngestionService) SetMediaService(ms *MediaService) {
 	s.mediaService = ms
+}
+
+// GetDB returns the database connection (used by handlers for additional queries)
+func (s *ContentIngestionService) GetDB() *database.DB {
+	return s.ingestionRepo.GetDB()
 }
 
 // IngestContent processes content from external sources
@@ -163,13 +169,17 @@ func (s *ContentIngestionService) IngestContent(ctx context.Context, sourceAPIKe
 
 	// 8. Auto-process if configured and not duplicate
 	if source.Config.AutoPublish && createdContent.Status == "pending" {
-		go func() {
-			// Process asynchronously to avoid blocking the API response
-			if err := s.ProcessPendingContent(context.Background(), createdContent.ID); err != nil {
-				// Log error but don't fail the ingestion
-				fmt.Printf("Failed to auto-process content %d: %v\n", createdContent.ID, err)
+		// Process synchronously so we can return article_id and translation_group_id
+		if err := s.ProcessPendingContent(ctx, createdContent.ID); err != nil {
+			fmt.Printf("Failed to auto-process content %d: %v\n", createdContent.ID, err)
+			// Don't fail the ingestion - content is saved and can be processed later
+		} else {
+			// Reload content to get updated article_id
+			updatedContent, err := s.ingestionRepo.GetContentByID(ctx, createdContent.ID)
+			if err == nil && updatedContent != nil {
+				createdContent = updatedContent
 			}
-		}()
+		}
 	}
 
 	return createdContent, nil

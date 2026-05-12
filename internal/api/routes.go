@@ -314,6 +314,9 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 			// Public ingestion endpoint (API key authentication)
 			ingestion.POST("/ingest", r.handler.IngestContent)                     // POST /api/v1/content/ingest
 			
+			// Content status endpoint (API key authentication)
+			ingestion.GET("/status/:external_id", r.handler.GetContentStatus)      // GET /api/v1/content/status/unique-id-123
+			
 			// Webhook ingestion endpoint (webhook secret authentication)
 			ingestion.POST("/webhook/:source_id", r.handler.WebhookIngestion)      // POST /api/v1/content/webhook/123
 			

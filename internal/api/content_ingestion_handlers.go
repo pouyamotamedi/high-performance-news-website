@@ -92,8 +92,33 @@ func (h *APIHandler) IngestContent(c *gin.Context) {
 		return
 	}
 
+	// Build response with article details if processed
+	response := map[string]interface{}{
+		"id":          ingestedContent.ID,
+		"external_id": ingestedContent.ExternalID,
+		"title":       ingestedContent.Title,
+		"status":      ingestedContent.Status,
+		"article_id":  ingestedContent.ArticleID,
+	}
+
+	// If article was created, get translation_group_id
+	if ingestedContent.ArticleID != nil && *ingestedContent.ArticleID > 0 {
+		// Query translation_group_id from the created article
+		db := h.contentIngestionService.GetDB()
+		if db != nil {
+			var translationGroupID *uint64
+			err := db.QueryRowContext(c.Request.Context(),
+				"SELECT translation_group_id FROM articles WHERE id = $1",
+				*ingestedContent.ArticleID,
+			).Scan(&translationGroupID)
+			if err == nil && translationGroupID != nil {
+				response["translation_group_id"] = *translationGroupID
+			}
+		}
+	}
+
 	c.JSON(http.StatusCreated, SuccessResponse{
-		Data:    ingestedContent,
+		Data:    response,
 		Message: "Content ingested successfully",
 	})
 }
@@ -394,6 +419,78 @@ func (h *APIHandler) WebhookIngestion(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "Webhook received successfully",
+	})
+}
+
+// GetContentStatus returns the status of ingested content by external_id
+// GET /api/v1/content/status/:external_id
+func (h *APIHandler) GetContentStatus(c *gin.Context) {
+	// Authenticate with API key
+	apiKey := c.GetHeader("X-API-Key")
+	if apiKey == "" {
+		handleError(c, &models.ValidationError{
+			Message: "API key required",
+			Fields:  []string{"X-API-Key header is required"},
+		})
+		return
+	}
+
+	externalID := c.Param("external_id")
+	if externalID == "" {
+		handleError(c, &models.ValidationError{
+			Message: "external_id is required",
+			Fields:  []string{"external_id parameter is required"},
+		})
+		return
+	}
+
+	// Query content by external_id
+	db := h.contentIngestionService.GetDB()
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not available"})
+		return
+	}
+
+	var contentID uint64
+	var status string
+	var articleID *uint64
+	var translationGroupID *uint64
+
+	// Get content status
+	err := db.QueryRowContext(c.Request.Context(),
+		`SELECT ic.id, ic.status, ic.article_id
+		 FROM ingested_content ic
+		 JOIN content_sources cs ON ic.source_id = cs.id
+		 WHERE ic.external_id = $1 AND cs.api_key = $2
+		 ORDER BY ic.created_at DESC LIMIT 1`,
+		externalID, apiKey,
+	).Scan(&contentID, &status, &articleID)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "content not found"})
+		return
+	}
+
+	// If article was created, get translation_group_id
+	if articleID != nil && *articleID > 0 {
+		db.QueryRowContext(c.Request.Context(),
+			"SELECT translation_group_id FROM articles WHERE id = $1",
+			*articleID,
+		).Scan(&translationGroupID)
+	}
+
+	response := map[string]interface{}{
+		"content_id":  contentID,
+		"external_id": externalID,
+		"status":      status,
+		"article_id":  articleID,
+	}
+	if translationGroupID != nil {
+		response["translation_group_id"] = *translationGroupID
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Data: response,
 	})
 }
 
