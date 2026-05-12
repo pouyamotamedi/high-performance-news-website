@@ -1009,7 +1009,7 @@ func (s *ContentIngestionService) processArticleTags(ctx context.Context, articl
 		if err != nil {
 			// Tag doesn't exist, create it
 			slug := strings.ToLower(strings.ReplaceAll(tagName, " ", "-"))
-			insertQuery := `INSERT INTO tags (name, slug, language_code, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id`
+			insertQuery := `INSERT INTO tags (name, slug, language_code, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id`
 			err = db.QueryRowContext(ctx, insertQuery, tagName, slug, lang).Scan(&tagID)
 			if err != nil {
 				fmt.Printf("ERROR: Failed to create tag %s: %v\n", tagName, err)
